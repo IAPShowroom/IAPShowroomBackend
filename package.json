@@ -1,0 +1,20 @@
+{
+  "name": "showroomapi",
+  "version": "1.0.0",
+  "description": "RESTful API for the IAP Showroom platform.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "keywords": [
+    "showroom",
+    "api",
+    "showroomapi"
+  ],
+  "author": "RUMStream",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.3"
+  }
+}
