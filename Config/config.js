@@ -17,6 +17,7 @@ const SHOWROOM_HOST = 'iapshowroon.ece.uprm.edu';
 const showroom_prefix = '/api/showroom';
 const stream_prefix = '/api/meet';
 const auth_prefix = '/api/auth';
+const bbb_prefix = '/bigbluebutton/api';
 
 //Database variables
 const showroomDBConfig = {
@@ -45,6 +46,7 @@ module.exports = {
     SHOWROOM_HOST: SHOWROOM_HOST,
     showroom_prefix: showroom_prefix,
     stream_prefix: stream_prefix,
+    bbb_prefix: bbb_prefix, 
     auth_prefix: auth_prefix,
     showroomDBConfig: showroomDBConfig,
     iapDBConfig: iapDBConfig
