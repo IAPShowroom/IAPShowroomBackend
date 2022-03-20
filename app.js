@@ -9,6 +9,8 @@ const port = config.PORT;
 
 //use app.use function to attach auth middleware that parses through the headers of all incoming requests
 
+//get CORS middleware and attach with app.use?
+
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
