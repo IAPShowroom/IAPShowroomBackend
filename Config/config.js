@@ -5,6 +5,8 @@
 //General variables
 const env = process.env;
 const PORT = env.PORT || 8080;
+const ENVIRONMENT = env.ENVIRONMENT || 'dev';
+const prod = ENVIRONMENT == 'prod';
 
 //BigBlueButton API variables
 // const BBB_SECRET = env.BBB_SECRET || '';
@@ -44,6 +46,7 @@ module.exports = {
     PORT: PORT,
     BBB_HOST: BBB_HOST,
     SHOWROOM_HOST: SHOWROOM_HOST,
+    ENVIRONMENT: ENVIRONMENT,
     showroom_prefix: showroom_prefix,
     stream_prefix: stream_prefix,
     bbb_prefix: bbb_prefix, 
