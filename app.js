@@ -11,9 +11,7 @@ const express = require('express');
 const app = express();
 const port = config.PORT;
 
-//use app.use function to attach auth middleware that parses through the headers of all incoming requests?
-
-//get CORS middleware and attach with app.use?
+//TODO: CORS middleware
 
 //Bind the main module routes to their respective routers
 app.use(config.auth_prefix, authEndpoints);
@@ -27,6 +25,5 @@ app.listen(port, () => {
 /**
  * Developer Notes:
  * 
- * - probably debamos usar Router objects 
- * --- combine router objects with imported routes (endpoints) from the Endpoints folder? is this the middleware?
+ * - Router objects
  */
