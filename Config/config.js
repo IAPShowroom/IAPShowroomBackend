@@ -9,8 +9,8 @@ const ENVIRONMENT = env.ENVIRONMENT || 'dev';
 const prod = ENVIRONMENT == 'prod';
 
 //BigBlueButton API variables
-// const BBB_SECRET = env.BBB_SECRET || '';
-// const MOD_PASSWORD = env.MOD_PASSWORD || '';
+const BBB_SECRET = env.BBB_SECRET || '';
+const MOD_PASSWORD = env.MOD_PASSWORD || '';
 
 //Endpoint parts
 const BBB_HOST = 'iapstream.ece.uprm.edu';
@@ -42,6 +42,8 @@ const iapDBConfig = {
     }
 }
 
+const session_secret = env.SESSION_SECRET || '';
+
 module.exports = {
     PORT: PORT,
     BBB_HOST: BBB_HOST,
@@ -52,8 +54,8 @@ module.exports = {
     bbb_prefix: bbb_prefix, 
     auth_prefix: auth_prefix,
     showroomDBConfig: showroomDBConfig,
-    iapDBConfig: iapDBConfig
-    // ,
-    // BBB_SECRET: BBB_SECRET,
-    // MOD_PASSWORD: MOD_PASSWORD
+    iapDBConfig: iapDBConfig,
+    session_secret: session_secret,
+    BBB_SECRET: BBB_SECRET,
+    MOD_PASSWORD: MOD_PASSWORD
 };
