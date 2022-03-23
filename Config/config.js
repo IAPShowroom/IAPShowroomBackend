@@ -22,6 +22,12 @@ const stream_prefix = '/api/meet';
 const auth_prefix = '/api/auth';
 const bbb_prefix = '/bigbluebutton/api';
 
+//CORS configuration options
+const corsOptions = {
+    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : '*',
+    optionsSuccessStatus: 200
+}
+
 //Database variables
 const showroomDBConfig = {
     db: {
@@ -60,5 +66,6 @@ module.exports = {
     BBB_SECRET: BBB_SECRET,
     MOD_PASSWORD: MOD_PASSWORD,
     prod: prod,
-    logDebug: logDebug
+    logDebug: logDebug,
+    corsOptions: corsOptions
 };

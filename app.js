@@ -10,6 +10,7 @@ const authRouter = require('./Endpoints/AuthEndpoints.js');
 const logger = require('./Utility/Logger.js');
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const session = require('express-session');
 
 let logCtx = {
@@ -19,8 +20,6 @@ let logCtx = {
 
 const app = express();
 const port = config.PORT;
-
-//TODO: CORS middleware
 
 //Log incoming requests
 app.use(logger.logRequest);
@@ -36,6 +35,7 @@ app.use(authHandler.authenticate);
 //Middleware
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
+app.use(cors(config.corsOptions));
 // app.use(session({ secret: config.session_secret }));
 
 //Catch non-existant URLs
