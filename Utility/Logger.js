@@ -2,25 +2,33 @@
  * File for logging utility functions.
  */
 
-let logContext;
+const config = require('../Config/config.js');
 
-function log(logLevel, message, fn) {
-    console.log(logLevel + logContext + ':' + (fn ? fn + ': ' : ' ' ) + message);
+function logAll (logLevel, message, logCtx) {
+    console.log(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
 }
 
-function logDebug (message) {
-    log('DEBUG:', message, fn);
+function log (message, logCtx) {
+    logAll(':', message, logCtx);
 }
 
-function logError (message, fn) {
-    log('ERROR:', message, fn);
+function logDebug (message, logCtx) {
+    if (config.logDebug) logAll('DEBUG:', message, logCtx);
 }
 
-module.exports = (context) => {
-    logContext = context;
+function logError (message, logCtx) {
+    logAll('ERROR:', message, logCtx);
+}
 
-    return {
-        logDebug: logDebug,
-        logError: logError
-    }
+function logRequest (req, res, next) {
+    logCtx = { fileName: 'app', fn: '' };
+    log("Received " + req.method + " " + req.path + " request", logCtx);
+    next();
+}
+
+module.exports = {
+    logDebug: logDebug,
+    logError: logError,
+    logRequest: logRequest,
+    log: log
 }
