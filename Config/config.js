@@ -5,8 +5,9 @@
 //General variables
 const env = process.env;
 const PORT = env.PORT || 8080;
-const ENVIRONMENT = env.ENVIRONMENT || 'dev';
+const ENVIRONMENT = env.ENVIRONMENT || 'dev'; //set NODE_ENV to 'production' with the OS's init system for better performance 
 const prod = ENVIRONMENT == 'prod';
+const logDebug = env.LOG_DEBUG == 'true';
 
 //BigBlueButton API variables
 const BBB_SECRET = env.BBB_SECRET || '';
@@ -57,5 +58,7 @@ module.exports = {
     iapDBConfig: iapDBConfig,
     session_secret: session_secret,
     BBB_SECRET: BBB_SECRET,
-    MOD_PASSWORD: MOD_PASSWORD
+    MOD_PASSWORD: MOD_PASSWORD,
+    prod: prod,
+    logDebug: logDebug
 };
