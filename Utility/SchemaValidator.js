@@ -46,10 +46,13 @@ function validateRegisterUser (req, callback) {
 }
 
 function validateRequest (req, schema, callback) {
+    logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
     if (error) { //return comma separated errors
+        logger.logError("Schema validation error for request payload.");
         callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
     } else {
+        logger.log("Request schema successfully validated.");
         callback(null);
     }
 }
