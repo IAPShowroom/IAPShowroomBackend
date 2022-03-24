@@ -85,8 +85,21 @@ function authenticate (req, res, next) {
     } else {
         errorMsg = "User could not be authenticated. Please log in."
         logger.logError(errorMsg, logCtx);
-        res.status(401).send(errMsg);
+        res.status(401).send(errorMsg);
     }
+}
+
+function authorizeAdmin (req, res, next) {
+    logCtx.fn = 'authorizeAdmin';
+    authenticate(req, res, () => {
+        if (req.session.key["role"] == "admin") { //Check if user has admin role
+            next(); //Success
+        } else {
+            errorMsg = "User does not have enough privileges."
+            logger.logError(errorMsg, logCtx);
+            res.status(403).send(errorMsg);
+        }
+    });
 }
 
 function checkSession (req, res, next) {
@@ -102,6 +115,7 @@ function checkSession (req, res, next) {
 module.exports = {
     registerUser: registerUser,
     authenticate: authenticate,
+    authorizeAdmin: authorizeAdmin,
     logOut: logOut,
     checkSession: checkSession
 }
