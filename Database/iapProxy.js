@@ -14,22 +14,12 @@ let logCtx = {
 
 // console.log("dbconfig: ", dbConfig); //testing
 
-//comment: env vars in windows don't seem to be working properly for this
-// const pool = new Pool({
-//     user: dbConfig.user,
-//     host: dbConfig.host,
-//     database: dbConfig.database,
-//     password: dbConfig.password,
-//     port: dbConfig.port,
-// });
-
-//only use this pool config temporarily
 const pool = new Pool({
-    user: 'readonlyuser',
-    host: '136.145.59.120',
-    database: 'iap',
-    password: 'Tw2"Ux[/feKp#[@y',
-    port: '5432',
+    user: dbConfig.user,
+    host: dbConfig.host,
+    database: dbConfig.database,
+    password: dbConfig.password,
+    port: dbConfig.port,
 });
 
 //TODO: change query call for stored procedure call
