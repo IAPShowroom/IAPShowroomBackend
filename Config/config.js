@@ -49,7 +49,7 @@ const iapDBConfig = {
     }
 }
 
-const session_secret = env.SESSION_SECRET || '';
+const session_secret = env.SESSION_SECRET || 'testsessionsecret';
 
 module.exports = {
     PORT: PORT,

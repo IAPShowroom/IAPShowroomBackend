@@ -5,6 +5,7 @@
 const express = require('express');
 const showroomRouter = express.Router();
 const showroomHandler = require('../Handlers/ShowroomHandlers.js');
+const auth = require('../Handlers/AuthHandlers.js');
 const logger = require('../Utility/Logger.js');
 
 let logCtx = {
@@ -24,6 +25,6 @@ var scheduleEvents = '/schedule/events'; //used for GET, POST
 var scheduleEventsID = scheduleEvents + '/:eventID'; //used for PUT, DELETE
 
 
-showroomRouter.get(getProjects, showroomHandler.getProjects);
+showroomRouter.get(getProjects, auth.authenticate, showroomHandler.getProjects);
 
 module.exports = showroomRouter;

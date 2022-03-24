@@ -2,7 +2,7 @@
  * Database proxy file, used to interface with the Showroom's database.
  */
 
-const { Pool, Client } = require('pg');
+const { Pool } = require('pg');
 const config = require('../Config/config');
 const dbConfig = config.showroomDBConfig;
 
@@ -14,8 +14,12 @@ const pool = new Pool({
     port: dbConfig.port,
 });
 
+function registerUser (req, callback) { //TODO: check role and call respective function
+    callback(null, { userID: 14 }); //testing sessions
+}
+
 module.exports = {
-    
+    registerUser: registerUser
 }
 
 /**
