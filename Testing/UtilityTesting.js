@@ -2,7 +2,7 @@
  * Test file for Utilities.
  */
 
-var logger = require('../Utility/Logger.js');
+var { logDebug, logError} = require('../Utility/Logger.js');
 let logCtx = {
     fileName: 'UtilityTesting',
     fn: ''
@@ -16,13 +16,13 @@ logErrorTest();
 //test functions
 function logDebugTest () {
     logCtx.fn = 'logDebugTest';
-    logger.logDebug("Hey what's up");
-    logger.logDebug("testing testing", logCtx);
+    logDebug("Hey what's up");
+    logDebug("testing testing", logCtx);
 }
 
 function logErrorTest () {
     logCtx.fn = 'logErrorTest';
-    logger.logError("ahh! emergency!");
-    logger.logError("ahh! emergency!", logCtx);
+    logError("ahh! emergency!");
+    logError("ahh! emergency!", logCtx);
 }
 

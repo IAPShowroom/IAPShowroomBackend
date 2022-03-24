@@ -4,7 +4,7 @@
 
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
-const logger = require('../Utility/Logger.js');
+const { logError, log } = require('../Utility/Logger.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 
@@ -21,7 +21,7 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
         //     //Validate request payload
         //     validator.validateRegisterUser(req, (error) => {
         //         if (error) {
-        //             logger.logError(error, logCtx);
+        //             logError(error, logCtx);
         //             errorStatus = 400;
         //             errorMsg = error.message;
         //         }
@@ -35,7 +35,7 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
         //         if (error) {
         //             errorStatus = 400;
         //             errorMsg = error.toString();
-        //             logger.logError(error, logCtx);
+        //             logError(error, logCtx);
         //         }
         //         callback(error);
         //     });
@@ -46,11 +46,11 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString;
-                    logger.logError(error, logCtx);
+                    logError(error, logCtx);
                     callback(error, null);
                 } else {
                     req.session.key = result; //Store result object with user ID in session.key
-                    logger.log("Response data: " + JSON.stringify(result), logCtx);
+                    log("Response data: " + JSON.stringify(result), logCtx);
                     callback(null, result);
                 }
             });
@@ -84,7 +84,7 @@ function authenticate (req, res, next) {
         next(); //Success
     } else {
         errorMsg = "User could not be authenticated. Please log in."
-        logger.logError(errorMsg, logCtx);
+        logError(errorMsg, logCtx);
         res.status(401).send(errorMsg);
     }
 }
@@ -96,7 +96,7 @@ function authorizeAdmin (req, res, next) {
             next(); //Success
         } else {
             errorMsg = "User does not have enough privileges."
-            logger.logError(errorMsg, logCtx);
+            logError(errorMsg, logCtx);
             res.status(403).send(errorMsg);
         }
     });
@@ -105,9 +105,9 @@ function authorizeAdmin (req, res, next) {
 function checkSession (req, res, next) {
     logCtx.fn = 'checkSession';
     if (!req.session) {
-        logger.logError("Session is not connected.", logCtx);
+        logError("Session is not connected.", logCtx);
     } else {
-        logger.log("Session is connected.", logCtx);
+        log("Session is connected.", logCtx);
     }
     next();
 }

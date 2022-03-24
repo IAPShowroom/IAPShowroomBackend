@@ -7,7 +7,7 @@ const auth = require('./Handlers/AuthHandlers.js');
 const showroomRouter = require('./Endpoints/ShowroomEndpoints.js');
 const streamingRouter = require('./Endpoints/VideoStreamingEndpoints.js');
 const authRouter = require('./Endpoints/AuthEndpoints.js');
-const logger = require('./Utility/Logger.js');
+const { logError, log, logRequest } = require('./Utility/Logger.js');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -29,7 +29,7 @@ redisClient.connect().catch(console.error);
 redisClient.on("error", console.error);
 
 //Log incoming requests
-app.use(logger.logRequest);
+app.use(logRequest);
 
 //Middleware
 app.use(bodyParser.urlencoded({ extended: false}));
@@ -56,12 +56,12 @@ app.use(config.bbb_prefix, streamingRouter);
 //health check for testing
 app.get('/test', (req, res) => {
   logCtx.fn = '/test';
-  logger.log("Hello, server is running.", logCtx);
+  log("Hello, server is running.", logCtx);
   res.status(200).send("Hello.");
 });
 
 app.listen(port, () => {
-  logger.log('IAP Showroom API listening on port ' + port, logCtx);
+  log('IAP Showroom API listening on port ' + port, logCtx);
 });
 
 

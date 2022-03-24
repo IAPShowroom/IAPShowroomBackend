@@ -2,7 +2,7 @@
  * File to organize handler functions for the Video Streaming endpoints.
  */
 
-const logger = require('../Utility/Logger.js');
+const { logError, log } = require('../Utility/Logger.js');
 
 const logCtx = {
     fileName: 'VideoStreamingHandlers',

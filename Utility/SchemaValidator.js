@@ -5,7 +5,7 @@
 
 const { func } = require('joi');
 const Joi = require('joi');
-const logger = require('./Logger');
+const { logError, log } = require('./Logger');
 
 let logCtx = {
     fileName: 'SchemaValidator',
@@ -40,7 +40,7 @@ function validateRegisterUser (req, callback) {
                 validateRequest(req, userSchema, callback);
         }
     } else {
-        logger.logError("Missing role in request body.", logCtx);
+        logError("Missing role in request body.", logCtx);
         callback(new Error("Missing role information in request body."));
     }
 }
@@ -49,10 +49,10 @@ function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
     if (error) { //return comma separated errors
-        logger.logError("Schema validation error for request payload.");
+        logError("Schema validation error for request payload.");
         callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
     } else {
-        logger.log("Request schema successfully validated.");
+        log("Request schema successfully validated.");
         callback(null);
     }
 }

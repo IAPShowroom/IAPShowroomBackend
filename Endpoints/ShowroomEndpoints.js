@@ -6,7 +6,7 @@ const express = require('express');
 const showroomRouter = express.Router();
 const showroomHandler = require('../Handlers/ShowroomHandlers.js');
 const auth = require('../Handlers/AuthHandlers.js');
-const logger = require('../Utility/Logger.js');
+const { logError, log } = require('../Utility/Logger.js');
 
 let logCtx = {
     fileName: 'ShowroomEndpoints',
