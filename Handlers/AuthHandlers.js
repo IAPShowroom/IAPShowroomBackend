@@ -5,6 +5,7 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
+const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 
@@ -61,9 +62,9 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
         }
     ], (error) => {
         if (error) {
-            res.status(errorStatus).send("Error: " + errorMsg);
+            errorResponse(res, errorStatus, errorMsg);
         } else {
-            res.status(201).send("User registered. Please check email for verification."); //TODO: llega el 201 Created pero no llega el mensaje? se queda tiempo loading it
+            successResponse(res, 201, "User registered. Please check email for verification."); //TODO: llega el 201 Created pero no llega el mensaje? se queda tiempo loading it
         }
     });
 }
@@ -71,10 +72,10 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
 function logOut (req, res, next) {
     if (req.session.key) {
         req.session.destroy(() => { //TODO: review functionality of destroy
-            res.status(200).send("Successfully logged user out.");
+            successResponse(res, 200, "Successfully logged user out.");
         }); 
     } else {
-        res.status(400).send("No session found, cannot perform this action.");
+        errorResponse(res, 400, "No session found, cannot perform this action.");
     }
 }
 
@@ -85,7 +86,7 @@ function authenticate (req, res, next) {
     } else {
         errorMsg = "User could not be authenticated. Please log in."
         logError(errorMsg, logCtx);
-        res.status(401).send(errorMsg);
+        errorResponse(res, 401, errorMsg);
     }
 }
 
@@ -97,7 +98,7 @@ function authorizeAdmin (req, res, next) {
         } else {
             errorMsg = "User does not have enough privileges."
             logError(errorMsg, logCtx);
-            res.status(403).send(errorMsg);
+            errorResponse(res, 403, errorMsg);
         }
     });
 }

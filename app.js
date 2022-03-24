@@ -8,6 +8,7 @@ const showroomRouter = require('./Endpoints/ShowroomEndpoints.js');
 const streamingRouter = require('./Endpoints/VideoStreamingEndpoints.js');
 const authRouter = require('./Endpoints/AuthEndpoints.js');
 const { logError, log, logRequest } = require('./Utility/Logger.js');
+const { successResponse, errorResponse } = require('./Utility/DbUtils.js');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -50,14 +51,14 @@ app.use(config.bbb_prefix, streamingRouter);
 
 //Catch non-existant URLs -  TODO: implement better or remove
 // app.get('*', function(req, res){
-//   res.status(400).send('Invalid URL. Sorry for the inconvenience.');
+  // errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
 // })
 
 //health check for testing
 app.get('/test', (req, res) => {
   logCtx.fn = '/test';
   log("Hello, server is running.", logCtx);
-  res.status(200).send("Hello.");
+  successResponse(res, 200, "Hello.");
 });
 
 app.listen(port, () => {

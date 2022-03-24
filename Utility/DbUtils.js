@@ -2,15 +2,17 @@
  * Utility file containing helper functions aiding database and request operations.
  */
 
+function successResponse (res, status, msg, payload) {
+    var data = { message: msg }
+    if (payload) data.payload = payload;
+    res.status(status).send(data);
+}
 
+function errorResponse (res, status, msg) {
+    successResponse(res, status, 'Error: ' + msg);
+}
 
-/**
- * Developer Notes:
- * 
- * - create functions to encapsulate express/node's write response functions into:
- * --- writeSuccess(status.OK, message, payload)
- * --- writeError(status.BadRequest, message)
- * 
- * - import 'status' as an object from config file, mapping status codes, maybe messages? other relevant things?
- * --- maybe this can be part of a general response object with more standardized info for responses
- */
+module.exports = {
+    successResponse: successResponse,
+    errorResponse: errorResponse
+}
