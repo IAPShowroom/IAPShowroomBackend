@@ -20,6 +20,10 @@ function logError (message, logCtx) {
     logAll('ERROR:', message, logCtx);
 }
 
+function logTest (message, logCtx) {
+    logAll('TEST:', message, logCtx);
+}
+
 function logRequest (req, res, next) {
     logCtx = { fileName: 'app', fn: '' };
     log("Received " + req.method + " " + req.path + " request", logCtx);
@@ -30,5 +34,6 @@ module.exports = {
     logDebug: logDebug,
     logError: logError,
     logRequest: logRequest,
+    logTest: logTest, 
     log: log
 }
