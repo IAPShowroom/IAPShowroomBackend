@@ -30,64 +30,88 @@ function postAnnouncements (req, res, next) {
 }
 
 function getScheduleEvents (req, res, next) {
-    
-}
-
-function postScheduleEvents (req, res, next) {
-    //IAP_Events(eventid serial primary key, adminid integer references Admin(adminid), startTime time, duration time, title text, projectid integer, e_date timestamp);
-    logCtx.fn = 'postScheduleEvents';
+    logCtx.fn = 'getScheduleEvents';
     var errorStatus, errorMsg;
     async.waterfall([
-        // function (callback) {
-        //     //Validate request payload
-        //     validator.validateRegisterUser(req, (error) => {
-        //         if (error) {
-        //             logError(error, logCtx);
-        //             errorStatus = 400;
-        //             errorMsg = error.message;
-        //         }
-        //         callback(error);
-        //     });
-        // },
-        // function (callback) {
-        //     //Check email against IAP
-        //     var userEmail = req.body.email;
-        //     iapDB.validateEmail(userEmail, (error) => { //TODO: implement
-        //         if (error) {
-        //             errorStatus = 400;
-        //             errorMsg = error.toString();
-        //             logError(error, logCtx);
-        //         }
-        //         callback(error);
-        //     });
-        // },
         function (callback) {
-            //Persist user data based on role
-            showroomDB.registerUser(req, (error, result) => { //TODO: implement
+            //Validate request payload
+            validator.validateGetEvents(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch events from DB
+            var upcoming = req.query.upcoming == true;
+            var time, date;
+            if (upcoming) {
+                time = req.query.time;
+                date = req.query.date;
+            }
+            showroomDB.getEvents(upcoming, time, date, (error, result) => { //TODO: test with postgres db
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString;
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    req.session.key = result; //Store result object with user ID in session.key
                     log("Response data: " + JSON.stringify(result), logCtx);
                     callback(null, result);
                 }
             });
-        },
-        function (result, callback) {
-            //Send verification email //TODO: implement
-            callback(null);
         }
-    ], (error) => {
+    ], (error, result) => {
+        //Send responses
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Successfully created events.", null); //TODO: add payload
+            successResponse(res, 201, "Successfully created events.", result); //TODO: verify what is being sent in result
         }
     });
+}
 
+function postScheduleEvents (req, res, next) {
+    logCtx.fn = 'postScheduleEvents';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateEventList(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Persist event list to DB
+            var eventList = req.body;
+            showroomDB.createEvents(eventList, (error, result) => { //TODO: test with postgres db
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString;
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Successfully created events.", result); //TODO: verify what is being sent in result
+        }
+    });
 }
 
 function updateScheduleEvent (req, res, next) {

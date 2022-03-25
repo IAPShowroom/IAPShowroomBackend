@@ -3,7 +3,6 @@
  * There is a schema object defined for each request payload that requires it.
  */
 
-const { func } = require('joi');
 const Joi = require('joi');
 const { logError, log } = require('./Logger');
 
@@ -28,6 +27,18 @@ const studentSchema = userSchema.append({
     graduation_date: Joi.date().required()
 });
 
+//TODO: review and make more accurate
+const eventSchema = Joi.object({
+    adminid: Joi.number().required(),
+    startTime: Joi.string().required(),
+    duration: Joi.string().required(),
+    title: Joi.string().required(),
+    projectid: Joi.number().required(),
+    e_date: Joi.string().required()
+});
+
+const eventListSchema = Joi.array().items(eventSchema);
+
 //TODO: review role values and add more switch cases
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
@@ -45,14 +56,57 @@ function validateRegisterUser (req, callback) {
     }
 }
 
+function validateEventList (req, callback) {
+    logCtx.fn = 'validateEventList';
+    if (req.body) {
+        validateRequest(req, eventListSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateGetEvents (req, callback) {
+    logCtx.fn = 'validateGetEvents';
+    if (req.query) { 
+        if (req.query.upcoming != undefined && req.query.upcoming != false) {
+            if (req.query.time && req.query.date) {
+                try {
+                    Joi.assert(req.query.upcoming, Joi.boolean());
+                    Joi.assert(req.query.time, Joi.string());
+                    Joi.assert(req.query.date, Joi.date());
+                    log("Request schema successfully validated.", logCtx);
+                    callback(null);
+                } catch {
+                    var errorMsg = "Invalid data types for query parameters";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                }
+            } else {
+                var errorMsg = "Missing time and date query parameters.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg));
+            }
+        } else {
+            //if 'upcoming' query parameter is missing or false, no need to check for date
+            log("Request schema successfully validated.", logCtx);
+            callback(null);
+        }
+    } else {
+        var errorMsg = "Missing query parameters.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
     if (error) { //return comma separated errors
-        logError("Schema validation error for request payload.");
+        logError("Schema validation error for request payload.", logCtx);
         callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
     } else {
-        log("Request schema successfully validated.");
+        log("Request schema successfully validated.", logCtx);
         callback(null);
     }
 }
@@ -62,5 +116,7 @@ function validateRequest (req, schema, callback) {
 // }
 
 module.exports = {
-    validateRegisterUser: validateRegisterUser
+    validateRegisterUser: validateRegisterUser,
+    validateEventList: validateEventList,
+    validateGetEvents: validateGetEvents
 }
