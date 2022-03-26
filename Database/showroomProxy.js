@@ -6,6 +6,7 @@ const { Pool } = require('pg');
 const config = require('../Config/config');
 const dbConfig = config.showroomDBConfig;
 const { logError, log } = require('../Utility/Logger.js');
+const dbUtils = require('../Utility/DbUtils.js');
 const async = require('async');
 
 let logCtx = {
@@ -28,6 +29,7 @@ function registerUser (req, callback) { //TODO: check role and call respective f
     callback(null, { userID: 14 }); //testing sessions
 }
 
+//TODO: test with db
 function createEvents (eventList, callback) {
     logCtx.fn = 'createEvents';
     var eventArrays = eventList.map(obj => Object.values(obj)); //get array of arrays
@@ -39,7 +41,7 @@ function createEvents (eventList, callback) {
             logError(errorMsg, logCtx);
             cb(new Error(errorMsg));
         }
-        pool.query("insert into iap_events (adminid, startTime, duration, title, projectid, e_date) values ($1, $2, $3, $4, $5, $6)", event, (error, res) => { //TODO: add pg_hba.conf to database cluster's data directory
+        dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date) values ($1, $2, $3, $4, $5, $6)", event, cb, (error, res) => {
             if (error) {
                 logError(error, logCtx);
                 cb(error, null);
@@ -48,7 +50,6 @@ function createEvents (eventList, callback) {
                 console.log("res: "); //testing
                 console.log(res); //testing
                 var result = res.rows; //returns <TODO>
-                pool.end();
                 cb(null, result);
             }
         });
@@ -56,7 +57,7 @@ function createEvents (eventList, callback) {
         if (error) {
             callback(error, null);
         } else {
-            callback(null, "Successfully created the events."); //TODO send something else back
+            callback(null, "Successfully created the events."); //TODO send something else back, depending on what db brings back as response
         }
     });
 }
@@ -67,23 +68,35 @@ function getEvents(upcoming, time, date, callback) {
     var getAll = "select * from iap_events";
     var getUpcoming = "select * from iap_events where time > $1 and e_date = $2";
     var query = upcoming ? getUpcoming : getAll;
-    pool.query(query, [time, date], (error, res) => { //test this, it might blow up with the getAll query if you're passing time and date anyway?
+    var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             var result = upcoming ? res.rows[0] : res.rows; //returns events
-            pool.end();
             callback(null, result);
         }
-    });
+    };
+    if (upcoming) {
+        dbUtils.makeQueryWithParams(pool, query, [time, date], callback, queryCb);
+    } else {
+        dbUtils.makeQuery(pool, query, callback, queryCb);
+    }
+}
+
+function endPool() {
+    logCtx.fn = 'endPool';
+    //Close the connection pool when server closes
+    log("Closing connection pool.", logCtx);
+    pool.end();
 }
 
 module.exports = {
     registerUser: registerUser,
     createEvents: createEvents,
-    getEvents: getEvents
+    getEvents: getEvents,
+    endPool: endPool
 }
 
 /**

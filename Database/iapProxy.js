@@ -5,7 +5,8 @@
 const { Pool } = require('pg');
 const config = require('../Config/config');
 const dbConfig = config.iapDBConfig;
-const logger = require('../Utility/Logger.js');
+const dbUtils = require('../Utility/DbUtils.js');
+const { logError, log } = require('../Utility/Logger.js');
 
 let logCtx = {
     fileName: 'iapProxy',
@@ -14,6 +15,7 @@ let logCtx = {
 
 // console.log("dbconfig: ", dbConfig); //testing
 
+//having problems connecting with environment variables
 const pool = new Pool({
     user: dbConfig.user,
     host: dbConfig.host,
@@ -22,23 +24,47 @@ const pool = new Pool({
     port: dbConfig.port,
 });
 
-//TODO: change query call for stored procedure call
+//Old version, not reusable since connection gets closed
+// function fetchProjects(sessionID, callback) {
+//     logCtx.fn = 'fetchProjects';
+//     pool.query("select project_id, title from projects where session_id = $1", [sessionID], (error, res) => {
+//         if (error) {
+//             logError(error, logCtx);
+//             callback(error, null);
+//         } else {
+//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+//             var result = res.rows; //returns array of json objects with project_id and title 
+//             pool.end();
+//             callback(null, result);
+//         }
+//     });
+// }
+
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    pool.query("select project_id, title from projects where session_id = $1", [sessionID], (error, res) => {
+    dbUtils.makeQueryWithParams(pool, "select project_id, title from projects where session_id = $1", [sessionID], callback, (error, res) => {
         if (error) {
-            logger.logError(error, logCtx);
+            logError(error, logCtx);
             callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns array of json objects with project_id and title 
+            callback(null, result);
         }
-        logger.log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-        var result = res.rows; //returns array of json objects with project_id and title 
-        pool.end();
-        callback(null, result);
     });
 }
 
+//TODO: this isn't recognized as a function??
+function endPool() {
+    logCtx.fn = 'endPool';
+    //Close the connection pool when server closes
+    log("Closing connection pool.", logCtx);
+    pool.end();
+}
+
 module.exports = {
-    fetchProjects: fetchProjects
+    fetchProjects: fetchProjects,
+    endPool: endPool
 }
 
 /**
