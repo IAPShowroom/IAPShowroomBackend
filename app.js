@@ -8,6 +8,7 @@ const showroomRouter = require('./Endpoints/ShowroomEndpoints.js');
 const streamingRouter = require('./Endpoints/VideoStreamingEndpoints.js');
 const authRouter = require('./Endpoints/AuthEndpoints.js');
 const { logError, log, logRequest } = require('./Utility/Logger.js');
+const dbUtils = require('./Utility/DbUtils.js');
 const { successResponse, errorResponse } = require('./Utility/DbUtils.js');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -61,8 +62,14 @@ app.get('/test', (req, res) => {
   successResponse(res, 200, "Hello.");
 });
 
-app.listen(port, () => {
+var server = app.listen(port, () => {
   log('IAP Showroom API listening on port ' + port, logCtx);
+});
+
+process.on('SIGINT', () => {
+  log(": Gracefully shutting server down.", logCtx);
+  dbUtils.closeDbConnections();
+  server.close();
 });
 
 
