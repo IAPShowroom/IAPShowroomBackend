@@ -29,7 +29,6 @@ function testCreateEvent() {
     logTest("Start Test", logCtx);
     showroomDB.createEvents(eventList, (error, result) => {
         if (error) logError(error, logCtx);
-        console.log(error);
         if (result) {
             logTest("result: ", logCtx);
             console.log(result);
@@ -46,7 +45,6 @@ function testGetEvents() {
     var date = '04-25-22';
     showroomDB.getEvents( upcoming, time, date, (error, result) => {
         if (error) logError(error, logCtx);
-        console.log(error);
         if (result) {
             logTest("result: ", logCtx);
             console.log(result);
