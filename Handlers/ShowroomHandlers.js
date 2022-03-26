@@ -3,6 +3,7 @@
  */
 
 const iapDB = require('../Database/iapProxy.js');
+const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
 const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
@@ -69,7 +70,7 @@ function getScheduleEvents (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Successfully created events.", result); //TODO: verify what is being sent in result
+            successResponse(res, 200, "Successfully retrieved events.", result); //TODO: verify what is being sent in result
         }
     });
 }
