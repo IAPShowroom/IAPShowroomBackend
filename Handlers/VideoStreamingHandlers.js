@@ -4,21 +4,21 @@
 
 const { logError, log } = require('../Utility/Logger.js');
 
-const logCtx = {
+let logCtx = {
     fileName: 'VideoStreamingHandlers',
     fn: ''
 }
 
 function createRoom (req, res, next) {
-    const logFn = "createRoom";
+    logCtx.fn = "createRoom";
 }
 
 function joinRoom (req, res, next) {
-    const logFn = "joinRoom";
+    logCtx.fn = "joinRoom";
 }
 
 function endRoom (req, res, next) {
-    const logFn = "endRoom";
+    logCtx.fn = "endRoom";
 }
 
 

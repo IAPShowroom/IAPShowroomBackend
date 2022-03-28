@@ -32,8 +32,8 @@ showroomRouter.get(getQnARoomInfo, auth.authenticate, showroomHandler.getQnARoom
 showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: implement
 
 showroomRouter.get(getProjects, auth.authenticate, showroomHandler.getProjects); //TODO - review
-showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); //TODO - implement
-showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); //TODO - implement
+showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); //TODO - test and review
+showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); //TODO - test and review
 showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.updateScheduleEvent); //TODO - implement
 showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent); //TODO - implement
 
