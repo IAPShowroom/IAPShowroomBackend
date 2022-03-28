@@ -74,7 +74,7 @@ function getEvents(upcoming, time, date, callback) {
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = upcoming ? res.rows[0] : res.rows; //returns events
+            var result = res.rows; //returns events
             callback(null, result);
         }
     };
@@ -83,6 +83,39 @@ function getEvents(upcoming, time, date, callback) {
     } else {
         dbUtils.makeQuery(pool, query, callback, queryCb);
     }
+}
+
+function updateEvent (eventID, event, callback) {
+    logCtx.fn = 'updateEvent';
+    var query = "insert into iap_events (adminid, startTime, duration, title, projectid, e_date) values ($1, $2, $3, $4, $5, $6) where event_id = $7";
+    var values = [event.adminid, event.startTime, event.duration, event.title, event.projectid, event.e_date, eventID];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows;
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function deleteEvent (eventID, callback) {
+    logCtx.fn = 'deleteEvent';
+    var query = "delete from iap_events where event_id = $1"; //TODO: maybe just add is_deleted column and set to true?
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows;
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
 function endPool() {
@@ -96,6 +129,8 @@ module.exports = {
     registerUser: registerUser,
     createEvents: createEvents,
     getEvents: getEvents,
+    updateEvent: updateEvent,
+    deleteEvent: deleteEvent,
     endPool: endPool
 }
 

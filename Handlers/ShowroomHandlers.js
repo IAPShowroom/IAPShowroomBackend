@@ -116,11 +116,84 @@ function postScheduleEvents (req, res, next) {
 }
 
 function updateScheduleEvent (req, res, next) {
-    
+    logCtx.fn = 'updateScheduleEvent';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateUpdateEvent(req, (error) => { //TODO: test this bit
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Persist updated event to DB
+            var event = req.body; //JSON object of event to be updated
+            var eventID = req.params.eventID;
+            showroomDB.updateEvent(eventID, event, (error, result) => { //TODO: test updateEvent
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString;
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Successfully updated event.", result); //TODO: verify what is being sent in result
+        }
+    });
 }
 
 function deleteScheduleEvent (req, res, next) {
-    
+    logCtx.fn = 'deleteScheduleEvent';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateDeleteEvent(req, (error) => { //TODO: test this bit
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+            var eventID = req.params.eventID;
+            showroomDB.deleteEvent(eventID, (error, result) => { //TODO: test deleteEvent
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString;
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully deleted event.", result); //TODO: verify what is being sent in result
+        }
+    });
 }
 
 function getProjects (req, res, next) {

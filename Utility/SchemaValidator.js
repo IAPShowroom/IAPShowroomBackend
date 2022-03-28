@@ -66,7 +66,55 @@ function validateEventList (req, callback) {
     }
 }
 
-function validateGetEvents (req, callback) {
+function validateUpdateEvent (req, callback) { //TODO: teeesssst
+    validateEventWithID(req, callback, (req, callback) => {
+        if (req.body != undefined) {
+            validateRequest(req, eventSchema, callback);
+        } else {
+            errorMsg = "Missing request body.";
+            logError(errorMsg, logCtx);
+            callback(new Error(errorMsg));
+        }
+    });
+}
+
+function validateDeleteEvent (req, callback) { //TODO: test
+    validateEventWithID(req, callback, null);
+}
+
+function validateEventWithID (req, callback, bodyCB) { //TODO: test please
+    //middle callback is to send an error if there are any invalid parameters
+    //bodyCB is to further keep checking the request body, optional since delete event doesn't receive a body
+    logCtx.fn = 'validateEventWithID';
+    var errorMsg;
+    if (req.params) {
+        if (req.params.eventID) {
+            try {
+                Joi.assert(req.query.eventID, Joi.number());
+                if (bodyCB) { //if a callback to validate request body is provided
+                    bodyCB(req.body); //call it
+                } else {
+                    log("Request schema successfully validated.", logCtx);
+                    callback(null);
+                }
+            } catch {
+                var errorMsg = "Invalid data type for path parameter.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg));
+            }
+        } else {
+            errorMsg = "Missing event ID path parameter."
+            logError(errorMsg, logCtx);
+            callback(new Error(errorMsg));
+        }
+    } else {
+        errorMsg = "Missing path parameters."
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
+function validateGetEvents (req, callback) { //TODO: test failing the Joi.assert and try catch functionality
     logCtx.fn = 'validateGetEvents';
     if (req.query) { 
         if (req.query.upcoming != undefined && req.query.upcoming != false) {
@@ -118,5 +166,7 @@ function validateRequest (req, schema, callback) {
 module.exports = {
     validateRegisterUser: validateRegisterUser,
     validateEventList: validateEventList,
-    validateGetEvents: validateGetEvents
+    validateGetEvents: validateGetEvents,
+    validateUpdateEvent: validateUpdateEvent,
+    validateDeleteEvent: validateDeleteEvent
 }
