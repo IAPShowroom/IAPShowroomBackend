@@ -24,22 +24,6 @@ const pool = new Pool({
     port: dbConfig.port,
 });
 
-//Old version, not reusable since connection gets closed
-// function fetchProjects(sessionID, callback) {
-//     logCtx.fn = 'fetchProjects';
-//     pool.query("select project_id, title from projects where session_id = $1", [sessionID], (error, res) => {
-//         if (error) {
-//             logError(error, logCtx);
-//             callback(error, null);
-//         } else {
-//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-//             var result = res.rows; //returns array of json objects with project_id and title 
-//             pool.end();
-//             callback(null, result);
-//         }
-//     });
-// }
-
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
     dbUtils.makeQueryWithParams(pool, "select project_id, title from projects where session_id = $1", [sessionID], callback, (error, res) => {
@@ -54,12 +38,11 @@ function fetchProjects(sessionID, callback) {
     });
 }
 
-//TODO: this isn't recognized as a function??
 function endPool() {
     logCtx.fn = 'endPool';
     //Close the connection pool when server closes
     log("Closing connection pool.", logCtx);
-    pool.end();
+    return pool.end();
 }
 
 module.exports = {
