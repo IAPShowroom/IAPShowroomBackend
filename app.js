@@ -8,7 +8,8 @@ const showroomRouter = require('./Endpoints/ShowroomEndpoints.js');
 const streamingRouter = require('./Endpoints/VideoStreamingEndpoints.js');
 const authRouter = require('./Endpoints/AuthEndpoints.js');
 const { logError, log, logRequest } = require('./Utility/Logger.js');
-const dbUtils = require('./Utility/DbUtils.js');
+const iapDB = require('./Database/iapProxy.js');
+const showroomDB = require('./Database/showroomProxy.js');
 const { successResponse, errorResponse } = require('./Utility/DbUtils.js');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -50,11 +51,6 @@ app.use(config.auth_prefix, authRouter);
 app.use(config.showroom_prefix, showroomRouter);
 app.use(config.bbb_prefix, streamingRouter);
 
-//Catch non-existant URLs -  TODO: implement better or remove
-// app.get('*', function(req, res){
-  // errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
-// })
-
 //health check for testing
 app.get('/test', (req, res) => {
   logCtx.fn = '/test';
@@ -62,19 +58,35 @@ app.get('/test', (req, res) => {
   successResponse(res, 200, "Hello.");
 });
 
+//Catch non-existant URLs
+app.all('*', function(req, res){
+  logError("Invalid URL: " + req.method + " " + req.path, logCtx);
+  errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
+})
+
 var server = app.listen(port, () => {
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
 
+//Properly close the server 
 process.on('SIGINT', () => {
-  log(": Gracefully shutting server down.", logCtx);
-  dbUtils.closeDbConnections();
-  server.close();
+  log("Gracefully shutting server down.", logCtx);
+  closeDbConnections(() => {
+    server.close(() => process.exit(1)); //stop listening and exit process
+  });
 });
 
-
-/**
- * Developer Notes:
- * 
- * - 
- */
+function closeDbConnections(cb) {
+  logCtx.fn = 'closeDbConnections';
+  log("Closing connection with IAP DB.", logCtx);
+  iapDB.endPool()
+  .then(result => {
+    log("Safely closed IAP DB connection pool.", logCtx);
+    log("Closing connection with Showroom DB.", logCtx);
+    showroomDB.endPool();})
+  .then(result => {
+    log("Safely closed IAP DB connection pool.", logCtx);
+    log("Bye, bye.", logCtx);
+    cb();}) //call the callback to exit server
+  .catch(reason => logError(reason, logCtx));
+}

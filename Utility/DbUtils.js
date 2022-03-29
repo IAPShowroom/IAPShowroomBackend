@@ -3,8 +3,6 @@
  */
 
 const { log } = require('./Logger.js');
-const iapDB = require('../Database/iapProxy.js');
-const showroomDB = require('../Database/showroomProxy.js');
 
 let logCtx = {
     fileName: 'DbUtils',
@@ -55,18 +53,9 @@ function makeQueryWithParams(pool, query, values, callback, queryCb) {
     });
 }
 
-function closeDbConnections() {
-    logCtx.fn = 'closeDbConnections';
-    log("Closing connection with IAP DB.", logCtx);
-    iapDB.endPool(); //TODO: for some reason this isn't recognized as a function??
-    log("Closing connection with Showroom DB.", logCtx);
-    showroomDB.endPool();
-}
-
 module.exports = {
     successResponse: successResponse,
     errorResponse: errorResponse,
     makeQuery: makeQuery,
-    makeQueryWithParams: makeQueryWithParams,
-    closeDbConnections: closeDbConnections
+    makeQueryWithParams: makeQueryWithParams
 }

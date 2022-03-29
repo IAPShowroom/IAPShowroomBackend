@@ -4,7 +4,7 @@
   "description": "RESTful API for the IAP Showroom platform.",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "testDB": "node ./Testing/DBTesting.js",
     "start": "node app.js"
   },
   "keywords": [
@@ -26,6 +26,7 @@
     "redis": "^4.0.4"
   },
   "devDependencies": {
-    "jest": "^27.5.1"
+    "jest": "^27.5.1",
+    "madge": "^5.0.1"
   }
 }
