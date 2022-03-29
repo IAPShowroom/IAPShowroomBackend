@@ -29,15 +29,15 @@ const studentSchema = userSchema.append({
 
 //TODO: review and make more accurate
 const eventSchema = Joi.object({
-    adminid: Joi.number().required(),
-    startTime: Joi.string().required(),
-    duration: Joi.string().required(),
+    adminid: Joi.number().required().prefs({ convert: false }),
+    starttime: Joi.string().required(),
+    duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
-    projectid: Joi.number().required(),
+    projectid: Joi.number().required().prefs({ convert: false }),
     e_date: Joi.string().required()
 });
 
-const eventListSchema = Joi.array().items(eventSchema);
+const eventListSchema = Joi.array().items(eventSchema); //TODO: test
 
 //TODO: review role values and add more switch cases
 function validateRegisterUser (req, callback) {
@@ -56,9 +56,9 @@ function validateRegisterUser (req, callback) {
     }
 }
 
-function validateEventList (req, callback) {
+function validateEventList (req, callback) { //TODO: test
     logCtx.fn = 'validateEventList';
-    if (req.body) {
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, eventListSchema, callback);
     } else {
         logError("Missing request body.", logCtx);
@@ -66,9 +66,10 @@ function validateEventList (req, callback) {
     }
 }
 
-function validateUpdateEvent (req, callback) { //TODO: teeesssst
+function validateUpdateEvent (req, callback) {
+    logCtx.fn = 'validateUpdateEvent';
     validateEventWithID(req, callback, (req, callback) => {
-        if (req.body != undefined) {
+        if (req.body != undefined && Object.keys(req.body).length != 0) {
             validateRequest(req, eventSchema, callback);
         } else {
             errorMsg = "Missing request body.";
@@ -78,26 +79,27 @@ function validateUpdateEvent (req, callback) { //TODO: teeesssst
     });
 }
 
-function validateDeleteEvent (req, callback) { //TODO: test
+function validateDeleteEvent (req, callback) {
     validateEventWithID(req, callback, null);
 }
 
-function validateEventWithID (req, callback, bodyCB) { //TODO: test please
+function validateEventWithID (req, callback, bodyCB) {
     //middle callback is to send an error if there are any invalid parameters
     //bodyCB is to further keep checking the request body, optional since delete event doesn't receive a body
     logCtx.fn = 'validateEventWithID';
     var errorMsg;
     if (req.params) {
-        if (req.params.eventID) {
-            try {
-                Joi.assert(req.query.eventID, Joi.number());
+        var eventID = req.params.eventID;
+        if (eventID) {
+            //Check if it's a number
+            if (!isNaN(parseInt(eventID, 10))) {
                 if (bodyCB) { //if a callback to validate request body is provided
-                    bodyCB(req.body); //call it
+                    bodyCB(req, callback); //call it
                 } else {
                     log("Request schema successfully validated.", logCtx);
                     callback(null);
                 }
-            } catch {
+            } else {
                 var errorMsg = "Invalid data type for path parameter.";
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg));
@@ -114,7 +116,7 @@ function validateEventWithID (req, callback, bodyCB) { //TODO: test please
     }
 }
 
-function validateGetEvents (req, callback) { //TODO: test failing the Joi.assert and try catch functionality
+function validateGetEvents (req, callback) {
     logCtx.fn = 'validateGetEvents';
     if (req.query) { 
         if (req.query.upcoming != undefined && req.query.upcoming != false) {
@@ -131,7 +133,7 @@ function validateGetEvents (req, callback) { //TODO: test failing the Joi.assert
                     callback(new Error(errorMsg));
                 }
             } else {
-                var errorMsg = "Missing time and date query parameters.";
+                var errorMsg = "Missing query parameters.";
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg));
             }

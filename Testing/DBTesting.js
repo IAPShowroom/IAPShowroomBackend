@@ -18,13 +18,16 @@ let logCtx = {
 // iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
-testGetEvents();
+// testGetEvents();
+testUpdateEvent();
+
 
 //test functions:
 
 function testCreateEvent() {
     logCtx.fn = 'testCreateEvent';
-    var eventList = [testData.exEvent];
+    var eventList = testData.exEventList;
+    // var eventList = [testData.exEvent];
     
     logTest("Start Test", logCtx);
     showroomDB.createEvents(eventList, (error, result) => {
@@ -37,11 +40,29 @@ function testCreateEvent() {
     });
 }
 
+function testUpdateEvent() {
+    logCtx.fn = 'testUpdateEvent';
+    var event = testData.exEventUpdateDate;
+    var eventID = 8;
+    
+    logTest("Start Test", logCtx);
+    showroomDB.updateEvent(eventID, event, (error, result) => {
+        if (error) logError(error, logCtx);
+        if (result) {
+            logTest("result: ", logCtx);
+            console.log(result);
+        }
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
 function testGetEvents() {
     logCtx.fn = 'testGetEvents';    
     logTest("Start Test", logCtx);
-    var upcoming = false;
-    var time = '10:00 PM';
+    // var upcoming = false;
+    var upcoming = true;
+    var time = '7:30 AM';
     var date = '04-25-22';
     showroomDB.getEvents( upcoming, time, date, (error, result) => {
         if (error) logError(error, logCtx);

@@ -47,18 +47,23 @@ function getScheduleEvents (req, res, next) {
         },
         function (callback) {
             //Fetch events from DB
-            var upcoming = req.query.upcoming == true;
+            var upcoming = req.query.upcoming == 'true';
             var time, date;
             if (upcoming) {
                 time = req.query.time;
                 date = req.query.date;
             }
-            showroomDB.getEvents(upcoming, time, date, (error, result) => { //TODO: test with postgres db
+            showroomDB.getEvents(upcoming, time, date, (error, result) => {
                 if (error) {
                     errorStatus = 500;
-                    errorMsg = error.toString;
+                    errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
+                } else if (result == undefined) {
+                    errorStatus = 404;
+                    errorMsg = "No events found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
                     callback(null, result);
@@ -93,10 +98,10 @@ function postScheduleEvents (req, res, next) {
         function (callback) {
             //Persist event list to DB
             var eventList = req.body;
-            showroomDB.createEvents(eventList, (error, result) => { //TODO: test with postgres db
+            showroomDB.createEvents(eventList, (error, result) => {
                 if (error) {
                     errorStatus = 500;
-                    errorMsg = error.toString;
+                    errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
@@ -110,7 +115,7 @@ function postScheduleEvents (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Successfully created events.", result); //TODO: verify what is being sent in result
+            successResponse(res, 201, "Successfully created events.", result);
         }
     });
 }
@@ -121,7 +126,7 @@ function updateScheduleEvent (req, res, next) {
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateUpdateEvent(req, (error) => { //TODO: test this bit
+            validator.validateUpdateEvent(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -134,10 +139,10 @@ function updateScheduleEvent (req, res, next) {
             //Persist updated event to DB
             var event = req.body; //JSON object of event to be updated
             var eventID = req.params.eventID;
-            showroomDB.updateEvent(eventID, event, (error, result) => { //TODO: test updateEvent
+            showroomDB.updateEvent(eventID, event, (error, result) => {
                 if (error) {
                     errorStatus = 500;
-                    errorMsg = error.toString;
+                    errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
@@ -151,7 +156,7 @@ function updateScheduleEvent (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Successfully updated event.", result); //TODO: verify what is being sent in result
+            successResponse(res, 201, "Successfully updated event.", result && result.length > 0 ? result : null);
         }
     });
 }
@@ -174,10 +179,10 @@ function deleteScheduleEvent (req, res, next) {
         function (callback) {
             //Take DB action
             var eventID = req.params.eventID;
-            showroomDB.deleteEvent(eventID, (error, result) => { //TODO: test deleteEvent
+            showroomDB.deleteEvent(eventID, (error, result) => { //TODO: test w/ updated db (isdeleted)
                 if (error) {
                     errorStatus = 500;
-                    errorMsg = error.toString;
+                    errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
@@ -191,7 +196,7 @@ function deleteScheduleEvent (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 200, "Successfully deleted event.", result); //TODO: verify what is being sent in result
+            successResponse(res, 200, "Successfully deleted event.", result && result.length > 0 ? result : null);
         }
     });
 }
