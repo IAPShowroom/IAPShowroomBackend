@@ -29,10 +29,10 @@ function registerUser (req, callback) { //TODO: check role and call respective f
     callback(null, { userID: 14 }); //testing sessions
 }
 
-//TODO: test with db
 function createEvents (eventList, callback) {
     logCtx.fn = 'createEvents';
-    var eventArrays = eventList.map(obj => Object.values(obj)); //get array of arrays [might have to create an array manually if properties in object don't translate in the order specified in the query]
+    var result;
+    var eventArrays = eventList.map(obj => Object.values(obj)); //get array of arrays
     //Insert each array into DB
     async.forEachLimit(eventArrays, MAX_ASYNC, (event, cb) => {
         if (event.length != EVENT_PROPERTIES) {
@@ -43,19 +43,18 @@ function createEvents (eventList, callback) {
             dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date) values ($1, $2, $3, $4, $5, $6)", event, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
-                    cb(error, null);
                 } else {
                     log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-                    var result = res.rows; //returns empty []
-                    cb(null, result);
+                    result = res.rows; //returns []
                 }
+                cb(error);
             });
         }
     }, (error) => {
         if (error) {
             callback(error, null);
         } else {
-            callback(null, "Successfully created the events.");
+            callback(null, result);
         }
     });
 }

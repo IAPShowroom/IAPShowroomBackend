@@ -2,7 +2,7 @@
  * Utility file containing helper functions aiding database and request operations.
  */
 
-const { log } = require('./Logger.js');
+const { log, logError } = require('./Logger.js');
 
 let logCtx = {
     fileName: 'DbUtils',

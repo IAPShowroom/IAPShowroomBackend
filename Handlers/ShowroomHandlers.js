@@ -75,7 +75,7 @@ function getScheduleEvents (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 200, "Successfully retrieved events.", result); //TODO: verify what is being sent in result
+            successResponse(res, 200, "Successfully retrieved events.", result);
         }
     });
 }
@@ -115,7 +115,7 @@ function postScheduleEvents (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Successfully created events.", result);
+            successResponse(res, 201, "Successfully created events.", result && result.length > 0 ? result : null);
         }
     });
 }

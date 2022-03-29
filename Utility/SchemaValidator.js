@@ -56,7 +56,7 @@ function validateRegisterUser (req, callback) {
     }
 }
 
-function validateEventList (req, callback) { //TODO: test
+function validateEventList (req, callback) {
     logCtx.fn = 'validateEventList';
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, eventListSchema, callback);
