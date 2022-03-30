@@ -26,7 +26,7 @@ const pool = new Pool({
     port: dbConfig.port,
 });
 
-function registerUser (req, callback) { //TODO: finish implementing and test
+function registerUser (req, callback) { //TODO: test
     logCtx.fn = 'registerUser';
     // var result = { userID: 14 }; //testing
     var result = {};
@@ -167,6 +167,107 @@ function registerCompanyRep (userID, body, callback) { //TODO: test
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function comparePasswords (email, plaintextPassword, callback) {
+    logCtx.fn = 'comparePasswords';
+    // var result = { userID: 14 admin: true}; //testing
+    var result = {};
+    async.waterfall([
+        function (callback) {
+            //Get hash from database (and retrieve user ID)
+            fetchHashAndUserID(email, (error, hash, userID) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    result.userID = userID; //Add user iD to result object
+                    callback(null, hash);
+                }
+            });
+        },
+        function (hash, callback) {
+            //Compare passwords
+            bcrypt.compare(plaintextPassword, hash, (error, valid) => {
+                if (error) {
+                    logError(error, logCtx); 
+                    callback(error);
+                } else {
+                    if (valid) {
+                        log("Successfully validated user credentials.", logCtx);
+                        callback(null);
+                    } else {
+                        var errorMsg = "Invalid email or password.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    }
+                }
+            });
+        },
+        function (callback) {
+            //Check if user is admin (and add to result along with user ID)
+            isUserAdmin(result.userID, (error, isAdmin) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    result.admin = isAdmin; //set as either true or false
+                    callback(null);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            callback(error, null);
+        } else {
+            callback(null, result)
+        }
+    });
+}
+
+function fetchHashAndUserID (email, callback) {
+    logCtx.fn = 'fetchHashAndUserID';
+    var query = "select userid, password from users where email = $1";
+    var values = [email];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "Invalid email or password."; //mention password even though we're checking email only to confuse hackers
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null, null);
+            } else {
+                var userID = res.rows[0];
+                var hash = res.rows[1];
+                callback(null, hash, userID); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function isUserAdmin (userID, callback) {
+    logCtx.fn = 'isUserAdmin';
+    var query = "select adminid from admins where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                callback(null, false);
+            } else {
+                callback(null, true); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function validateEmail (email, callback) { //TODO: test
     //Verify that email is not already being used
     logCtx.fn = 'validateEmail';
@@ -291,5 +392,6 @@ module.exports = {
     updateEvent: updateEvent,
     deleteEvent: deleteEvent,
     endPool: endPool,
-    validateEmail: validateEmail
+    validateEmail: validateEmail,
+    comparePasswords: comparePasswords
 }

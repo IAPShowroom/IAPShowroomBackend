@@ -84,11 +84,45 @@ function registerUser (req, res, next) {
 }
 
 function logIn (req, res, next) {
-    //get plaintext password
-    //get hash from db 
-    //compare
-    //get user id
-    //insert user id into session key
+    logCtx.fn = 'logIn';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateLogIn(req, (error) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Get hash from database and compare
+            var userEmail = req.body.email;
+            var userPassword = req.body.password;
+            showroomDB.comparePasswords(userEmail, userPassword, (error, result) => { //TODO: implement and test
+                if (error) {
+                    errorStatus = 400;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    //Insert session token with user ID in request objet
+                    req.session.key = result; //JSON object with user ID and admin role if applicable
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null);
+                }
+            });
+        }
+    ], (error) => {
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "User successfully logged in.");
+        }
+    });
 }
 
 function logOut (req, res, next) {
@@ -105,8 +139,8 @@ function authenticate (req, res, next) {
     logCtx.fn = 'authenticate';
     // console.log("before hang up"); //testing
     if (req.session.key) {
-        // console.log("req.session: "); //testing
-        // console.log(req.session); //testing
+        console.log("req.session: "); //testing
+        console.log(req.session); //testing
         next(); //Success
     } else {
         errorMsg = "User could not be authenticated. Please log in."
@@ -143,6 +177,7 @@ module.exports = {
     authenticate: authenticate,
     authorizeAdmin: authorizeAdmin,
     logOut: logOut,
+    logIn: logIn,
     checkSession: checkSession
 }
 

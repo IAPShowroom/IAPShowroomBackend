@@ -15,8 +15,8 @@ var verifyUser = '/verify';
 var changePassword = '/change-pass';
 
 authRouter.post(register, authHandler.registerUser);
-// authRouter.post(logIn, authHandler.logUserIn);
-// authRouter.post(logOut, authHandler.logOut);
+authRouter.post(logIn, authHandler.logIn);
+authRouter.post(logOut, authHandler.logOut);
 // authRouter.post(inPersonTracking, authHandler.trackInPerson);
 // authRouter.post(verifyUser, authHandler.verifyUserFromEmail);
 

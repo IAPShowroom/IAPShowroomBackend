@@ -11,6 +11,11 @@ let logCtx = {
     fn: ''
 }
 
+const logInSchema = Joi.object({
+    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net']}}).required(),
+    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9]{3,30}$'))
+});
+
 //TODO: review and make more accurate (missing properties in total: dept, grad date, project id, is pm, company name)
 const userSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net']}}).required(),
@@ -168,6 +173,16 @@ function validateGetEvents (req, callback) {
     }
 }
 
+function validateLogIn (req, callback) {
+    logCtx.fn = 'validateLogIn';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, logInSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -189,5 +204,6 @@ module.exports = {
     validateEventList: validateEventList,
     validateGetEvents: validateGetEvents,
     validateUpdateEvent: validateUpdateEvent,
-    validateDeleteEvent: validateDeleteEvent
+    validateDeleteEvent: validateDeleteEvent,
+    validateLogIn: validateLogIn
 }
