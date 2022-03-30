@@ -10,8 +10,9 @@ const authHandler = require('../Handlers/AuthHandlers.js');
 var register = '/register';
 var logIn = '/login';
 var logOut = '/logout';
-var inPersonTracking = '/inperson';
+var inPersonTracking = '/in-person';
 var verifyUser = '/verify';
+var changePassword = '/change-pass';
 
 authRouter.post(register, authHandler.registerUser);
 // authRouter.post(logIn, authHandler.logUserIn);

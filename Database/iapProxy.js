@@ -38,6 +38,29 @@ function fetchProjects(sessionID, callback) {
     });
 }
 
+function validateEmail (email, callback) { //TODO: test
+    //Verify that email is registered in IAP 
+    logCtx.fn = 'validateEmail';
+    var query = "select user_id from users where email = $1";
+    var values = [email];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "Email is not registered in IAP's system.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg));
+            } else {
+                callback(null); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function endPool() {
     logCtx.fn = 'endPool';
     //Close the connection pool when server closes
@@ -47,7 +70,8 @@ function endPool() {
 
 module.exports = {
     fetchProjects: fetchProjects,
-    endPool: endPool
+    endPool: endPool,
+    validateEmail: validateEmail
 }
 
 /**

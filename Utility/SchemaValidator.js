@@ -21,10 +21,23 @@ const userSchema = Joi.object({
     role: Joi.string().alphanum().min(1).max(30).required()
 });
 
-//TODO: review and add missing
+//TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    //add student speciic properties
-    graduation_date: Joi.date().required()
+    projectID: Joi.number().required().prefs({ convert: false }),
+    department: Joi.string().alphanum().min(1).max(30).required(),
+    gradDate: Joi.date().required(),
+    isPM: Joi.boolean().required(),
+    validatedMember: Joi.boolean().required()
+});
+
+//TODO: review and make more accurate?
+const advisorSchema = userSchema.append({
+    projectIDs: Joi.string().alphanum().required()
+});
+
+//TODO: review and make more accurate?
+const companyRepSchema = userSchema.append({
+    companyName: Joi.string().alphanum().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate
@@ -37,17 +50,23 @@ const eventSchema = Joi.object({
     e_date: Joi.string().required()
 });
 
-const eventListSchema = Joi.array().items(eventSchema); //TODO: test
+const eventListSchema = Joi.array().items(eventSchema);
 
-//TODO: review role values and add more switch cases
+//TODO: test
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
     if (req.body && req.body.role != undefined) {
-        switch (role) {
+        switch (req.body.role) {
             case 'student_researcher':
                 validateRequest(req, studentSchema, callback);
                 break;
-            default:
+            case 'advisor':
+                validateRequest(req, advisorSchema, callback);
+                break;
+            case 'company_representative':
+                validateRequest(req, companyRepSchema, callback);
+                break;
+            default: //general guest
                 validateRequest(req, userSchema, callback);
         }
     } else {

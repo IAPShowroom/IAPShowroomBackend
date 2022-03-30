@@ -14,39 +14,51 @@ let logCtx = {
     fn: ''
 }
 
-function registerUser (req, res, next) { //Nota: don't focus on implementing first, primero trata sessions
+function registerUser (req, res, next) {
     logCtx.fn = 'registerUser';
     var errorStatus, errorMsg;
     async.waterfall([
-        // function (callback) {
-        //     //Validate request payload
-        //     validator.validateRegisterUser(req, (error) => {
-        //         if (error) {
-        //             logError(error, logCtx);
-        //             errorStatus = 400;
-        //             errorMsg = error.message;
-        //         }
-        //         callback(error);
-        //     });
-        // },
-        // function (callback) {
-        //     //Check email against IAP
-        //     var userEmail = req.body.email;
-        //     iapDB.validateEmail(userEmail, (error) => { //TODO: implement
-        //         if (error) {
-        //             errorStatus = 400;
-        //             errorMsg = error.toString();
-        //             logError(error, logCtx);
-        //         }
-        //         callback(error);
-        //     });
-        // },
+        function (callback) {
+            //Validate request payload
+            validator.validateRegisterUser(req, (error) => { //TODO: finish implementing
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Check email against IAP
+            var userEmail = req.body.email;
+            iapDB.validateEmail(userEmail, (error) => { //TODO: implement
+                if (error) {
+                    errorStatus = 400;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Check email is not already in use
+            var userEmail = req.body.email;
+            showroomDB.validateEmail(userEmail, (error) => { //TODO: implement
+                if (error) {
+                    errorStatus = 400;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                }
+                callback(error);
+            });
+        },
         function (callback) {
             //Persist user data based on role
             showroomDB.registerUser(req, (error, result) => { //TODO: implement
                 if (error) {
                     errorStatus = 500;
-                    errorMsg = error.toString;
+                    errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
@@ -58,6 +70,8 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
         },
         function (result, callback) {
             //Send verification email //TODO: implement
+            //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
+            //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
             callback(null);
         }
     ], (error) => {
@@ -67,6 +81,14 @@ function registerUser (req, res, next) { //Nota: don't focus on implementing fir
             successResponse(res, 201, "User registered. Please check email for verification."); //TODO: llega el 201 Created pero no llega el mensaje? se queda tiempo loading it
         }
     });
+}
+
+function logIn (req, res, next) {
+    //get plaintext password
+    //get hash from db 
+    //compare
+    //get user id
+    //insert user id into session key
 }
 
 function logOut (req, res, next) {
@@ -81,7 +103,10 @@ function logOut (req, res, next) {
 
 function authenticate (req, res, next) {
     logCtx.fn = 'authenticate';
+    // console.log("before hang up"); //testing
     if (req.session.key) {
+        // console.log("req.session: "); //testing
+        // console.log(req.session); //testing
         next(); //Success
     } else {
         errorMsg = "User could not be authenticated. Please log in."
