@@ -11,8 +11,8 @@ const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 
 //BigBlueButton API variables
-const BBB_SECRET = env.BBB_SECRET || '';
-const MOD_PASSWORD = env.MOD_PASSWORD || '';
+const BBB_SECRET = env.BBB_SECRET || 'testbbbsecret';
+const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
 
 //Endpoint parts
 const BBB_HOST = 'iapstream.ece.uprm.edu';
@@ -31,23 +31,19 @@ const corsOptions = {
 
 //Database variables
 const showroomDBConfig = {
-    db: {
-        host: env.SHOWROOM_DB_HOST || 'test_db_host',
-        port: env.SHOWROOM_DB_PORT || '5432',
-        user: env.SHOWROOM_DB_USER || 'test_db_user',
-        password: env.SHOWROOM_DB_PASSWORD || 'test_db_password',
-        database: env.SHOWROOM_DB_NAME || 'test_db_name'
-    }
+    host: env.SHOWROOM_DB_HOST || 'test_db_host',
+    port: env.SHOWROOM_DB_PORT || '5432',
+    user: env.SHOWROOM_DB_USER || 'test_db_user',
+    password: env.SHOWROOM_DB_PASSWORD || 'test_db_password',
+    database: env.SHOWROOM_DB_NAME || 'test_db_name'
 }
 
 const iapDBConfig = {
-    db: {
-        host: env.IAP_DB_HOST || 'test_db_host',
-        port: env.IAP_DB_PORT || '5432',
-        user: env.IAP_DB_USER || 'test_db_user',
-        password: env.IAP_DB_PASSWORD || 'test_db_password',
-        database: env.IAP_DB_NAME || 'test_db_name'
-    }
+    host: env.IAP_DB_HOST || 'test_db_host',
+    port: env.IAP_DB_PORT || '5432',
+    user: env.IAP_DB_USER || 'test_db_user',
+    password: env.IAP_DB_PASSWORD || 'test_db_password',
+    database: env.IAP_DB_NAME || 'test_db_name'
 }
 
 const session_secret = env.SESSION_SECRET || 'testsessionsecret';
