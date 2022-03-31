@@ -20,7 +20,7 @@ function registerUser (req, res, next) {
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateRegisterUser(req, (error) => { //TODO: finish implementing
+            validator.validateRegisterUser(req, (error) => { //TODO: test
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -32,7 +32,7 @@ function registerUser (req, res, next) {
         function (callback) {
             //Check email against IAP
             var userEmail = req.body.email;
-            iapDB.validateEmail(userEmail, (error) => { //TODO: implement
+            iapDB.validateEmail(userEmail, (error) => { //TODO: test
                 if (error) {
                     errorStatus = 400;
                     errorMsg = error.toString();
@@ -44,7 +44,7 @@ function registerUser (req, res, next) {
         function (callback) {
             //Check email is not already in use
             var userEmail = req.body.email;
-            showroomDB.validateEmail(userEmail, (error) => { //TODO: implement
+            showroomDB.validateEmail(userEmail, (error) => { //TODO: test
                 if (error) {
                     errorStatus = 400;
                     errorMsg = error.toString();
@@ -55,14 +55,14 @@ function registerUser (req, res, next) {
         },
         function (callback) {
             //Persist user data based on role
-            showroomDB.registerUser(req, (error, result) => { //TODO: implement
+            showroomDB.registerUser(req, (error, result) => { //TODO: test
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    req.session.key = result; //Store result object with user ID in session.key
+                    req.session.data = result; //Store result object with user ID in session.key
                     log("Response data: " + JSON.stringify(result), logCtx);
                     callback(null, result);
                 }
@@ -83,7 +83,7 @@ function registerUser (req, res, next) {
     });
 }
 
-function logIn (req, res, next) {
+function logIn (req, res, next) { //TODO: test
     logCtx.fn = 'logIn';
     var errorStatus, errorMsg;
     async.waterfall([
@@ -102,7 +102,7 @@ function logIn (req, res, next) {
             //Get hash from database and compare
             var userEmail = req.body.email;
             var userPassword = req.body.password;
-            showroomDB.comparePasswords(userEmail, userPassword, (error, result) => { //TODO: implement and test
+            showroomDB.comparePasswords(userEmail, userPassword, (error, result) => { //TODO: test
                 if (error) {
                     errorStatus = 400;
                     errorMsg = error.toString();
@@ -110,7 +110,7 @@ function logIn (req, res, next) {
                     callback(error);
                 } else {
                     //Insert session token with user ID in request objet
-                    req.session.key = result; //JSON object with user ID and admin role if applicable
+                    req.session.data = result; //JSON object with user ID and admin role if applicable
                     log("Response data: " + JSON.stringify(result), logCtx);
                     callback(null);
                 }
@@ -126,7 +126,7 @@ function logIn (req, res, next) {
 }
 
 function logOut (req, res, next) {
-    if (req.session.key) {
+    if (req.session.data) {
         req.session.destroy(() => { //TODO: review functionality of destroy
             successResponse(res, 200, "Successfully logged user out.");
         }); 
@@ -138,7 +138,7 @@ function logOut (req, res, next) {
 function authenticate (req, res, next) {
     logCtx.fn = 'authenticate';
     // console.log("before hang up"); //testing
-    if (req.session.key) {
+    if (req.session.data) {
         console.log("req.session: "); //testing
         console.log(req.session); //testing
         next(); //Success
@@ -147,12 +147,13 @@ function authenticate (req, res, next) {
         logError(errorMsg, logCtx);
         errorResponse(res, 401, errorMsg);
     }
+    // next(); //testing
 }
 
 function authorizeAdmin (req, res, next) {
     logCtx.fn = 'authorizeAdmin';
     authenticate(req, res, () => {
-        if (req.session.key["role"] == "admin") { //Check if user has admin role
+        if (req.session.data["admin"] == true) { //Check if user has admin role
             next(); //Success
         } else {
             errorMsg = "User does not have enough privileges."

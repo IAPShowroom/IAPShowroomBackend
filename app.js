@@ -27,9 +27,10 @@ const app = express();
 const port = config.PORT;
 
 //Set up Redis
-const redisClient = redis.createClient();
+const redisClient = redis.createClient({ legacyMode: true });
 redisClient.connect().catch(console.error);
 redisClient.on("error", console.error);
+const store = new redisStore({ host: '127.0.0.1', port: 6379, client: redisClient, ttl: 260 });
 
 //Log incoming requests
 app.use(logRequest);
@@ -40,9 +41,10 @@ app.use(bodyParser.json());
 app.use(cors(config.corsOptions));
 app.use(session({ //TODO: review session config settings
   secret: config.session_secret,
-  store: new redisStore({ host: '127.0.0.1', port: 6379, client: redisClient, ttl: 260 }),
+  store: store,
   saveUninitialized: false,
-  resave: false
+  resave: false,
+  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false} //TODO: make sure cookies are being set in prod
 }));
 app.use(auth.checkSession);
 
@@ -72,21 +74,25 @@ var server = app.listen(port, () => {
 process.on('SIGINT', () => {
   log("Gracefully shutting server down.", logCtx);
   closeDbConnections(() => {
-    server.close(() => process.exit(1)); //stop listening and exit process
+    logCtx.fn = '';
+    store.clear(() => {  //Clear all sessions
+      log("Cleared sessions.", logCtx);
+      server.close(() => { //Stop listening
+        log("Bye, bye.", logCtx);
+        process.exit(1); //Exit the process
+      });
+    });
   });
 });
 
 function closeDbConnections(cb) {
   logCtx.fn = 'closeDbConnections';
-  log("Closing connection with IAP DB.", logCtx);
   iapDB.endPool()
   .then(result => {
     log("Safely closed IAP DB connection pool.", logCtx);
-    log("Closing connection with Showroom DB.", logCtx);
     showroomDB.endPool();})
   .then(result => {
     log("Safely closed IAP DB connection pool.", logCtx);
-    log("Bye, bye.", logCtx);
     cb();}) //call the callback to exit server
   .catch(reason => logError(reason, logCtx));
 }

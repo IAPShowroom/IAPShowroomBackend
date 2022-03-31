@@ -3,6 +3,34 @@
  */
 
 //Test data:
+
+const adminUser = {
+    first_name: 'TestUser',
+    last_name: 'TestUserini',
+    email: 'test123@gmail.com',
+    password: 'testpassword',
+    gender: 'male',
+    user_role: 'test_role'
+}
+
+const normalUser = {
+    first_name: 'TestUserNoAdmin',
+    last_name: 'TestUserini',
+    email: 'test567@gmail.com',
+    password: 'testpassword',
+    gender: 'male',
+    user_role: 'test_role'
+}
+
+const notInDBUser = {
+    first_name: 'TestUserNotInDB',
+    last_name: 'TestUserini',
+    email: 'notindbtest567@gmail.com',
+    password: 'testpasswordz',
+    gender: 'male',
+    user_role: 'test_role'
+}
+
 const exEvent = {
     adminid: 1,
     startTime: '11:00 AM',
@@ -56,5 +84,8 @@ module.exports = {
     exEvent3: exEvent3,
     exEvent4: exEvent4,
     exEventList: exEventList,
-    exEventUpdateDate: exEventUpdateDate
+    exEventUpdateDate: exEventUpdateDate,
+    adminUser: adminUser,
+    normalUser: normalUser,
+    notInDBUser: notInDBUser
 }

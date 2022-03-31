@@ -30,6 +30,7 @@ function registerUser (req, callback) { //TODO: test
     logCtx.fn = 'registerUser';
     // var result = { userID: 14 }; //testing
     var result = {};
+    var saltRounds = 10;
     async.waterfall([
         function (callback) {
             //Hash password
@@ -62,6 +63,8 @@ function registerUser (req, callback) { //TODO: test
                 case 'company_representative':
                     registerCompanyRep(userID, req.body, callback);
                     break;
+                default:
+                    callback(null, null);
             }
         }
     ], (error, result) => {
@@ -187,6 +190,7 @@ function comparePasswords (email, plaintextPassword, callback) {
         function (hash, callback) {
             //Compare passwords
             bcrypt.compare(plaintextPassword, hash, (error, valid) => {
+                logCtx.fn = 'bcrypt.compare';
                 if (error) {
                     logError(error, logCtx); 
                     callback(error);
@@ -214,7 +218,7 @@ function comparePasswords (email, plaintextPassword, callback) {
                 }
             });
         }
-    ], (error, result) => {
+    ], (error) => {
         //Send responses
         if (error) {
             callback(error, null);
@@ -239,8 +243,8 @@ function fetchHashAndUserID (email, callback) {
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg), null, null);
             } else {
-                var userID = res.rows[0];
-                var hash = res.rows[1];
+                let userID = res.rows[0].userid;
+                let hash = res.rows[0].password;
                 callback(null, hash, userID); //Success
             }
         }

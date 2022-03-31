@@ -8,6 +8,7 @@ const PORT = env.PORT || 8080;
 const ENVIRONMENT = env.ENVIRONMENT || 'dev'; //set NODE_ENV to 'production' with the OS's init system for better performance 
 const prod = ENVIRONMENT == 'prod';
 const logDebug = env.LOG_DEBUG == 'true';
+const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 
 //BigBlueButton API variables
 const BBB_SECRET = env.BBB_SECRET || '';
@@ -67,5 +68,6 @@ module.exports = {
     MOD_PASSWORD: MOD_PASSWORD,
     prod: prod,
     logDebug: logDebug,
-    corsOptions: corsOptions
+    corsOptions: corsOptions,
+    SESSION_MAX_AGE: SESSION_MAX_AGE
 };

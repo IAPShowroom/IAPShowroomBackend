@@ -19,10 +19,51 @@ let logCtx = {
 // testEventArrayMapping();
 // testCreateEvent();
 // testGetEvents();
-testUpdateEvent();
+// testUpdateEvent();
+// testRegisterUser();
+testComparePassword();
 
 
 //test functions:
+
+function testComparePassword() {
+    logCtx.fn = 'testComparePassword';
+    logTest("Start test", logCtx);
+    var emailAdmin = testData.normalUser.email;
+    var passAdmin = testData.notInDBUser.password;
+    showroomDB.comparePasswords(emailAdmin, passAdmin, (error, result) => {
+        if (error) logError(error, logCtx);
+        if (result) {
+            logTest("result: ", logCtx);
+            console.log(result);
+        }
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testRegisterUser() { 
+    logCtx.fn = 'testRegisterUser';
+    logTest("Start test", logCtx);
+    var req = { body: {} };
+
+    req.body.first_name = testData.normalUser.first_name;
+    req.body.last_name = testData.normalUser.last_name;
+    req.body.email = testData.normalUser.email;
+    req.body.password = testData.normalUser.password;
+    req.body.gender = testData.normalUser.gender;
+    req.body.user_role = testData.normalUser.user_role;
+
+    showroomDB.registerUser(req, (error, result) => {
+        if (error) logError(error, logCtx);
+        if (result) {
+            logTest("result: ", logCtx);
+            console.log(result);
+        }
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testCreateEvent() {
     logCtx.fn = 'testCreateEvent';
@@ -35,6 +76,7 @@ function testCreateEvent() {
         if (result) {
             logTest("result: ", logCtx);
             console.log(result);
+            showroomDB.endPool();
         }
         logTest("End test", logCtx);
     });
