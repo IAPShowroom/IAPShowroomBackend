@@ -28,14 +28,13 @@ const pool = new Pool({
 
 function registerUser (req, callback) { //TODO: test
     logCtx.fn = 'registerUser';
-    // var result = { userID: 14 }; //testing
     var result = {};
     var saltRounds = 10;
     async.waterfall([
         function (callback) {
             //Hash password
             var plainText = req.body.password;
-            bcrypt.hash(plainText, saltRounds, (error, hash) => { //TODO: test
+            bcrypt.hash(plainText, saltRounds, (error, hash) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error, null);
@@ -114,13 +113,13 @@ function registerGeneralUser (hash, body, callback) { //TODO: test
 
 function registerStudent (userID, body, callback) { //TODO: test
     logCtx.fn = 'registerStudent';
-    var projectID = body.projectid;
+    var projectIDs = body.projectids;
     var department = body.department;
     var gradDate = body.grad_date;
     var isPM = body.ispm;
-    var validatedmember = body.validatedmember; //como funciona este parametro?
+    var validatedmember = body.validatedmember;
     var query = "insert into student_researchers (userid, team_project, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5, $6)";
-    var values = [userID, projectID, department, gradDate, isPM, validatedmember];
+    var values = [userID, null, department, gradDate, isPM, validatedmember]; //team_project is not used
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
