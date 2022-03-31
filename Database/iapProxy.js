@@ -13,9 +13,6 @@ let logCtx = {
     fn: ''
 }
 
-// console.log("dbconfig: ", dbConfig); //testing
-
-//having problems connecting with environment variables
 const pool = new Pool({
     user: dbConfig.user,
     host: dbConfig.host,
@@ -73,9 +70,3 @@ module.exports = {
     endPool: endPool,
     validateEmail: validateEmail
 }
-
-/**
- * Development Notes:
- * 
- * - en el query podemos poner un sql to try to use the SP in the db
- */

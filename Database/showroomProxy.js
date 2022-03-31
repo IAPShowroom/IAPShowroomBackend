@@ -28,14 +28,13 @@ const pool = new Pool({
 
 function registerUser (req, callback) { //TODO: test
     logCtx.fn = 'registerUser';
-    // var result = { userID: 14 }; //testing
     var result = {};
     var saltRounds = 10;
     async.waterfall([
         function (callback) {
             //Hash password
             var plainText = req.body.password;
-            bcrypt.hash(plainText, saltRounds, (error, hash) => { //TODO: test
+            bcrypt.hash(plainText, saltRounds, (error, hash) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error, null);
@@ -136,7 +135,7 @@ function registerStudent (userID, body, callback) { //TODO: test
 
 function registerAdvisor (userID, body, callback) { //TODO: test
     logCtx.fn = 'registerAdvisor';
-    var projectIDs = body.projectid; //is this a list of project ids? (and hence also text?)
+    var projectIDs = body.projectid;
     var query = "insert into advisors (userid, team_project) values ($1, $2)";
     var values = [userID, projectIDs];
     var queryCb = (error, res) => { 
@@ -172,7 +171,6 @@ function registerCompanyRep (userID, body, callback) { //TODO: test
 
 function comparePasswords (email, plaintextPassword, callback) {
     logCtx.fn = 'comparePasswords';
-    // var result = { userID: 14 admin: true}; //testing
     var result = {};
     async.waterfall([
         function (callback) {
@@ -347,7 +345,6 @@ function getEvents(upcoming, time, date, callback) {
     }
 }
 
-//TODO: should we add logic to roll over other events' startTimes if it changes?
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
     var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
