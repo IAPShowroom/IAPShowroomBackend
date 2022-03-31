@@ -338,8 +338,12 @@ function getEvents(upcoming, time, date, callback) {
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = upcoming ? res.rows[0] : res.rows; //returns events
-            callback(null, result);
+            if (res.rowCount == 0) {
+                callback(null, null); //No events found, send null result to provoke 404 error
+            } else {
+                var result = upcoming ? res.rows[0] : res.rows; //returns events
+                callback(null, result);
+            }
         }
     };
     if (upcoming) {
@@ -349,7 +353,6 @@ function getEvents(upcoming, time, date, callback) {
     }
 }
 
-//TODO: should we add logic to roll over other events' startTimes if it changes?
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
     var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";

@@ -25,7 +25,6 @@ module.exports = authRouter;
 /**
  * Developer Notes:
  * 
- * - Not sure if we should add an endpoint to change password
+ * - add an endpoint to change password
  * - add endpoint for isVerified?
- * - maybe implement something para que cuando se vaya a cerrar express clearee los sessions? or maybe on start up?
  */

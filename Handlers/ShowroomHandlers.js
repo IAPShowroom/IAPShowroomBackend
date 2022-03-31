@@ -59,7 +59,7 @@ function getScheduleEvents (req, res, next) {
                     errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
-                } else if (result == undefined) {
+                } else if (result == undefined || result == null) {
                     errorStatus = 404;
                     errorMsg = "No events found.";
                     logError(error, logCtx);

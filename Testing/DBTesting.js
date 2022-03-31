@@ -18,10 +18,10 @@ let logCtx = {
 // iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
-// testGetEvents();
+testGetEvents();
 // testUpdateEvent();
 // testRegisterUser();
-testComparePassword();
+// testComparePassword();
 
 
 //test functions:

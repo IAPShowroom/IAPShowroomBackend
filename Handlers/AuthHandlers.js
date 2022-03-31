@@ -83,13 +83,13 @@ function registerUser (req, res, next) {
     });
 }
 
-function logIn (req, res, next) { //TODO: test
+function logIn (req, res, next) {
     logCtx.fn = 'logIn';
     var errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateLogIn(req, (error) => { //TODO: test
+            validator.validateLogIn(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -127,7 +127,7 @@ function logIn (req, res, next) { //TODO: test
 
 function logOut (req, res, next) {
     if (req.session.data) {
-        req.session.destroy(() => { //TODO: review functionality of destroy
+        req.session.destroy(() => {
             successResponse(res, 200, "Successfully logged user out.");
         }); 
     } else {
@@ -137,17 +137,13 @@ function logOut (req, res, next) {
 
 function authenticate (req, res, next) {
     logCtx.fn = 'authenticate';
-    // console.log("before hang up"); //testing
     if (req.session.data) {
-        console.log("req.session: "); //testing
-        console.log(req.session); //testing
         next(); //Success
     } else {
         errorMsg = "User could not be authenticated. Please log in."
         logError(errorMsg, logCtx);
         errorResponse(res, 401, errorMsg);
     }
-    // next(); //testing
 }
 
 function authorizeAdmin (req, res, next) {
