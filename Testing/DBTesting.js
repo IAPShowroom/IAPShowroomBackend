@@ -18,13 +18,68 @@ let logCtx = {
 // iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
-testGetEvents();
+// testGetEvents();
 // testUpdateEvent();
 // testRegisterUser();
 // testComparePassword();
+// testIAPValidateEmail();
+// testShowroomValidateEmail();
+// testRegisterGeneralUser();
+testAssociateProjectsWithUser();
 
 
 //test functions:
+
+function testAssociateProjectsWithUser () {
+    logCtx.fn = 'testAssociateProjectsWithUser';
+    logTest("Start test", logCtx);
+    var userID = 1;
+    var projectIDList = [1, 2];
+    var emptyList = [];
+    showroomDB.associateProjectsWithUser(userID, projectIDList, (error) => {
+        if (error) {
+            logError(error, logCtx);
+        } else {
+            logTest("No errors, check DB :)", logCtx);
+        }
+        iapDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testShowroomValidateEmail() {
+    logCtx.fn = 'testShowroomValidateEmail';
+    logTest("Start test", logCtx);
+    var email = "jorge.vega6@upr.edu"; //is in showroom
+    // var email = "wiliel.florenciani@upr.edu"; //is not in showroom
+    showroomDB.validateEmail(email, (error) => {
+        if (error) {
+            logError(error, logCtx);
+            logTest("Email is already in use", logCtx);
+        } else {
+            logTest("Email can be used to register", logCtx);
+        }
+        iapDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testIAPValidateEmail() {
+    logCtx.fn = 'testIAPValidateEmail';
+    logTest("Start test", logCtx);
+    // var email = "jorge.vega6@upr.edu"; //is in IAP
+    var email = "wiliel.florenciani@upr.edu"; //is not in IAP
+    iapDB.validateEmail(email, (error) => {
+        if (error) {
+            logError(error, logCtx);
+            logTest("Email is not in IAP", logCtx);
+        } else {
+            logTest("Email is in IAP", logCtx);
+        }
+        iapDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testComparePassword() {
     logCtx.fn = 'testComparePassword';
@@ -55,6 +110,30 @@ function testRegisterUser() {
     req.body.user_role = testData.normalUser.user_role;
 
     showroomDB.registerUser(req, (error, result) => {
+        if (error) logError(error, logCtx);
+        if (result) {
+            logTest("result: ", logCtx);
+            console.log(result);
+        }
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testRegisterGeneralUser() { 
+    logCtx.fn = 'testRegisterUser';
+    logTest("Start test", logCtx);
+    var body = {};
+    var hash = "fakehash";
+
+    body.first_name = testData.normalUser.first_name;
+    body.last_name = testData.normalUser.last_name;
+    body.email = testData.normalUser.email;
+    body.password = testData.normalUser.password;
+    body.gender = testData.normalUser.gender;
+    body.user_role = testData.normalUser.user_role;
+
+    showroomDB.registerGeneralUser(hash, body, (error, result) => {
         if (error) logError(error, logCtx);
         if (result) {
             logTest("result: ", logCtx);

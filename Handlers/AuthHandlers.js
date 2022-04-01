@@ -20,7 +20,7 @@ function registerUser (req, res, next) {
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateRegisterUser(req, (error) => { //TODO: test
+            validator.validateRegisterUser(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -29,22 +29,22 @@ function registerUser (req, res, next) {
                 callback(error);
             });
         },
-        function (callback) {
-            //Check email against IAP
-            var userEmail = req.body.email;
-            iapDB.validateEmail(userEmail, (error) => { //TODO: test
-                if (error) {
-                    errorStatus = 400;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                }
-                callback(error);
-            });
-        },
+        // function (callback) { //Commented while testing since test emails are not in IAP
+        //     //Check email against IAP
+        //     var userEmail = req.body.email;
+        //     iapDB.validateEmail(userEmail, (error) => {
+        //         if (error) {
+        //             errorStatus = 400;
+        //             errorMsg = error.toString();
+        //             logError(error, logCtx);
+        //         }
+        //         callback(error);
+        //     });
+        // },
         function (callback) {
             //Check email is not already in use
             var userEmail = req.body.email;
-            showroomDB.validateEmail(userEmail, (error) => { //TODO: test
+            showroomDB.validateEmail(userEmail, (error) => {
                 if (error) {
                     errorStatus = 400;
                     errorMsg = error.toString();
@@ -68,17 +68,17 @@ function registerUser (req, res, next) {
                 }
             });
         },
-        function (result, callback) {
-            //Send verification email //TODO: implement
-            //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
-            //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
-            callback(null);
-        }
+        // function (result, callback) {
+        //     //Send verification email //TODO: implement
+        //     //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
+        //     //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
+        //     callback(null);
+        // }
     ], (error) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "User registered. Please check email for verification."); //TODO: llega el 201 Created pero no llega el mensaje? se queda tiempo loading it
+            successResponse(res, 201, "User registered. Please check email for verification.");
         }
     });
 }
@@ -102,7 +102,7 @@ function logIn (req, res, next) {
             //Get hash from database and compare
             var userEmail = req.body.email;
             var userPassword = req.body.password;
-            showroomDB.comparePasswords(userEmail, userPassword, (error, result) => { //TODO: test
+            showroomDB.comparePasswords(userEmail, userPassword, (error, result) => {
                 if (error) {
                     errorStatus = 400;
                     errorMsg = error.toString();

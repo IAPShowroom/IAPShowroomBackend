@@ -54,22 +54,22 @@ function registerUser (req, callback) { //TODO: test
             //Add user ID to result
             result.userID = userID;
             //Check role and persist role specific info
-            var role = req.body.role;
+            var role = req.body.user_role;
             switch (role) {
-                case 'student_researcher':
+                case config.userRoles.studentResearcher:
                     registerStudent(userID, req.body, callback);
                     break;
-                case 'advisor':
+                case config.userRoles.advisor:
                     registerAdvisor(userID, req.body, callback);
                     break;
-                case 'company_representative':
+                case config.userRoles.companyRep:
                     registerCompanyRep(userID, req.body, callback);
                     break;
                 default:
-                    callback(null, null);
+                    callback(null);
             }
         }
-    ], (error, result) => {
+    ], (error) => {
         //Send responses
         if (error) {
             callback(error, null);
@@ -79,7 +79,7 @@ function registerUser (req, callback) { //TODO: test
     });
 }
 
-function registerGeneralUser (hash, body, callback) { //TODO: test
+function registerGeneralUser (hash, body, callback) {
     logCtx.fn = 'registerGeneralUser';
     var firstName = body.first_name;
     var lastName = body.last_name;
@@ -95,16 +95,14 @@ function registerGeneralUser (hash, body, callback) { //TODO: test
             logError(error, logCtx);
             callback(error, null);
         } else {
-            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            let result = res.rows.length > 0 ? res.rows : null;
-            
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);            
             //Retrieve user ID
             dbUtils.makeQueryWithParams(pool, "select userid from users where email = $1", [email], callback, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    var userID = res.rows[0];
+                    var userID = res.rows[0].userid;
                     log("Retrieved user ID.", logCtx);
                     callback(null, userID);
                 }
@@ -114,47 +112,45 @@ function registerGeneralUser (hash, body, callback) { //TODO: test
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function registerStudent (userID, body, callback) { //TODO: test
+function registerStudent (userID, body, callback) {
     logCtx.fn = 'registerStudent';
-    var projectIDs = body.projectids;
+    var projectIDList = body.projectids; //array of project ids for this student
     var department = body.department;
     var gradDate = body.grad_date;
     var isPM = body.ispm;
     var validatedmember = body.validatedmember;
-    var query = "insert into student_researchers (userid, team_project, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5, $6)";
-    var values = [userID, null, department, gradDate, isPM, validatedmember]; //team_project is not used
+    var query = "insert into student_researchers (userid, team_project, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5, $6)"; //TODO: remove team_project when it is reflected in DB
+    var values = [userID, null, department, gradDate, isPM, validatedmember]; //TODO: remove team_project when it is reflected in DB
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
-            callback(error, null);
+            callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows.length > 0 ? res.rows : null;
-            callback(null, result);
+            associateProjectsWithUser(userID, projectIDList, callback);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function registerAdvisor (userID, body, callback) { //TODO: test
+function registerAdvisor (userID, body, callback) {
     logCtx.fn = 'registerAdvisor';
-    var projectIDs = body.projectid; //is this a list of project ids? (and hence also text?)
-    var query = "insert into advisors (userid, team_project) values ($1, $2)";
-    var values = [userID, projectIDs];
-    var queryCb = (error, res) => { 
+    var projectIDList = body.projectids;
+    var query = "insert into advisors (userid, team_project) values ($1, $2)"; //TODO: remove team_project once it's updated in DB
+    var values = [userID, null]; //TODO: remove team_project once it's updated in DB
+    var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
-            callback(error, null);
+            callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows.length > 0 ? res.rows : null;
-            callback(null, result);
+            associateProjectsWithUser(userID, projectIDList, callback);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function registerCompanyRep (userID, body, callback) { //TODO: test
+function registerCompanyRep (userID, body, callback) {
     logCtx.fn = 'registerCompanyRep';
     var companyName = body.company_name;
     var query = "insert into company_representatives (userid, company_name) values ($1, $2)";
@@ -162,14 +158,37 @@ function registerCompanyRep (userID, body, callback) { //TODO: test
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
-            callback(error, null);
+            callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows.length > 0 ? res.rows : null;
-            callback(null, result);
+            callback(null);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function associateProjectsWithUser (userID, projectIDList, callback) {
+    logCtx.fn = 'associateProjectsWithUser';
+    if (projectIDList.length == 0) {
+        let errorMsg = "Empty project list.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    } else {
+        //Insert each project ID into DB
+        async.forEachLimit(projectIDList, MAX_ASYNC, (projectID, cb) => {
+            var values = [userID, projectID];
+            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid) values ($1, $2)", values, cb, (error, res) => {
+                if (error) {
+                    logError(error, logCtx);
+                } else {
+                    log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+                }
+                cb(error);
+            });
+        }, (error) => {
+            callback(error); //null if no error
+        });
+    }
 }
 
 function comparePasswords (email, plaintextPassword, callback) {
@@ -402,5 +421,7 @@ module.exports = {
     deleteEvent: deleteEvent,
     endPool: endPool,
     validateEmail: validateEmail,
-    comparePasswords: comparePasswords
+    comparePasswords: comparePasswords,
+    registerGeneralUser: registerGeneralUser,
+    associateProjectsWithUser: associateProjectsWithUser
 }

@@ -10,6 +10,12 @@ const prod = ENVIRONMENT == 'prod';
 const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 
+const userRoles = {
+    studentResearcher: 'student_researcher',
+    companyRep: 'company_representative',
+    advisor: 'advisor'
+}
+
 //BigBlueButton API variables
 const BBB_SECRET = env.BBB_SECRET || 'testbbbsecret';
 const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
@@ -65,5 +71,6 @@ module.exports = {
     prod: prod,
     logDebug: logDebug,
     corsOptions: corsOptions,
-    SESSION_MAX_AGE: SESSION_MAX_AGE
+    SESSION_MAX_AGE: SESSION_MAX_AGE,
+    userRoles: userRoles
 };

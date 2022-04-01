@@ -5,6 +5,7 @@
 
 const Joi = require('joi');
 const { logError, log } = require('./Logger');
+const config = require('../Config/config');
 
 let logCtx = {
     fileName: 'SchemaValidator',
@@ -16,33 +17,33 @@ const logInSchema = Joi.object({
     password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
 });
 
-//TODO: review and make more accurate (missing properties in total: dept, grad date, project id, is pm, company name)
+//TODO: review and make more accurate
 const userSchema = Joi.object({
-    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net']}}).required(),
+    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
     password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
-    firstName: Joi.string().alphanum().min(1).max(30).required(),
-    lastName: Joi.ref('firstName'),
+    first_name: Joi.string().alphanum().min(1).max(30).required(),
+    last_name: Joi.string().alphanum().min(1).max(30).required(),
     gender: Joi.string().alphanum().min(1).max(10).required(),
-    role: Joi.string().alphanum().min(1).max(30).required()
+    user_role: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectID: Joi.number().required().prefs({ convert: false }),
+    projectids: Joi.array().items(Joi.number()).required(),
     department: Joi.string().alphanum().min(1).max(30).required(),
-    gradDate: Joi.date().required(),
-    isPM: Joi.boolean().required(),
-    validatedMember: Joi.boolean().required()
+    grad_date: Joi.date().required(),
+    ispm: Joi.boolean().required(),
+    validatedmember: Joi.boolean().required()
 });
 
 //TODO: review and make more accurate?
 const advisorSchema = userSchema.append({
-    projectIDs: Joi.string().alphanum().required()
+    projectids: Joi.array().items(Joi.number()).required()
 });
 
 //TODO: review and make more accurate?
 const companyRepSchema = userSchema.append({
-    companyName: Joi.string().alphanum().min(1).max(30).required()
+    company_name: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate
@@ -60,15 +61,15 @@ const eventListSchema = Joi.array().items(eventSchema);
 //TODO: test
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
-    if (req.body && req.body.role != undefined) {
-        switch (req.body.role) {
-            case 'student_researcher':
+    if (req.body && req.body.user_role != undefined) {
+        switch (req.body.user_role) {
+            case config.userRoles.studentResearcher:
                 validateRequest(req, studentSchema, callback);
                 break;
-            case 'advisor':
+            case config.userRoles.advisor:
                 validateRequest(req, advisorSchema, callback);
                 break;
-            case 'company_representative':
+            case config.userRoles.companyRep:
                 validateRequest(req, companyRepSchema, callback);
                 break;
             default: //general guest
