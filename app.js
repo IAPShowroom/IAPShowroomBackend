@@ -44,7 +44,7 @@ app.use(session({ //TODO: review session config settings
   store: store,
   saveUninitialized: false,
   resave: false,
-  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false} //TODO: make sure cookies are being set in prod
+  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false, httpOnly: config.prod ? true : false} //TODO: make sure cookies are being set in prod
 }));
 app.use(auth.checkSession);
 
@@ -71,7 +71,7 @@ var server = app.listen(port, () => {
 });
 
 //Properly close the server 
-process.on('SIGINT', () => {
+process.on('SIGINT', () => { //TODO: add handler for SIGTERM and other fatal events
   log("Gracefully shutting server down.", logCtx);
   closeDbConnections(() => {
     logCtx.fn = '';
