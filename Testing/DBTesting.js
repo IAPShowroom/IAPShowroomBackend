@@ -25,10 +25,27 @@ let logCtx = {
 // testIAPValidateEmail();
 // testShowroomValidateEmail();
 // testRegisterGeneralUser();
-testAssociateProjectsWithUser();
+testGetRoleAndName();
 
 
 //test functions:
+
+function testGetRoleAndName () {
+    logCtx.fn = 'testGetRoleAndName';
+    logTest("Start test", logCtx);
+    // var userID = 1; //student researcher two projects
+    // var userID = 19; //student researcher one project
+    var userID = 13; //general user no projects
+    showroomDB.getRoleAndName(userID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        iapDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testAssociateProjectsWithUser () {
     logCtx.fn = 'testAssociateProjectsWithUser';
