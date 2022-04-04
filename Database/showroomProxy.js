@@ -193,7 +193,6 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
 
 function comparePasswords (email, plaintextPassword, callback) {
     logCtx.fn = 'comparePasswords';
-    // var result = { userID: 14 admin: true}; //testing
     var result = {};
     async.waterfall([
         function (callback) {
@@ -393,6 +392,30 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function getUserInfo (userID, callback) {
+    logCtx.fn = 'getUserInfo';
+    var query = "select first_name, last_name, email, user_role, gender, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No users found, send null result to provoke 404 error
+            } else {
+                var result = {};
+                Object.keys(res.rows[0]).forEach( key => {
+                    //Only fill result obj with necessary properties
+                    if (res.rows[0][key] != null) result[`${key}`] = res.rows[0][key];
+                });
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
     var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
@@ -478,5 +501,6 @@ module.exports = {
     registerGeneralUser: registerGeneralUser,
     associateProjectsWithUser: associateProjectsWithUser,
     getRoleAndName: getRoleAndName,
-    getEventByID: getEventByID
+    getEventByID: getEventByID,
+    getUserInfo: getUserInfo
 }
