@@ -26,6 +26,10 @@ function getQnARoomInfo (req, res, next) {
     
 }
 
+function getIAPSessions (req, res, next) {
+
+}
+
 function postAnnouncements (req, res, next) {
     
 }
@@ -225,5 +229,6 @@ module.exports = {
     getScheduleEvents: getScheduleEvents,
     postScheduleEvents: postScheduleEvents,
     updateScheduleEvent: updateScheduleEvent,
-    deleteScheduleEvent: deleteScheduleEvent
+    deleteScheduleEvent: deleteScheduleEvent,
+    getIAPSessions: getIAPSessions
 }
