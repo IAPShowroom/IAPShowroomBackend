@@ -51,7 +51,7 @@ app.use(auth.checkSession);
 //Bind the main module routes to their respective routers
 app.use(config.auth_prefix, authRouter); //add req.sessions here??
 app.use(config.showroom_prefix, showroomRouter);
-app.use(config.bbb_prefix, streamingRouter);
+app.use(config.stream_prefix, streamingRouter);
 
 //health check for testing
 app.get('/test', (req, res) => {

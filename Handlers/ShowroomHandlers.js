@@ -26,6 +26,18 @@ function getQnARoomInfo (req, res, next) {
     
 }
 
+function getIAPSessions (req, res, next) {
+    logCtx.fn = "getIAPSessions";
+    iapDB.getSessions( (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+            errorResponse(res, 500, error.toString());
+        }
+        log("Response data: " + JSON.stringify(result), logCtx);
+        successResponse(res, 200, "Successfully retrieved sessions", result);
+    });
+}
+
 function postAnnouncements (req, res, next) {
     
 }
@@ -76,6 +88,51 @@ function getScheduleEvents (req, res, next) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 200, "Successfully retrieved events.", result);
+        }
+    });
+}
+
+function getScheduleEventByID (req, res, nect) {
+    logCtx.fn = 'getScheduleEventByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateGetEventByID(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch event from DB
+            var eventID = req.params.eventID;
+            showroomDB.getEventByID(eventID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No event found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved event.", result);
         }
     });
 }
@@ -167,7 +224,7 @@ function deleteScheduleEvent (req, res, next) {
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateDeleteEvent(req, (error) => { //TODO: test this bit
+            validator.validateDeleteEvent(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -179,7 +236,7 @@ function deleteScheduleEvent (req, res, next) {
         function (callback) {
             //Take DB action
             var eventID = req.params.eventID;
-            showroomDB.deleteEvent(eventID, (error, result) => { //TODO: test w/ updated db (isdeleted)
+            showroomDB.deleteEvent(eventID, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -225,5 +282,7 @@ module.exports = {
     getScheduleEvents: getScheduleEvents,
     postScheduleEvents: postScheduleEvents,
     updateScheduleEvent: updateScheduleEvent,
-    deleteScheduleEvent: deleteScheduleEvent
+    deleteScheduleEvent: deleteScheduleEvent,
+    getIAPSessions: getIAPSessions,
+    getScheduleEventByID: getScheduleEventByID
 }

@@ -56,9 +56,17 @@ const eventSchema = Joi.object({
     e_date: Joi.string().required()
 });
 
+const createRoomSchema = Joi.object({
+    meeting_name: Joi.string().required(),
+    projectid: Joi.number().required()
+});
+
+const joinRoomSchema = Joi.object({
+    meeting_id: Joi.number().required()
+});
+
 const eventListSchema = Joi.array().items(eventSchema);
 
-//TODO: test
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
     if (req.body && req.body.user_role != undefined) {
@@ -105,6 +113,10 @@ function validateUpdateEvent (req, callback) {
 }
 
 function validateDeleteEvent (req, callback) {
+    validateEventWithID(req, callback, null);
+}
+
+function validateGetEventByID (req, callback) {
     validateEventWithID(req, callback, null);
 }
 
@@ -184,6 +196,36 @@ function validateLogIn (req, callback) {
     }
 }
 
+function validateCreateRoom (req, callback) {
+    logCtx.fn = 'validateCreateRoom';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, createRoomSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateJoinRoom (req, callback) {
+    logCtx.fn = 'validateJoinRoom';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateEndRoom (req, callback) {
+    logCtx.fn = 'validateEndRoom';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -206,5 +248,9 @@ module.exports = {
     validateGetEvents: validateGetEvents,
     validateUpdateEvent: validateUpdateEvent,
     validateDeleteEvent: validateDeleteEvent,
-    validateLogIn: validateLogIn
+    validateLogIn: validateLogIn,
+    validateCreateRoom: validateCreateRoom,
+    validateJoinRoom: validateJoinRoom,
+    validateEndRoom: validateEndRoom,
+    validateGetEventByID: validateGetEventByID
 }

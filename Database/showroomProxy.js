@@ -119,8 +119,8 @@ function registerStudent (userID, body, callback) {
     var gradDate = body.grad_date;
     var isPM = body.ispm;
     var validatedmember = body.validatedmember;
-    var query = "insert into student_researchers (userid, team_project, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5, $6)"; //TODO: remove team_project when it is reflected in DB
-    var values = [userID, null, department, gradDate, isPM, validatedmember]; //TODO: remove team_project when it is reflected in DB
+    var query = "insert into student_researchers (userid, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5)";
+    var values = [userID, department, gradDate, isPM, validatedmember];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -136,8 +136,8 @@ function registerStudent (userID, body, callback) {
 function registerAdvisor (userID, body, callback) {
     logCtx.fn = 'registerAdvisor';
     var projectIDList = body.projectids;
-    var query = "insert into advisors (userid, team_project) values ($1, $2)"; //TODO: remove team_project once it's updated in DB
-    var values = [userID, null]; //TODO: remove team_project once it's updated in DB
+    var query = "insert into advisors (userid) values ($1)";
+    var values = [userID];
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -328,7 +328,8 @@ function createEvents (eventList, callback) {
             logError(errorMsg, logCtx);
             cb(new Error(errorMsg));
         } else {
-            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date) values ($1, $2, $3, $4, $5, $6)", event, cb, (error, res) => {
+            event.push("false"); //add value for isdeleted
+            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date, isdeleted) values ($1, $2, $3, $4, $5, $6, $7)", event, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -349,8 +350,8 @@ function createEvents (eventList, callback) {
 
 function getEvents(upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
-    var getAll = "select * from iap_events";
-    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2";
+    var getAll = "select * from iap_events where isdeleted = false";
+    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false";
     var query = upcoming ? getUpcoming : getAll;
     var queryCb = (error, res) => { 
         if (error) {
@@ -373,6 +374,26 @@ function getEvents(upcoming, time, date, callback) {
     }
 }
 
+function getEventByID (eventID, callback) {
+    logCtx.fn = 'getEventByID';
+    var query = "select * from iap_events where eventid = $1 and isdeleted = false"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No events found, send null result to provoke 404 error
+            } else {
+                var result = res.rows[0]; //returns event
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
+}
+
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
     var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
@@ -390,7 +411,6 @@ function updateEvent (eventID, event, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-//TODO: test w/ DB
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
     var query = "update iap_events set isdeleted=true where eventid = $1"; 
@@ -400,11 +420,44 @@ function deleteEvent (eventID, callback) {
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows;
-            callback(null, result);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete event.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
+}
+
+function getRoleAndName (userID, callback) {
+    logCtx.fn = 'getRoleAndName';
+    var query = "select users.user_role, users.first_name, users.last_name, p.projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = {};
+            var onlyOne = res.rows.length == 1;
+            result.role = res.rows[0].user_role;
+            result.first_name = res.rows[0].first_name;
+            result.last_name = res.rows[0].last_name;
+            if (onlyOne) {
+                //If single project ID, place inside array, else keep as null
+                result.projectIDs = (res.rows[0].projectid != null) ? [res.rows[0].projectid] : null;        
+            } else {
+                //Flatten array of objects to array of project ids
+                result.projectIDs = res.rows.map( row => row.projectid );
+            }
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
 function endPool() {
@@ -424,5 +477,7 @@ module.exports = {
     validateEmail: validateEmail,
     comparePasswords: comparePasswords,
     registerGeneralUser: registerGeneralUser,
-    associateProjectsWithUser: associateProjectsWithUser
+    associateProjectsWithUser: associateProjectsWithUser,
+    getRoleAndName: getRoleAndName,
+    getEventByID: getEventByID
 }

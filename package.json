@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "testDB": "node ./Testing/DBTesting.js",
+    "testBBB": "node ./Testing/BBBTesting.js",
     "start": "node app.js"
   },
   "keywords": [

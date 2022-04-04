@@ -38,6 +38,20 @@ function fetchProjects(sessionID, callback) {
     });
 }
 
+function getSessions(callback) {
+    logCtx.fn = 'getSessions';
+    dbUtils.makeQuery(pool, "select year_id as session_id, start_date, end_date from iap_session", callback, (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns array of json objects with session_id, start_date and end_date
+            callback(null, result);
+        }
+    });
+}
+
 function validateEmail (email, callback) { //TODO: test
     //Verify that email is registered in IAP 
     logCtx.fn = 'validateEmail';
@@ -71,11 +85,12 @@ function endPool() {
 module.exports = {
     fetchProjects: fetchProjects,
     endPool: endPool,
-    validateEmail: validateEmail
+    validateEmail: validateEmail,
+    getSessions: getSessions
 }
 
 /**
  * Development Notes:
  * 
  * - en el query podemos poner un sql to try to use the SP in the db
- */
+*/
