@@ -27,7 +27,15 @@ function getQnARoomInfo (req, res, next) {
 }
 
 function getIAPSessions (req, res, next) {
-
+    logCtx.fn = "getIAPSessions";
+    iapDB.getSessions( (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+            errorResponse(res, 500, error.toString());
+        }
+        log("Response data: " + JSON.stringify(result), logCtx);
+        successResponse(res, 200, "Successfully retrieved sessions", result);
+    });
 }
 
 function postAnnouncements (req, res, next) {
