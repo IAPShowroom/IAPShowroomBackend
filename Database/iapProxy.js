@@ -13,9 +13,6 @@ let logCtx = {
     fn: ''
 }
 
-// console.log("dbconfig: ", dbConfig); //testing
-
-//having problems connecting with environment variables
 const pool = new Pool({
     user: dbConfig.user,
     host: dbConfig.host,
@@ -26,7 +23,7 @@ const pool = new Pool({
 
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    dbUtils.makeQueryWithParams(pool, "select project_id, title from projects where session_id = $1", [sessionID], callback, (error, res) => {
+    dbUtils.makeQueryWithParams(pool, "select project_id, session_id, title, abstract from projects where session_id = $1", [sessionID], callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
