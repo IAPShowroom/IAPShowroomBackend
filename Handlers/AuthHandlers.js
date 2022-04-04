@@ -185,7 +185,7 @@ function authorizeAdmin (req, res, next) {
         if (req.session.data["admin"] == true) { //Check if user has admin role
             next(); //Success
         } else {
-            errorMsg = "User does not have enough privileges."
+            errorMsg = "User does not have enough privileges.";
             logError(errorMsg, logCtx);
             errorResponse(res, 403, errorMsg);
         }
