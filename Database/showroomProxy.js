@@ -228,6 +228,7 @@ function comparePasswords (email, plaintextPassword, callback) {
         },
         function (callback) {
             //Check if user is admin (and add to result along with user ID)
+            //Login should also check for other roles 
             isUserAdmin(result.userID, (error, isAdmin) => { //TODO: test
                 if (error) {
                     logError(error, logCtx);

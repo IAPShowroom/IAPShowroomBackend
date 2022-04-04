@@ -49,7 +49,7 @@ app.use(session({ //TODO: review session config settings
 app.use(auth.checkSession);
 
 //Bind the main module routes to their respective routers
-app.use(config.auth_prefix, authRouter);
+app.use(config.auth_prefix, authRouter); //add req.sessions here??
 app.use(config.showroom_prefix, showroomRouter);
 app.use(config.stream_prefix, streamingRouter);
 

@@ -31,8 +31,9 @@ const bbb_prefix = '/bigbluebutton/api';
 
 //CORS configuration options
 const corsOptions = {
-    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : '*',
-    optionsSuccessStatus: 200
+    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : 'http://localhost:3000',
+    optionsSuccessStatus: 200,
+    credentials: true
 }
 
 //Database variables
