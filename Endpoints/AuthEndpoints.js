@@ -18,10 +18,10 @@ var changePassword = '/change-pass';
 authRouter.post(register, authHandler.registerUser);
 authRouter.post(logIn, authHandler.logIn);
 authRouter.post(logOut, authHandler.logOut);
-authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); //TODO: implement and test
-authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
-authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
-authRouter.post(changePassword, authHandler.authenticate, authHandler.changePassword); //TODO: implement and test
+// authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); //TODO: implement and test
+// authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
+// authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
+// authRouter.post(changePassword, authHandler.authenticate, authHandler.changePassword); //TODO: implement and test
 
 module.exports = authRouter;
 

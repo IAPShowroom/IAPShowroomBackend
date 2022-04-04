@@ -327,7 +327,8 @@ function createEvents (eventList, callback) {
             logError(errorMsg, logCtx);
             cb(new Error(errorMsg));
         } else {
-            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date) values ($1, $2, $3, $4, $5, $6)", event, cb, (error, res) => {
+            event.push("false"); //add value for isdeleted
+            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date, isdeleted) values ($1, $2, $3, $4, $5, $6, $7)", event, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -346,12 +347,11 @@ function createEvents (eventList, callback) {
     });
 }
 
-//TODO: test with delete update
 function getEvents(upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
-    var getAll = "select * from iap_events";
-    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2";
-    var query = (upcoming ? getUpcoming : getAll) + " and isdeleted = false"; //TODO: test
+    var getAll = "select * from iap_events where isdeleted = false";
+    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false";
+    var query = upcoming ? getUpcoming : getAll;
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -373,6 +373,26 @@ function getEvents(upcoming, time, date, callback) {
     }
 }
 
+function getEventByID (eventID, callback) {
+    logCtx.fn = 'getEventByID';
+    var query = "select * from iap_events where eventid = $1 and isdeleted = false"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No events found, send null result to provoke 404 error
+            } else {
+                var result = res.rows[0]; //returns event
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
+}
+
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
     var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
@@ -390,7 +410,6 @@ function updateEvent (eventID, event, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-//TODO: test w/ DB
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
     var query = "update iap_events set isdeleted=true where eventid = $1"; 
@@ -400,8 +419,14 @@ function deleteEvent (eventID, callback) {
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows;
-            callback(null, result);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete event.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
@@ -452,5 +477,6 @@ module.exports = {
     comparePasswords: comparePasswords,
     registerGeneralUser: registerGeneralUser,
     associateProjectsWithUser: associateProjectsWithUser,
-    getRoleAndName: getRoleAndName
+    getRoleAndName: getRoleAndName,
+    getEventByID: getEventByID
 }

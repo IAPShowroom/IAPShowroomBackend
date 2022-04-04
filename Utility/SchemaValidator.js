@@ -116,6 +116,10 @@ function validateDeleteEvent (req, callback) {
     validateEventWithID(req, callback, null);
 }
 
+function validateGetEventByID (req, callback) {
+    validateEventWithID(req, callback, null);
+}
+
 function validateEventWithID (req, callback, bodyCB) {
     //middle callback is to send an error if there are any invalid parameters
     //bodyCB is to further keep checking the request body, optional since delete event doesn't receive a body
@@ -247,5 +251,6 @@ module.exports = {
     validateLogIn: validateLogIn,
     validateCreateRoom: validateCreateRoom,
     validateJoinRoom: validateJoinRoom,
-    validateEndRoom: validateEndRoom
+    validateEndRoom: validateEndRoom,
+    validateGetEventByID: validateGetEventByID
 }
