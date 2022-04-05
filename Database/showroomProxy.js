@@ -350,7 +350,7 @@ function createEvents (eventList, callback) {
 function getEvents(upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false";
-    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false";
+    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false";
     var query = upcoming ? getUpcoming : getAll;
     var queryCb = (error, res) => { 
         if (error) {
@@ -361,7 +361,13 @@ function getEvents(upcoming, time, date, callback) {
             if (res.rowCount == 0) {
                 callback(null, null); //No events found, send null result to provoke 404 error
             } else {
-                var result = upcoming ? res.rows[0] : res.rows; //returns events
+                if (upcoming) {
+                    //Sennd current event and next upcoming
+                    result = res.rows[1] ? [res.rows[0], res.rows[1]] : [res.rows[0]];
+                } else {
+                    //Send all events
+                    result = res.rows;
+                }
                 callback(null, result);
             }
         }
