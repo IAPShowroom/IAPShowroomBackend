@@ -22,7 +22,7 @@ const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
 
 //Endpoint parts
 const BBB_HOST = 'iapstream.ece.uprm.edu';
-const SHOWROOM_HOST = 'iapshowroon.ece.uprm.edu';
+const SHOWROOM_HOST = 'iapshowroom.ece.uprm.edu';
 
 const showroom_prefix = '/showroom';
 const stream_prefix = '/meet';
@@ -31,7 +31,7 @@ const bbb_prefix = '/bigbluebutton/api';
 
 //CORS configuration options
 const corsOptions = {
-    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : 'http://localhost:3000',
+    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : ['http://localhost:3000','http://localhost:3001'],
     optionsSuccessStatus: 200,
     credentials: true
 }
