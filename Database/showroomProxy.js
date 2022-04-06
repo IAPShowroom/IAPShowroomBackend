@@ -489,6 +489,40 @@ function getRoleAndName (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
+function postMeetHistory (userID, meetingID, callback) { //TODO: test with db updates
+    logCtx.fn = 'postMeetHistory';
+    var query = "insert into meethistory (eventid, userid, title, jointime) values ($1, $2, $3, $4)"; //TODO: update with meetingid and no title
+    var values = [meetingID, userID, null, new Date(Date.now()).toISOString()]; //TODO: current time seems to be in different time zone? it's 4 hours ahead
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function postToShowroomProjects (iapProjects, callback) { //TODO: test 
+    logCtx.fn = 'postToShowroomProjects';
+    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4) returning projectid, iapproject_title";
+    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows[0]; //returns {projectid: '#', iapproject_title: 'abc'}
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function endPool() {
     logCtx.fn = 'endPool';
     //Close the connection pool when server closes
@@ -509,5 +543,7 @@ module.exports = {
     associateProjectsWithUser: associateProjectsWithUser,
     getRoleAndName: getRoleAndName,
     getEventByID: getEventByID,
-    getUserInfo: getUserInfo
+    getUserInfo: getUserInfo,
+    postMeetHistory: postMeetHistory,
+    postToShowroomProjects: postToShowroomProjects
 }

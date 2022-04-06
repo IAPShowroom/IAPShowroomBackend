@@ -65,6 +65,10 @@ const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
 });
 
+const sessionIDSchema = Joi.object({
+    session_id: Joi.number().required()
+});
+
 const eventListSchema = Joi.array().items(eventSchema);
 
 function validateRegisterUser (req, callback) {
@@ -226,6 +230,34 @@ function validateEndRoom (req, callback) {
     }
 }
 
+function validatePostMeetHistory (req, callback) {
+    logCtx.fn = 'validatePostMeetHistory';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateGetIAPProjects (req, callback) { //TODO: test
+    logCtx.fn = 'validateGetIAPProjects';
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        const { error, value } = sessionIDSchema.validate(req.params);
+        if (error) { //return comma separated errors
+            logError("Schema validation error for request payload.", logCtx);
+            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+        } else {
+            log("Request schema successfully validated.", logCtx);
+            callback(null);
+        }
+    } else {
+        var errorMsg = "Missing request query parameters.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -252,5 +284,7 @@ module.exports = {
     validateCreateRoom: validateCreateRoom,
     validateJoinRoom: validateJoinRoom,
     validateEndRoom: validateEndRoom,
-    validateGetEventByID: validateGetEventByID
+    validateGetEventByID: validateGetEventByID,
+    validatePostMeetHistory: validatePostMeetHistory,
+    validateGetIAPProjects: validateGetIAPProjects
 }

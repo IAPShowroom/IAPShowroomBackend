@@ -29,7 +29,7 @@ function fetchProjects(sessionID, callback) {
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows; //returns array of json objects with project_id and title 
+            var result = res.rows; //returns array of json objects
             callback(null, result);
         }
     });

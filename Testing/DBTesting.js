@@ -25,7 +25,8 @@ let logCtx = {
 // testIAPValidateEmail();
 // testShowroomValidateEmail();
 // testRegisterGeneralUser();
-testGetRoleAndName();
+// testGetRoleAndName();
+// testPostMeetHistory();
 
 
 //test functions:
@@ -43,6 +44,23 @@ function testGetRoleAndName () {
         logTest(" result: ", logCtx);
         console.log(result);
         iapDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testPostMeetHistory () {
+    logCtx.fn = 'testPostMeetHistory';
+    logTest("Start test", logCtx);
+    var meetingID = '47';
+    var userID = '1';
+    showroomDB.postMeetHistory(userID, meetingID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        } else {
+            logTest("result", logCtx);
+            console.log(result);
+        }
+        showroomDB.endPool();
         logTest("End test", logCtx);
     });
 }
@@ -228,7 +246,9 @@ function iapProjectsTest () {
         if (error) {
             logError(error, logCtx);
         }
-        logTest("Returned data: " + data, logCtx);
+        logTest("Returned data: ", logCtx);
+        console.log(data);
+        iapDB.endPool();
         logTest("Test ended", logCtx);
     });
 }

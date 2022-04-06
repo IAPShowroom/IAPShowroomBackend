@@ -150,8 +150,45 @@ function endRoom (req, res, next) { //TODO: test produced url w/ BBB
     });
 }
 
-function postMeetHistory (req, res, next) {
-
+function postMeetHistory (req, res, next) { //TODO: test with new db updates
+    logCtx.fn = 'postMeetHistory';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validatePostMeetHistory(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+            var meetingID = req.body.meeting_id;
+            var userID = req.session.data["userID"];
+            showroomDB.postMeetHistory(userID, meetingID, (error, result) => { //TODO test w/ db updates
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully recorded meeting history.", result && result.length > 0 ? result : null);
+        }
+    });
 }
 
 function generateChecksum (callName, queryString) {
@@ -203,5 +240,6 @@ module.exports = {
     joinRoom: joinRoom,
     endRoom: endRoom,
     postMeetHistory: postMeetHistory,
-    generateChecksum: generateChecksum
+    generateChecksum: generateChecksum,
+    postMeetHistory: postMeetHistory
 }

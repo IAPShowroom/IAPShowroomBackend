@@ -258,20 +258,80 @@ function deleteScheduleEvent (req, res, next) {
     });
 }
 
-function getProjects (req, res, next) {
+function getProjects (req, res, next) { //TODO: post data to our own projects table
     logCtx.fn = "getProjects";
-    var session_id = req.query.session_id;
-    iapDB.fetchProjects(session_id, (error, result) => {
+    var sessionID, errorStatus, errorMsg;
+    var skip; //Used as flag to skip retrieving projects and persisting to Showroom projects table
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateGetIAPProjects(req, (error) => { //TODO: implement
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Check if there are projects for the given session already in DB
+            sessionID = req.query.session_id;
+            //*wait - solo try to retrieve the thing as you want it y si no hay pues call to refill
+            showroomDB.checkIAPProjects(sessionID, (error, result) => { //TODO: implement and test
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data for checkIAPProjects: " + JSON.stringify(result), logCtx); //Result should be either true or false
+                    skip = result; //If true, projects for given session have already been loaded
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            //Fetch projects from IAP
+            iapDB.fetchProjects(session_id, (error, iapProjects) => { //result is array of objs with project info
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(iapProjects), logCtx);
+                    callback(null, iapProjects);
+                }
+            });
+        },
+        function (iapProjects, callback) {
+            //Save project info from IAP in our own database
+            showroomDB.postToShowroomProjects(iapProjects, (error, result) => { //TODO: implement and test
+                if (error) {
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });        }
+    ], (error, result) => {
+        //Send responses
         if (error) {
-            logError(error, logCtx);
-            errorResponse(res, 500, error.toString());
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            var successMsg;
+            if (skip) {
+                successMsg = "Projects"
+            }
+            successResponse(res, 200, "Successfully retrieved projects.", result && result.length > 0 ? result : null);
         }
-        log("Response data: " + JSON.stringify(result), logCtx);
-        successResponse(res, 200, "Successfully retrieved projects", result);
     });
 }
 
-
+function getShowroomProjects(sessionID, )
 
 module.exports = {
     getProjects: getProjects,
