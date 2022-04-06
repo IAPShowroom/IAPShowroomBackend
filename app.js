@@ -71,7 +71,12 @@ var server = app.listen(port, () => {
 });
 
 //Properly close the server 
-process.on('SIGINT', () => { //TODO: add handler for SIGTERM and other fatal events
+process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
+process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
+process.on('SIGTERM', () => { handleKillServer() }); 
+
+function handleKillServer() {
+  logCtx.fn = 'handleKillServer'
   log("Gracefully shutting server down.", logCtx);
   closeDbConnections(() => {
     logCtx.fn = '';
@@ -83,7 +88,7 @@ process.on('SIGINT', () => { //TODO: add handler for SIGTERM and other fatal eve
       });
     });
   });
-});
+}
 
 function closeDbConnections(cb) {
   logCtx.fn = 'closeDbConnections';
