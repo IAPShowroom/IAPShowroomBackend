@@ -508,7 +508,7 @@ function postMeetHistory (userID, meetingID, callback) { //TODO: test with db up
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function postToShowroomProjects (iapProjects, callback) { //TODO: test 
+function postToShowroomProjects (iapProjects, callback) {
     logCtx.fn = 'postToShowroomProjects';
     var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4) returning projectid, iapproject_title";
     var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
@@ -523,6 +523,20 @@ function postToShowroomProjects (iapProjects, callback) { //TODO: test
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchProjects(sessionID, callback) { //TODO: test
+    logCtx.fn = 'fetchProjects';
+    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns array of json objects
+            callback(null, result);
+        }
+    });
 }
 
 function endPool() {
@@ -547,5 +561,6 @@ module.exports = {
     getEventByID: getEventByID,
     getUserInfo: getUserInfo,
     postMeetHistory: postMeetHistory,
-    postToShowroomProjects: postToShowroomProjects
+    postToShowroomProjects: postToShowroomProjects,
+    fetchProjects: fetchProjects
 }

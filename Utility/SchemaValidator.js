@@ -242,8 +242,8 @@ function validatePostMeetHistory (req, callback) {
 
 function validateGetIAPProjects (req, callback) { //TODO: test
     logCtx.fn = 'validateGetIAPProjects';
-    if (req.params != undefined && Object.keys(req.params).length != 0) {
-        const { error, value } = sessionIDSchema.validate(req.params);
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        const { error, value } = sessionIDSchema.validate(req.query);
         if (error) { //return comma separated errors
             logError("Schema validation error for request payload.", logCtx);
             callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
