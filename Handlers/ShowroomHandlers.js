@@ -14,6 +14,8 @@ let logCtx = {
     fn: ''
 }
 
+let SSE = {}; //Object to expose sendEvent
+
 function getStats (req, res, next) {
 
 }
@@ -38,8 +40,69 @@ function getIAPSessions (req, res, next) {
     });
 }
 
-function postAnnouncements (req, res, next) {
-    
+function sseConnect (req, res, next) {
+    //This endpoint is used to establish a connection for Server Sent Events
+    logCtx.fn = 'sseConnect';
+    res.writeHead(200, {
+        "Cache-Control": "no-cache",
+        "Content-type": "text/event-stream",
+        "Connection": "keep-alive"
+    });
+
+    //Define function to send events
+    SSE.sendEvent = (data) => {
+        log("Sending event with data: " + data, logCtx);
+        res.write(data + "\n\n");
+    };
+
+    //End response when due
+    res.on('close', () => {
+        log("Ending the SSE request.", logCtx);
+        res.end();
+    });
+}
+
+function postAnnouncements (req, res, next) { //TODO: test
+    logCtx.fn = 'postAnnouncements';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validatePostAnnouncement(req, (error) => { //TODO test
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch events from DB
+            var adminID = req.session.data.admin;
+            var message = req.body.message;
+            var date = req.body.date;
+            showroomDB.postAnnouncements(adminID, message, date, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    // SSE.sendEvent(message); //TODO test
+                    callback(null);
+                }
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully posted announcement.");
+        }
+    });
 }
 
 function getScheduleEvents (req, res, next) {
@@ -284,5 +347,6 @@ module.exports = {
     updateScheduleEvent: updateScheduleEvent,
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
-    getScheduleEventByID: getScheduleEventByID
+    getScheduleEventByID: getScheduleEventByID,
+    sseConnect: sseConnect
 }

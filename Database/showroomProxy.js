@@ -229,12 +229,13 @@ function comparePasswords (email, plaintextPassword, callback) {
         function (callback) {
             //Check if user is admin (and add to result along with user ID)
             //Login should also check for other roles 
-            isUserAdmin(result.userID, (error, isAdmin) => { //TODO: test
+            isUserAdmin(result.userID, (error, adminID) => { //TODO: test
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
-                    result.admin = isAdmin; //set as either true or false
+                    // result.admin = isAdmin; //set as either true or false //TODO delete
+                    result.admin = adminID; //If it's null, not admin
                     callback(null);
                 }
             });
@@ -284,9 +285,11 @@ function isUserAdmin (userID, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length == 0 ) {
-                callback(null, false);
+                // callback(null, false); //TODO: delete
+                callback(null, null);
             } else {
-                callback(null, true); //Success
+                // callback(null, true); //Success //TODO: delete
+                callback(null, res.rows[0].adminid); //Success
             }
         }
     };
@@ -462,6 +465,21 @@ function deleteEvent (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function postAnnouncements (adminID, message, date, callback) {
+    logCtx.fn = 'postAnnouncements';
+    var query = "insert into announcements (adminid, a_content, a_date) values ($1, $2, $3)"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [adminID, message, date], callback, queryCb);
+}
+
 function getRoleAndName (userID, callback) {
     logCtx.fn = 'getRoleAndName';
     var query = "select users.user_role, users.first_name, users.last_name, p.projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
@@ -509,5 +527,6 @@ module.exports = {
     associateProjectsWithUser: associateProjectsWithUser,
     getRoleAndName: getRoleAndName,
     getEventByID: getEventByID,
-    getUserInfo: getUserInfo
+    getUserInfo: getUserInfo,
+    postAnnouncements: postAnnouncements
 }

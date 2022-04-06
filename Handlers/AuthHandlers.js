@@ -185,7 +185,8 @@ function authenticate (req, res, next) {
 function authorizeAdmin (req, res, next) {
     logCtx.fn = 'authorizeAdmin';
     authenticate(req, res, () => {
-        if (req.session.data["admin"] == true) { //Check if user has admin role
+        // if (req.session.data["admin"] == true) { //Check if user has admin role //changing boolean for id
+        if (req.session.data["admin"] != null) { //Check if user has admin role
             next(); //Success
         } else {
             errorMsg = "User does not have enough privileges.";

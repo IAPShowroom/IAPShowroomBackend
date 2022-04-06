@@ -18,6 +18,7 @@ var getStats = '/stats';
 var getRoomStatus = '/rooms/status';
 var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
+var sseConnect = '/sse-connect'; //used to establish server sent events connection
 
 //Schedule Routes
 var getIAPSessions = '/sessions';
@@ -31,6 +32,7 @@ var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats); //TODO: implement
 showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: implement
 // //showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement - this might be replaced with event listener on client side
+showroomRouter.post(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: implement and test
 
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: implement

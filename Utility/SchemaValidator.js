@@ -56,6 +56,11 @@ const eventSchema = Joi.object({
     e_date: Joi.string().required()
 });
 
+const postAnnouncementSchema = Joi.object({
+    message: Joi.string().required(),
+    date: Joi.date().required()
+});
+
 const createRoomSchema = Joi.object({
     meeting_name: Joi.string().required(),
     projectid: Joi.number().required()
@@ -226,6 +231,16 @@ function validateEndRoom (req, callback) {
     }
 }
 
+function validatePostAnnouncement (req, callback) {
+    logCtx.fn = 'validatePostAnnouncement';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, postAnnouncementSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -252,5 +267,6 @@ module.exports = {
     validateCreateRoom: validateCreateRoom,
     validateJoinRoom: validateJoinRoom,
     validateEndRoom: validateEndRoom,
-    validateGetEventByID: validateGetEventByID
+    validateGetEventByID: validateGetEventByID,
+    validatePostAnnouncement: validatePostAnnouncement
 }
