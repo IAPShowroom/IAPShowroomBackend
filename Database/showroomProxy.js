@@ -197,12 +197,13 @@ function comparePasswords (email, plaintextPassword, callback) {
     async.waterfall([
         function (callback) {
             //Get hash from database (and retrieve user ID)
-            fetchHashAndUserID(email, (error, hash, userID) => { //TODO: test
+            fetchHashAndUserID(email, (error, hash, userID, user_role) => { //TODO: test
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
                     result.userID = userID; //Add user iD to result object
+                    result.user_role = user_role;
                     callback(null, hash);
                 }
             });
@@ -251,7 +252,7 @@ function comparePasswords (email, plaintextPassword, callback) {
 
 function fetchHashAndUserID (email, callback) {
     logCtx.fn = 'fetchHashAndUserID';
-    var query = "select userid, password from users where email = $1";
+    var query = "select userid, password, user_role from users where email = $1";
     var values = [email];
     var queryCb = (error, res) => { 
         if (error) {
@@ -266,7 +267,8 @@ function fetchHashAndUserID (email, callback) {
             } else {
                 let userID = res.rows[0].userid;
                 let hash = res.rows[0].password;
-                callback(null, hash, userID); //Success
+                let role = res.rows[0].user_role;
+                callback(null, hash, userID, role); //Success
             }
         }
     };
