@@ -24,9 +24,9 @@ const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
 const BBB_HOST = 'iapstream.ece.uprm.edu';
 const SHOWROOM_HOST = 'iapshowroon.ece.uprm.edu';
 
-const showroom_prefix = '/api/showroom';
-const stream_prefix = '/api/meet';
-const auth_prefix = '/api/auth';
+const showroom_prefix = '/showroom';
+const stream_prefix = '/meet';
+const auth_prefix = '/auth';
 const bbb_prefix = '/bigbluebutton/api';
 
 //CORS configuration options
