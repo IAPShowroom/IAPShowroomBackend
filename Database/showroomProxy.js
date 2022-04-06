@@ -491,10 +491,10 @@ function getRoleAndName (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
-function postMeetHistory (userID, meetingID, callback) { //TODO: test with db updates
+function postMeetHistory (userID, meetingID, callback) {
     logCtx.fn = 'postMeetHistory';
-    var query = "insert into meethistory (eventid, userid, title, jointime) values ($1, $2, $3, $4)"; //TODO: update with meetingid and no title
-    var values = [meetingID, userID, null, new Date(Date.now()).toISOString()]; //TODO: current time seems to be in different time zone? it's 4 hours ahead
+    var query = "insert into meethistory (meetid, userid, jointime) values ($1, $2, $3)";
+    var values = [meetingID, userID, new Date(Date.now()).toISOString()]; //TODO: current time seems to be in different time zone? it's 4 hours ahead
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
