@@ -238,6 +238,12 @@ function validateRequest (req, schema, callback) {
     }
 }
 
+function validateServerSideEvent(req, callback){
+    logCtx.fn = 'validateServerSideEvent';
+    log("Request schema successfully validated.", logCtx);
+    callback(null);
+}
+
 //optionally implement this function to add additional sql injection defense
 // function sanitizeInput(input, callback){ //callback: (error) => {}
 // }
@@ -252,5 +258,6 @@ module.exports = {
     validateCreateRoom: validateCreateRoom,
     validateJoinRoom: validateJoinRoom,
     validateEndRoom: validateEndRoom,
-    validateGetEventByID: validateGetEventByID
+    validateGetEventByID: validateGetEventByID,
+    validateServerSideEvent: validateServerSideEvent
 }

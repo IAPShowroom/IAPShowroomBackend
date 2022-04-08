@@ -5,7 +5,7 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse, serverSideResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 
@@ -271,7 +271,71 @@ function getProjects (req, res, next) {
     });
 }
 
+function getServerSideUpcomingEvents(req, res, next){
+    logCtx.fn = "getServerSideUpcomingEvents";
+    console.log('Client connected');
 
+    const upcoming = true;
+    var errorStatus, errorMsg;
+
+    res.writeHead(200, {
+        "Connection": "keep-alive",
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+    });
+
+
+    setInterval(() => {
+
+        async.waterfall([
+         
+        //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
+        
+        function (callback) {
+            //Validate request payload
+            validator.validateServerSideEvent(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+
+            const date_obj = new Date();
+            const day = date_obj.toLocaleDateString('en-US');
+            const time = date_obj.toLocaleTimeString('en-US');
+
+            showroomDB.getEvents(upcoming, time, day, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No events found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+        ], (error, result) => {
+            //Send responses
+            serverSideResponse(res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+        }, 
+        );
+                
+                
+    }, 10000);
+
+}
 
 module.exports = {
     getProjects: getProjects,
@@ -284,5 +348,6 @@ module.exports = {
     updateScheduleEvent: updateScheduleEvent,
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
-    getScheduleEventByID: getScheduleEventByID
+    getScheduleEventByID: getScheduleEventByID,
+    getServerSideUpcomingEvents: getServerSideUpcomingEvents
 }
