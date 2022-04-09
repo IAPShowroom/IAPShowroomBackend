@@ -10,8 +10,9 @@ const async = require('async');
 const crypto = require('crypto');
 const showroomDB = require('../Database/showroomProxy.js');
 const BBBUtils = require('../Utility/BBBUtils.js');
-// const { XMLParser } = require('fast-xml-parser');
-// const xmlParser = new XMLParser();
+const axios = require('axios').default;
+const { XMLParser } = require('fast-xml-parser');
+const xmlParser = new XMLParser({ ignoreAttributes: false });
 
 //https://iapstream.ece.uprm.edu/bigbluebutton/api
 var urlPrefix = "https://" + config.BBB_HOST + config.bbb_prefix;
@@ -39,20 +40,26 @@ function createRoom (req, res, next) { //TODO: test produced url w/ BBB
         },
         function (callback) {
             //Construct URL for BBB API call
-            
-            // var isBreakout = "true"; //TODO: review - if this changes maybe it can be received as a query param
-            // var muteOnStart = "true"; //TODO: review - do we want to mute everyone as they come in?
-            // var meetingKeepEvents = "true"; //TODO: review -  if we want to use BBB logs
-            
             var queryParams = {
                 name: req.body.meeting_name,
                 meetingID: req.body.projectid,
-                moderatorPW: config.MOD_PASSWORD
+                moderatorPW: config.MOD_PASSWORD,
+                isBreakout: "true"
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('create', queryString);
             var url = urlPrefix + "/create?" + queryString + "&checksum=" + checksum;
-            callback(null, { url: url });
+            callback(null, url);
+        },
+        function (url, callback) {
+            //Make BBB API call
+            axios.post(url).then((response) => { //TODO: test
+                log("Successful response for BBB end call.", logCtx);
+                callback(null, response);
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
         }
     ], (error, result) => {
         //Send responses
@@ -65,9 +72,8 @@ function createRoom (req, res, next) { //TODO: test produced url w/ BBB
 }
 
 function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
-    //TODO: Add waterfall cb to post to meet history (?) not if we just return the URL and use another endpoint for meet history
     logCtx.fn = "joinRoom";
-    var errorStatus, errorMsg;
+    var errorStatus, errorMsg, bbbRole, firstName, lastName;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -83,16 +89,46 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
         function (callback) {
             //Get name and role for BBB room
             var userData = req.session.data;
-            getBBBRoleAndName(userData, req.body.meeting_id, (error, role, firstName, lastName) => {
+            getBBBRoleAndName(userData, req.body.meeting_id, (error, role, first_name, last_name) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error, null, null, null);
                 } else {
-                    callback(null, role, firstName, lastName);
+                    bbbRole = role;
+                    firstName = first_name;
+                    lastName = last_name;
+                    callback(null);
                 }
             });
         },
-        function (bbbRole, firstName, lastName, callback) {
+        function (callback) {
+            //Check role
+            switch (bbbRole) {
+                case "moderator":
+                    joinModerator(); //TODO: call create -> cb(null)
+                    break;
+                case "viewer":
+                    joinViewer(); //TODO: call isMeetingRunning -> if not running fail, if running cb(null)
+                    break;
+            }
+        },
+        function (callback) {
+            var meetingID = req.body.meeting_id;
+            var userID = req.session.data["userID"];
+            //Record join history
+            showroomDB.postMeetHistory(userID, meetingID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (callback) {
             //Construct URL for BBB API call
             var queryParams = {
                 meetingID: req.body.meeting_id,
@@ -103,6 +139,47 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
             var checksum = generateChecksum('join', queryString);
             var url = urlPrefix + "/join?" + queryString + "&checksum=" + checksum;
             callback(null, { url: url });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully constructed URL.", result);
+        }
+    });
+}
+
+function joinViewer (meetingID, callback) { //TODO: test 
+    logCtx.fn = "joinViewer";
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: meetingID,
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('isMeetingRunning', queryString); //TODO: is this accurate? test w/ bbb pls
+            var url = urlPrefix + "/isMeetingRunning?" + queryString + "&checksum=" + checksum;
+            callback(null, url);
+        },
+        function (url, callback) {
+            //Make BBB API call
+            axios.post(url).then((xmlResponse) => { //TODO: test
+                log("Successful response for BBB isMeetingRunning call.", logCtx);
+                const jsonResp = xmlParser.parse(xmlResponse);
+                if (jsonResp.response.running) {
+                    callback(null);
+                } else {
+                    var errorMsg = "Meeting is not running.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                }
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
         }
     ], (error, result) => {
         //Send responses
@@ -138,7 +215,17 @@ function endRoom (req, res, next) { //TODO: test produced url w/ BBB
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('end', queryString);
             var url = urlPrefix + "/end?" + queryString + "&checksum=" + checksum;
-            callback(null, { url: url });
+            callback(null, url);
+        },
+        function (url, callback) {
+            //Make BBB API call
+            axios.post(url).then((response) => { //TODO: test
+                log("Successful response for BBB end call.", logCtx);
+                callback(null, response);
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
         }
     ], (error, result) => {
         //Send responses
@@ -146,47 +233,6 @@ function endRoom (req, res, next) { //TODO: test produced url w/ BBB
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 200, "Successfully constructed URL.", result);
-        }
-    });
-}
-
-function postMeetHistory (req, res, next) { //TODO: test with new db updates
-    logCtx.fn = 'postMeetHistory';
-    var errorStatus, errorMsg;
-    async.waterfall([
-        function (callback) {
-            //Validate request payload
-            validator.validatePostMeetHistory(req, (error) => {
-                if (error) {
-                    logError(error, logCtx);
-                    errorStatus = 400;
-                    errorMsg = error.message;
-                }
-                callback(error);
-            });
-        },
-        function (callback) {
-            //Take DB action
-            var meetingID = req.body.meeting_id;
-            var userID = req.session.data["userID"];
-            showroomDB.postMeetHistory(userID, meetingID, (error, result) => { //TODO test w/ db updates
-                if (error) {
-                    errorStatus = 500;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                    callback(error, null);
-                } else {
-                    log("Response data: " + JSON.stringify(result), logCtx);
-                    callback(null, result);
-                }
-            });
-        }
-    ], (error, result) => {
-        //Send responses
-        if (error) {
-            errorResponse(res, errorStatus, errorMsg);
-        } else {
-            successResponse(res, 200, "Successfully recorded meeting history.", result && result.length > 0 ? result : null);
         }
     });
 }
@@ -201,7 +247,6 @@ function generateChecksum (callName, queryString) {
 function getBBBRoleAndName(data, projectID, callback) {
     logCtx.fn = "getBBBRoleAndName";
     var role = 'viewer';
-    var firstName, lastName;
     var userID = data.userID;
     var isAdmin = data.admin;
     showroomDB.getRoleAndName(userID, (error, result) => {
@@ -218,7 +263,7 @@ function getBBBRoleAndName(data, projectID, callback) {
         } else {
             log("Response data: " + JSON.stringify(result), logCtx);
             //Check if role should be moderator
-            if (isAdmin) { //Auto mod if admin //TODO: confirm with team
+            if (isAdmin) { //Auto mod if admin
                 role = 'moderator';
             } else {
                 if (result.projectIDs) { //List of project IDs is not null, they are advisor or student researcher
@@ -239,7 +284,5 @@ module.exports = {
     createRoom: createRoom,
     joinRoom: joinRoom,
     endRoom: endRoom,
-    postMeetHistory: postMeetHistory,
-    generateChecksum: generateChecksum,
-    postMeetHistory: postMeetHistory
+    generateChecksum: generateChecksum
 }

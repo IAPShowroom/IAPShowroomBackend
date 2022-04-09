@@ -78,6 +78,8 @@ const exEvent4 = {
 
 const exEventList = [exEvent2, exEvent3, exEvent4];
 
+const getMeetingInfoXMLSuccessResponse = "<response><returncode>SUCCESS</returncode><running>true</running></response>";
+
 module.exports = {
     exEvent: exEvent,
     exEvent2: exEvent2,
@@ -87,5 +89,6 @@ module.exports = {
     exEventUpdateDate: exEventUpdateDate,
     adminUser: adminUser,
     normalUser: normalUser,
-    notInDBUser: notInDBUser
+    notInDBUser: notInDBUser,
+    getMeetingInfoXMLSuccessResponse: getMeetingInfoXMLSuccessResponse
 }
