@@ -10,8 +10,9 @@ const async = require('async');
 const crypto = require('crypto');
 const showroomDB = require('../Database/showroomProxy.js');
 const BBBUtils = require('../Utility/BBBUtils.js');
-// const { XMLParser } = require('fast-xml-parser');
-// const xmlParser = new XMLParser();
+const axios = require('axios').default;
+const { XMLParser } = require('fast-xml-parser');
+const xmlParser = new XMLParser({ ignoreAttributes: false });
 
 //https://iapstream.ece.uprm.edu/bigbluebutton/api
 var urlPrefix = "https://" + config.BBB_HOST + config.bbb_prefix;
@@ -234,6 +235,39 @@ function getBBBRoleAndName(data, projectID, callback) {
     });
 }
 
+function getMeetingInfo (meetingID, callback) { //TODO: test produced url w/ BBB
+    logCtx.fn = "getMeetingInfo";
+    async.waterfall([
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: meetingID,
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('getMeetingInfo', queryString);
+            var url = urlPrefix + "/getMeetingInfo?" + queryString + "&checksum=" + checksum;
+            callback(null, url);
+        },
+        function (url, callback) {
+            //Make BBB API call
+            axios.post(url).then((response) => { //TODO: test
+                log("Successful response for BBB end call.", logCtx);
+                callback(null, response);
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            callback(error, null);
+        } else {
+            var jsonObj = xmlParser.parse(result);
+            callback(jsonObj.response);
+        }
+    });
+}
 
 module.exports = {
     createRoom: createRoom,
@@ -241,5 +275,6 @@ module.exports = {
     endRoom: endRoom,
     postMeetHistory: postMeetHistory,
     generateChecksum: generateChecksum,
-    postMeetHistory: postMeetHistory
+    postMeetHistory: postMeetHistory,
+    getMeetingInfo: getMeetingInfo
 }

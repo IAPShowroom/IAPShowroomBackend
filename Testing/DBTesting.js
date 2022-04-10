@@ -18,7 +18,7 @@ let logCtx = {
 // iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
-// testGetEvents();
+testGetEvents();
 // testUpdateEvent();
 // testRegisterUser();
 // testComparePassword();
@@ -216,11 +216,11 @@ function testUpdateEvent() {
 function testGetEvents() {
     logCtx.fn = 'testGetEvents';    
     logTest("Start Test", logCtx);
-    // var upcoming = false;
-    var upcoming = true;
+    var upcoming = false;
+    // var upcoming = true;
     var time = '7:30 AM';
     var date = '04-25-22';
-    showroomDB.getEvents( upcoming, time, date, (error, result) => {
+    showroomDB.getEvents(true, upcoming, time, date, (error, result) => {
         if (error) logError(error, logCtx);
         if (result) {
             logTest("result: ", logCtx);

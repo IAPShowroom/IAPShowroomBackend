@@ -349,11 +349,12 @@ function createEvents (eventList, callback) {
     });
 }
 
-function getEvents(upcoming, time, date, callback) {
+function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false";
+    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null"; //project id not null to make sure we only select project events
     var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false";
-    var query = upcoming ? getUpcoming : getAll;
+    var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -376,6 +377,8 @@ function getEvents(upcoming, time, date, callback) {
     };
     if (upcoming) {
         dbUtils.makeQueryWithParams(pool, query, [time, date], callback, queryCb);
+    } else if (byDate) {
+        dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
     } else {
         dbUtils.makeQuery(pool, query, callback, queryCb);
     }
