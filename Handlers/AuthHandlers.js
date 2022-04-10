@@ -116,6 +116,40 @@ function getUserInfo (req, res, next) {
     });
 }
 
+// Use for student/advisor permisions for project rooms
+function getRoleAndName (req, res, next) {
+    logCtx.fn = 'getRoleAndName';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Get user info. from database
+            var userID = req.session.data["userID"];
+            showroomDB.getRoleAndName(userID, (error, result) => {
+                if (error) {
+                    errorStatus = 400;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No user found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "User successfully retrieved user role and name.", result);
+        }
+    });
+}
+
 function logIn (req, res, next) {
     logCtx.fn = 'logIn';
     var errorStatus, errorMsg;
@@ -208,6 +242,7 @@ function checkSession (req, res, next) {
 module.exports = {
     registerUser: registerUser,
     getUserInfo: getUserInfo,
+    getRoleAndName: getRoleAndName,
     authenticate: authenticate,
     authorizeAdmin: authorizeAdmin,
     logOut: logOut,

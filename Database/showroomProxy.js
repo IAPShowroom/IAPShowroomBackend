@@ -118,9 +118,9 @@ function registerStudent (userID, body, callback) {
     var department = body.department;
     var gradDate = body.grad_date;
     var isPM = body.ispm;
-    var validatedmember = body.validatedmember;
-    var query = "insert into student_researchers (userid, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5)";
-    var values = [userID, department, gradDate, isPM, validatedmember];
+    // var validatedmember = body.validatedmember;
+    var query = "insert into student_researchers (userid, department, grad_date, ispm) values ($1, $2, $3, $4)";
+    var values = [userID, department, gradDate, isPM];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
