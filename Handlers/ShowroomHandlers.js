@@ -9,6 +9,7 @@ const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
+const config = require('../Config/config.js');
 
 let logCtx = {
     fileName: 'ShowroomHandlers',
@@ -79,6 +80,7 @@ function getRoomStatus (req, res, next) {
 function getStatusForEvents (allEvents, mainCallback) {
     logCtx.fn = 'getStatusForEvents';
     var result = [];
+    var userList;
     //Traverse all event objects and get status for each one
     async.forEachLimit(allEvents, MAX_ASYNC, (event, cb) => {
         var eventObj = {};
@@ -86,35 +88,45 @@ function getStatusForEvents (allEvents, mainCallback) {
         async.waterfall([
             function (callback) {
                //Fetch user IDs and roles from meet history table
-               showroomDB.fetchUserIDsAndRoles(event.projectid, (error, result) => {
+               showroomDB.fetchUserIDsAndRoles(event.projectid, (error, result) => { //TODO: implement and test
                     if (error) {
                         errorStatus = 500;
                         errorMsg = error.toString();
                         logError(error, logCtx);
-                        callback(error, null);
                     } else if (result == undefined || result == null) {
                         eventObj.company_representatives = 0;
                         eventObj.general_users = 0;
-                        // eventObj.student_researcher = false; //TODO will we use it? is it a boolean?
-                        callback(null, );
+                        // eventObj.student_researcher = false; //TODO will we use it? is it a boolean? <-- should we just look at mod vs viewer for the red tiling?
+                        
+                        //<add something to skip al final and dont make other calls, since we're done>
                     } else {
                         log("Response data: " + JSON.stringify(result), logCtx);
-                        callback(null, result);
+                        userList = result;
                     }
+                    callback(error); //Null if no error 
                 });
             },
-            function (hash, callback) {
+            function (callback) {
                //Call getMeetingInfo to get a list of current users in meeting
-               meetingHandler.getMeetingInfo("0" + event.projectid, (error, response) => {
-                   var attendees = response.attendees
-                // response.attendees <-- obj
-// response.attendees.attendee <-- array of obj
-// event in array: userID
+               meetingHandler.getMeetingInfo("0" + event.projectid, (error, response) => { // response.attendees <-- obj // response.attendees.attendee <-- array of obj // event in array: userID
+                    if (error) {
+                        logError(error, logCtx);
+                        callback(error, null);
+                    } else {
+                        var attendeeObjs = response.attendees.attendee; //Array of attendee json objects
+                        var attendeeUserIDs = new Set(attendeeObjs.map( obj => obj.userID )); //Place into a Set for faster look up: O(1)
+                        callback(null, attendeeUserIDs);
+                    }
                });
             },
-            function (userID, callback) {
-               //Filter users list and finish writing to eventObj
-            }
+            // function (attendeeUserIDs, callback) {
+            //    //Filter users list and finish writing to eventObj
+            //    userList.forEach( user => {
+            //        if (attendeeUserIDs.has(user.userid)) {
+            //            if (user.user_role == config.userRoles.companyRep) 
+            //        } //TODO ^^^^^ finish above la parte de cuando no hay nada
+            //    });
+            // }
         ], (error) => {
             //Add eventObj to result
             result.push(eventObj);
