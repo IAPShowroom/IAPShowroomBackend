@@ -6,7 +6,7 @@
   "scripts": {
     "testDB": "node ./Testing/DBTesting.js",
     "testBBB": "node ./Testing/BBBTesting.js",
-    "start": "sudo /etc/init.d/redis-server restart && node app.js"
+    "start": "node app.js"
   },
   "keywords": [
     "showroom",
