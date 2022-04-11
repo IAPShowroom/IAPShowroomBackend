@@ -16,6 +16,6 @@
  streamingRouter.post(createRoom, auth.authorizeAdmin, streamingHandler.createRoom);
  streamingRouter.post(joinRoom, auth.authenticate, streamingHandler.joinRoom);
  streamingRouter.post(endRoom, auth.authorizeAdmin, streamingHandler.endRoom);
- streamingRouter.post(history, auth.authenticate, streamingHandler.postMeetHistory);
+//  streamingRouter.post(history, auth.authenticate, streamingHandler.postMeetHistory); //Got absolved into join room logic
  
  module.exports = streamingRouter;
