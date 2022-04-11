@@ -88,7 +88,6 @@ function validateRegisterUser (req, callback) {
                 validateRequest(req, userSchema, callback);
         }
     } else {
-        logError(JSON.stringify(req.body), logCtx);
         logError("Missing role in request body.", logCtx);
         callback(new Error("Missing role information in request body."));
     }
@@ -260,7 +259,6 @@ function validateGetIAPProjects (req, callback) { //TODO: test
 }
 
 function validateRequest (req, schema, callback) {
-    logError(JSON.stringify(req.body), logCtx);
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
     if (error) { //return comma separated errors
