@@ -4,7 +4,6 @@
 
 const testData = require('./TestData.js');
 const streaming = require('../Handlers/VideoStreamingHandlers.js');
-const { logError, logDebug, logTest } = require('../Utility/Logger.js');
 const { XMLParser } = require('fast-xml-parser');
 const parser = new XMLParser({ ignoreAttributes: false });
 const config = require('../Config/config.js');
@@ -24,11 +23,36 @@ let logCtx = {
 //  testChecksum();
 // testReadXML();
 // testGetMeetingInfoURL();
-testGetMeetingInfo();
+// testGetMeetingInfo();
+testIsMeetingRunning();
+// testCreateRoom();
  
  
  //test functions:
  
+function testCreateRoom() {
+    logCtx.fn = 'testCreateRoom';
+    logTest("Start test", logCtx);
+    var meetingName = "Test Meeting";
+    var projectID = 1;
+    streaming.createRoom(meetingName, projectID, (error) => {
+        if (error) logError(error, logCtx);
+        logTest("End test", logCtx);
+    });
+}
+
+function testIsMeetingRunning() {
+    logCtx.fn = 'testIsMeetingRunning';
+    logTest("Start test", logCtx);
+    var projectID = 1;
+    streaming.isMeetingRunning(projectID, (error, isRunning) => {
+        if (error) logError(error, logCtx);
+        logTest("isRunning: ", logCtx);
+        console.log(isRunning);
+        logTest("End test", logCtx);
+    });
+}
+
 function testGetMeetingInfo () {
     logCtx.fn = 'testGetMeetingInfo';
     logTest("Start test", logCtx);

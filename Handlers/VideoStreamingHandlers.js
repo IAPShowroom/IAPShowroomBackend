@@ -22,53 +22,38 @@ let logCtx = {
     fn: ''
 }
 
-function createRoom (req, res, next) { //TODO: test produced url w/ BBB
+function createRoom (meetingName, projectID, callback) { //TODO: test and finish implementing
     logCtx.fn = "createRoom";
-
-    var errorStatus, errorMsg;
     async.waterfall([
-        function (callback) {
-            //Validate request payload
-            validator.validateCreateRoom(req, (error) => {
-                if (error) {
-                    logError(error, logCtx);
-                    errorStatus = 400;
-                    errorMsg = error.message;
-                }
-                callback(error);
-            });
-        },
         function (callback) {
             //Construct URL for BBB API call
             var queryParams = {
-                name: req.body.meeting_name,
-                meetingID: req.body.projectid,
+                name: meetingName,
+                meetingID: "0" + projectID,
                 moderatorPW: config.MOD_PASSWORD,
-                attendeePW: config.ATTENDEE_PASSWORD,
-                isBreakout: "true"
+                attendeePW: config.ATTENDEE_PASSWORD
+                // ,
+                // isBreakout: "true" //testing
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('create', queryString);
             var url = urlPrefix + "/create?" + queryString + "&checksum=" + checksum;
+            console.log("url"); //testing
+            console.log(url); //testing
             callback(null, url);
         },
         function (url, callback) {
             //Make BBB API call
-            axios.post(url).then((response) => { //TODO: test
-                log("Successful response for BBB end call.", logCtx);
+            axios.post(url).then((response) => {
+                log("Successful response for BBB create call.", logCtx);
                 callback(null, response);
             }).catch((error) => {
                 logError(error, logCtx);
                 callback(error, null);
             });
         }
-    ], (error, result) => {
-        //Send responses
-        if (error) {
-            errorResponse(res, errorStatus, errorMsg);
-        } else {
-            successResponse(res, 200, "Successfully constructed URL.", result);
-        }
+    ], (error) => {
+        callback(error); //Null if no error
     });
 }
 
@@ -143,47 +128,6 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
             var checksum = generateChecksum('join', queryString);
             var url = urlPrefix + "/join?" + queryString + "&checksum=" + checksum;
             callback(null, { url: url });
-        }
-    ], (error, result) => {
-        //Send responses
-        if (error) {
-            errorResponse(res, errorStatus, errorMsg);
-        } else {
-            successResponse(res, 200, "Successfully constructed URL.", result);
-        }
-    });
-}
-
-function joinViewer (meetingID, callback) { //TODO: test 
-    logCtx.fn = "joinViewer";
-    var errorStatus, errorMsg;
-    async.waterfall([
-        function (callback) {
-            //Construct URL for BBB API call
-            var queryParams = {
-                meetingID: meetingID,
-            }
-            var queryString = (new URLSearchParams(queryParams)).toString();
-            var checksum = generateChecksum('isMeetingRunning', queryString); //TODO: is this accurate? test w/ bbb pls
-            var url = urlPrefix + "/isMeetingRunning?" + queryString + "&checksum=" + checksum;
-            callback(null, url);
-        },
-        function (url, callback) {
-            //Make BBB API call
-            axios.post(url).then((xmlResponse) => { //TODO: test
-                log("Successful response for BBB isMeetingRunning call.", logCtx);
-                const jsonResp = xmlParser.parse(xmlResponse);
-                if (jsonResp.response.running) {
-                    callback(null);
-                } else {
-                    var errorMsg = "Meeting is not running.";
-                    logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg));
-                }
-            }).catch((error) => {
-                logError(error, logCtx);
-                callback(error, null);
-            });
         }
     ], (error, result) => {
         //Send responses
@@ -318,10 +262,48 @@ function getMeetingInfo (meetingID, callback) {
     });
 }
 
+function isMeetingRunning (meetingID, callback) {
+    logCtx.fn = "isMeetingRunning";
+    async.waterfall([
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: "0" + meetingID,
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('isMeetingRunning', queryString);
+            var url = urlPrefix + "/isMeetingRunning?" + queryString + "&checksum=" + checksum;
+            console.log("url"); //testing
+            console.log(url); //testing
+            callback(null, url);
+        },
+        function (url, callback) {
+            logCtx.fn = "isMeetingRunning";
+            //Make BBB API call
+            axios.post(url).then((response) => {
+                log("Successful response for BBB isMeetingRunning call.", logCtx);
+                callback(null, response);
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            callback(error, null);
+        } else {
+            var jsonObj = xmlParser.parse(result.data);
+            callback(null, jsonObj.response.running);
+        }
+    });
+}
+
 module.exports = {
     createRoom: createRoom,
     joinRoom: joinRoom,
     endRoom: endRoom,
     generateChecksum: generateChecksum,
-    getMeetingInfo: getMeetingInfo
+    getMeetingInfo: getMeetingInfo,
+    isMeetingRunning: isMeetingRunning
 }
