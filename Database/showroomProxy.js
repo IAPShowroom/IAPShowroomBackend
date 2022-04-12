@@ -494,6 +494,23 @@ function getRoleAndName (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
+function getStudentProject (userID, projectID, callback) { //TODO: test
+    logCtx.fn = 'getStudentProject';
+    var query = "select userid, projectid from participates where userid = $1 and projectid = $2"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = false;
+            if (res.rows.length != 0) result = true; //Set as true since this student is linked with the project
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID, projectID], callback, queryCb);
+}
+
 function postMeetHistory (userID, meetingID, callback) {
     logCtx.fn = 'postMeetHistory';
     var query = "insert into meethistory (meetid, userid, jointime) values ($1, $2, $3)";
@@ -526,6 +543,22 @@ function postToShowroomProjects (iapProjects, callback) {
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchUserIDsAndRoles (projectID, callback) {
+    logCtx.fn = 'fetchUserIDsAndRoles';
+    var query = "select u.userid, u.user_role from users u left join meethistory m on u.userid = m.userid where m.meetid = $1";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns [{userid: '#', user_role: 'abc'}, {userid: '#', user_role: 'abc'}]
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
 }
 
 function fetchProjects(sessionID, callback) { //TODO: test
@@ -565,5 +598,7 @@ module.exports = {
     getUserInfo: getUserInfo,
     postMeetHistory: postMeetHistory,
     postToShowroomProjects: postToShowroomProjects,
-    fetchProjects: fetchProjects
+    fetchProjects: fetchProjects,
+    getStudentProject: getStudentProject,
+    fetchUserIDsAndRoles: fetchUserIDsAndRoles
 }

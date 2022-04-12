@@ -18,7 +18,7 @@ let logCtx = {
 // iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
-testGetEvents();
+// testGetEvents();
 // testUpdateEvent();
 // testRegisterUser();
 // testComparePassword();
@@ -27,9 +27,42 @@ testGetEvents();
 // testRegisterGeneralUser();
 // testGetRoleAndName();
 // testPostMeetHistory();
+// testGetRolesAndNameFromMeetHistory();
+testGetStudentProject();
 
 
 //test functions:
+
+function testGetStudentProject() {
+    logCtx.fn = 'testGetStudentProject';
+    logTest("Start test", logCtx);
+    var projectID = 1;
+    var userID = 20;
+    showroomDB.getStudentProject(userID, projectID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testGetRolesAndNameFromMeetHistory() {
+    logCtx.fn = 'testGetRolesAndNameFromMeetHistory';
+    logTest("Start test", logCtx);
+    var projectID = 47;
+    showroomDB.fetchUserIDsAndRoles(projectID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testGetRoleAndName () {
     logCtx.fn = 'testGetRoleAndName';
@@ -43,7 +76,7 @@ function testGetRoleAndName () {
         }
         logTest(" result: ", logCtx);
         console.log(result);
-        iapDB.endPool();
+        showroomDB.endPool();
         logTest("End test", logCtx);
     });
 }
