@@ -8,6 +8,7 @@ const { logError, log } = require('../Utility/Logger.js');
 const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
+const config = require('../Config/config.js');
 
 let logCtx = {
     fileName: 'AuthHandlers',
@@ -30,16 +31,21 @@ function registerUser (req, res, next) {
             });
         },
         // function (callback) { //Commented while testing since test emails are not in IAP
-        //     //Check email against IAP
-        //     var userEmail = req.body.email;
-        //     iapDB.validateEmail(userEmail, (error) => {
-        //         if (error) {
-        //             errorStatus = 400;
-        //             errorMsg = error.toString();
-        //             logError(error, logCtx);
-        //         }
-        //         callback(error);
-        //     });
+        //     //Check email against IAP if it's an advisor
+        //     if (req.body.user_role == config.userRoles.advisor) { //TODO: test
+        //         var userEmail = req.body.email;
+        //         iapDB.validateEmail(userEmail, (error) => {
+        //             if (error) {
+        //                 errorStatus = 400;
+        //                 errorMsg = error.toString();
+        //                 logError(error, logCtx);
+        //             }
+        //             callback(error);
+        //         });
+        //     } else {
+        //         //Skip
+        //         callback(null);
+        //     }
         // },
         function (callback) {
             //Check email is not already in use
