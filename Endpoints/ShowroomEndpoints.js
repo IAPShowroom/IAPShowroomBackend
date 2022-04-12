@@ -42,7 +42,7 @@ showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.update
 showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent); //TODO - test and review
 
 //IAP
-showroomRouter.get(getIAPProjects, auth.authenticate, showroomHandler.getProjects); //TODO - review
-showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSessions); //TODO intr test
+showroomRouter.get(getIAPProjects, showroomHandler.getProjects); //TODO - review
+showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSessions); //TODO: implement
 
 module.exports = showroomRouter;

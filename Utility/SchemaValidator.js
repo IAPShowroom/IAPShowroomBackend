@@ -23,17 +23,17 @@ const userSchema = Joi.object({
     password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
     first_name: Joi.string().alphanum().min(1).max(30).required(),
     last_name: Joi.string().alphanum().min(1).max(30).required(),
-    gender: Joi.string().alphanum().min(1).max(10).required(),
+    gender: Joi.string().alphanum().min(1).max(30).required(),
     user_role: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required(),
-    department: Joi.string().alphanum().min(1).max(30).required(),
+    projectids: Joi.array().items(Joi.number()).required(), 
+    department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
     ispm: Joi.boolean().required(),
-    validatedmember: Joi.boolean().required()
+//    validatedmember: Joi.boolean().required() X
 });
 
 //TODO: review and make more accurate?

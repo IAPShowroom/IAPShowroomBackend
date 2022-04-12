@@ -11,7 +11,7 @@ const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 
 const userRoles = {
-    studentResearcher: 'student_researcher',
+    studentResearcher: 'Student Researcher',
     companyRep: 'company_representative',
     advisor: 'advisor'
 }
