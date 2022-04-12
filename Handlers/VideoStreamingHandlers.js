@@ -44,6 +44,7 @@ function createRoom (req, res, next) { //TODO: test produced url w/ BBB
                 name: req.body.meeting_name,
                 meetingID: req.body.projectid,
                 moderatorPW: config.MOD_PASSWORD,
+                attendeePW: config.ATTENDEE_PASSWORD,
                 isBreakout: "true"
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
@@ -74,6 +75,7 @@ function createRoom (req, res, next) { //TODO: test produced url w/ BBB
 function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
     logCtx.fn = "joinRoom";
     var errorStatus, errorMsg, bbbRole, firstName, lastName;
+    var userID = req.session.data.userID;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -133,7 +135,9 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
             var queryParams = {
                 meetingID: req.body.meeting_id,
                 fullName: firstName + " " + lastName,
-                role: bbbRole
+                userID: userID,
+                role: bbbRole,
+                password: config.ATTENDEE_PASSWORD
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('join', queryString);
@@ -279,10 +283,45 @@ function getBBBRoleAndName(data, projectID, callback) {
     });
 }
 
+function getMeetingInfo (meetingID, callback) {
+    logCtx.fn = "getMeetingInfo";
+    async.waterfall([
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: "0" + meetingID,
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('getMeetingInfo', queryString);
+            var url = urlPrefix + "/getMeetingInfo?" + queryString + "&checksum=" + checksum;
+            callback(null, url);
+        },
+        function (url, callback) {
+            logCtx.fn = "getMeetingInfo";
+            //Make BBB API call
+            axios.post(url).then((response) => {
+                log("Successful response for BBB end call.", logCtx);
+                callback(null, response);
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            callback(error, null);
+        } else {
+            var jsonObj = xmlParser.parse(result.data);
+            callback(null, jsonObj.response);
+        }
+    });
+}
 
 module.exports = {
     createRoom: createRoom,
     joinRoom: joinRoom,
     endRoom: endRoom,
-    generateChecksum: generateChecksum
+    generateChecksum: generateChecksum,
+    getMeetingInfo: getMeetingInfo
 }

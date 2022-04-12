@@ -23,17 +23,17 @@ const userSchema = Joi.object({
     password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
     first_name: Joi.string().alphanum().min(1).max(30).required(),
     last_name: Joi.string().alphanum().min(1).max(30).required(),
-    gender: Joi.string().alphanum().min(1).max(10).required(),
+    gender: Joi.string().alphanum().min(1).max(30).required(),
     user_role: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required(),
-    department: Joi.string().alphanum().min(1).max(30).required(),
+    projectids: Joi.array().items(Joi.number()).required(), 
+    department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
     ispm: Joi.boolean().required(),
-    validatedmember: Joi.boolean().required()
+//    validatedmember: Joi.boolean().required() X
 });
 
 //TODO: review and make more accurate?
@@ -53,7 +53,7 @@ const eventSchema = Joi.object({
     duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
     projectid: Joi.number().required().prefs({ convert: false }),
-    e_date: Joi.string().required()
+    e_date: Joi.date().required()
 });
 
 const createRoomSchema = Joi.object({
@@ -67,6 +67,10 @@ const joinRoomSchema = Joi.object({
 
 const sessionIDSchema = Joi.object({
     session_id: Joi.number().required()
+});
+
+const roomStatusSchema = Joi.object({
+    date: Joi.date().required()
 });
 
 const eventListSchema = Joi.array().items(eventSchema);
@@ -240,7 +244,7 @@ function validatePostMeetHistory (req, callback) {
     }
 }
 
-function validateGetIAPProjects (req, callback) { //TODO: test
+function validateGetIAPProjects (req, callback) {
     logCtx.fn = 'validateGetIAPProjects';
     if (req.query != undefined && Object.keys(req.query).length != 0) {
         const { error, value } = sessionIDSchema.validate(req.query);
@@ -255,6 +259,23 @@ function validateGetIAPProjects (req, callback) { //TODO: test
         var errorMsg = "Missing request query parameters.";
         logError(errorMsg, logCtx);
         callback(new Error(errorMsg));
+    }
+}
+
+function validateGetRoomStatus (req, callback) { //TODO: test
+    logCtx.fn = 'validateGetRoomStatus';
+    if (req.query && Object.keys(req.query).length != 0) {
+        const { error, value } = roomStatusSchema.validate(req.query);
+        if (error) { //return comma separated errors
+            logError("Schema validation error for request payload.", logCtx);
+            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+        } else {
+            log("Request schema successfully validated.", logCtx);
+            callback(null);
+        }
+    } else {
+        log("Request schema successfully validated, no query parameter found.", logCtx);
+        callback(null);
     }
 }
 
@@ -286,5 +307,6 @@ module.exports = {
     validateEndRoom: validateEndRoom,
     validateGetEventByID: validateGetEventByID,
     validatePostMeetHistory: validatePostMeetHistory,
-    validateGetIAPProjects: validateGetIAPProjects
+    validateGetIAPProjects: validateGetIAPProjects,
+    validateGetRoomStatus: validateGetRoomStatus
 }
