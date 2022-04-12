@@ -10,8 +10,9 @@ const async = require('async');
 const crypto = require('crypto');
 const showroomDB = require('../Database/showroomProxy.js');
 const BBBUtils = require('../Utility/BBBUtils.js');
-// const { XMLParser } = require('fast-xml-parser');
-// const xmlParser = new XMLParser();
+const axios = require('axios').default;
+const { XMLParser } = require('fast-xml-parser');
+const xmlParser = new XMLParser({ ignoreAttributes: false });
 
 //https://iapstream.ece.uprm.edu/bigbluebutton/api
 var urlPrefix = "https://" + config.BBB_HOST + config.bbb_prefix;
@@ -47,7 +48,8 @@ function createRoom (req, res, next) { //TODO: test produced url w/ BBB
             var queryParams = {
                 name: req.body.meeting_name,
                 meetingID: req.body.projectid,
-                moderatorPW: config.MOD_PASSWORD
+                moderatorPW: config.MOD_PASSWORD,
+                attendeePW: config.ATTENDEE_PASSWORD
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('create', queryString);
@@ -68,6 +70,7 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
     //TODO: Add waterfall cb to post to meet history (?) not if we just return the URL and use another endpoint for meet history
     logCtx.fn = "joinRoom";
     var errorStatus, errorMsg;
+    var userID = req.session.data.userID;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -97,7 +100,9 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
             var queryParams = {
                 meetingID: req.body.meeting_id,
                 fullName: firstName + " " + lastName,
-                role: bbbRole
+                userID: userID,
+                role: bbbRole,
+                password: config.ATTENDEE_PASSWORD
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('join', queryString);
@@ -167,7 +172,7 @@ function postMeetHistory (req, res, next) { //TODO: test with new db updates
         },
         function (callback) {
             //Take DB action
-            var meetingID = req.body.meeting_id;
+            var meetingID = req.body.meeting_id; //This is really the project id
             var userID = req.session.data["userID"];
             showroomDB.postMeetHistory(userID, meetingID, (error, result) => { //TODO test w/ db updates
                 if (error) {
@@ -234,6 +239,40 @@ function getBBBRoleAndName(data, projectID, callback) {
     });
 }
 
+function getMeetingInfo (meetingID, callback) {
+    logCtx.fn = "getMeetingInfo";
+    async.waterfall([
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: "0" + meetingID,
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('getMeetingInfo', queryString);
+            var url = urlPrefix + "/getMeetingInfo?" + queryString + "&checksum=" + checksum;
+            callback(null, url);
+        },
+        function (url, callback) {
+            logCtx.fn = "getMeetingInfo";
+            //Make BBB API call
+            axios.post(url).then((response) => {
+                log("Successful response for BBB end call.", logCtx);
+                callback(null, response);
+            }).catch((error) => {
+                logError(error, logCtx);
+                callback(error, null);
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            callback(error, null);
+        } else {
+            var jsonObj = xmlParser.parse(result.data);
+            callback(null, jsonObj.response);
+        }
+    });
+}
 
 module.exports = {
     createRoom: createRoom,
@@ -241,5 +280,6 @@ module.exports = {
     endRoom: endRoom,
     postMeetHistory: postMeetHistory,
     generateChecksum: generateChecksum,
-    postMeetHistory: postMeetHistory
+    postMeetHistory: postMeetHistory,
+    getMeetingInfo: getMeetingInfo
 }

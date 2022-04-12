@@ -29,7 +29,7 @@ var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 
 //Showroom General
 showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats); //TODO: implement
-showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: implement
+showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: test
 // //showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement - this might be replaced with event listener on client side
 
 //Events 
@@ -37,7 +37,7 @@ showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStat
 showroomRouter.get(getQnARoomInfo, auth.authenticate, showroomHandler.getQnARoomInfo); //TODO: implement
 showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); //TODO - test and review
 showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); //TODO - test and review
-showroomRouter.get(scheduleEventsID, auth.authorizeAdmin, showroomHandler.getScheduleEventByID); //TODO - implement test and review
+showroomRouter.get(scheduleEventsID, auth.authorizeAdmin, showroomHandler.getScheduleEventByID); //TODO - test and review
 showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.updateScheduleEvent); //TODO - test and review
 showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent); //TODO - test and review
 
