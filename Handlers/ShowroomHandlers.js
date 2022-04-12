@@ -19,6 +19,7 @@ let logCtx = {
 }
 
 let SSE = {}; //Object to expose sendEvent
+let sseRequest; //Store the request object for the SSE connection (maybe change this for an array for multiple clients?)
 
 function getStats (req, res, next) {
 
@@ -207,25 +208,40 @@ function getIAPSessions (req, res, next) {
     });
 }
 
+//TODO: might need to keep record of all request objects that try to make a connection to this endpoint, thinking of having many clients connecting at the same time
 function sseConnect (req, res, next) {
     //This endpoint is used to establish a connection for Server Sent Events
     logCtx.fn = 'sseConnect';
+
+    //TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
+    var eventHistory = []; //Keep track of which events have been sent
+
     res.writeHead(200, {
         "Cache-Control": "no-cache",
         "Content-type": "text/event-stream",
         "Connection": "keep-alive"
     });
 
+    //TODO: test with the connection staying on longer than 2 minutes, if it times out then uncomment this
+    //Disable timeout so the connection can stay alive for as long as we want
+    // res.setTimeout(() => {
+    //     log("SSE connection has timed out.", logCtx);
+    // }, 0);
+
+    //TODO: maybe it makes sense to use wiliel's serverSideResponse utility function and pass the res object to it
     //Define function to send events
     SSE.sendEvent = (data) => {
-        log("Sending event with data: " + data, logCtx);
-        res.write(data + "\n\n");
+        log("Sending event with data: ", logCtx);
+        log(data, logCtx);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
     //End response when due
     res.on('close', () => {
-        log("Ending the SSE request.", logCtx);
-        res.end();
+        if (!res.finished) {
+            log("Ending the SSE request.", logCtx);
+            res.end();
+        }
     });
 }
 
@@ -257,7 +273,8 @@ function postAnnouncements (req, res, next) { //TODO: test
                     callback(error);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    // SSE.sendEvent(message); //TODO test
+                    var announcement = result[0];
+                    SSE.sendEvent(announcement); //TODO test
                     callback(null);
                 }
             });

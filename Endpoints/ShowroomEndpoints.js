@@ -32,7 +32,7 @@ var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats); //TODO: implement
 showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: test
 // //showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement - this might be replaced with event listener on client side
-showroomRouter.post(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: implement and test
+showroomRouter.get(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: implement and test
 
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: implement

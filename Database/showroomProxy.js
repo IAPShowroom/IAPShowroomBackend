@@ -472,7 +472,7 @@ function deleteEvent (eventID, callback) {
 
 function postAnnouncements (adminID, message, date, callback) {
     logCtx.fn = 'postAnnouncements';
-    var query = "insert into announcements (adminid, a_content, a_date) values ($1, $2, $3)"; 
+    var query = "insert into announcements (adminid, a_content, a_date) values ($1, $2, $3) returning announcementid, a_content"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
