@@ -23,17 +23,17 @@ const userSchema = Joi.object({
     password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
     first_name: Joi.string().alphanum().min(1).max(30).required(),
     last_name: Joi.string().alphanum().min(1).max(30).required(),
-    gender: Joi.string().alphanum().min(1).max(10).required(),
+    gender: Joi.string().alphanum().min(1).max(30).required(),
     user_role: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required(),
-    department: Joi.string().alphanum().min(1).max(30).required(),
+    projectids: Joi.array().items(Joi.number()).required(), 
+    department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
     ispm: Joi.boolean().required(),
-    validatedmember: Joi.boolean().required()
+//    validatedmember: Joi.boolean().required() X
 });
 
 //TODO: review and make more accurate?
@@ -53,7 +53,7 @@ const eventSchema = Joi.object({
     duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
     projectid: Joi.number().required().prefs({ convert: false }),
-    e_date: Joi.string().required()
+    e_date: Joi.date().required()
 });
 
 const postAnnouncementSchema = Joi.object({
@@ -68,6 +68,14 @@ const createRoomSchema = Joi.object({
 
 const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
+});
+
+const sessionIDSchema = Joi.object({
+    session_id: Joi.number().required()
+});
+
+const roomStatusSchema = Joi.object({
+    date: Joi.date().required()
 });
 
 const eventListSchema = Joi.array().items(eventSchema);
@@ -241,6 +249,51 @@ function validatePostAnnouncement (req, callback) {
     }
 }
 
+function validatePostMeetHistory (req, callback) {
+    logCtx.fn = 'validatePostMeetHistory';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateGetIAPProjects (req, callback) {
+    logCtx.fn = 'validateGetIAPProjects';
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        const { error, value } = sessionIDSchema.validate(req.query);
+        if (error) { //return comma separated errors
+            logError("Schema validation error for request payload.", logCtx);
+            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+        } else {
+            log("Request schema successfully validated.", logCtx);
+            callback(null);
+        }
+    } else {
+        var errorMsg = "Missing request query parameters.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
+function validateGetRoomStatus (req, callback) { //TODO: test
+    logCtx.fn = 'validateGetRoomStatus';
+    if (req.query && Object.keys(req.query).length != 0) {
+        const { error, value } = roomStatusSchema.validate(req.query);
+        if (error) { //return comma separated errors
+            logError("Schema validation error for request payload.", logCtx);
+            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+        } else {
+            log("Request schema successfully validated.", logCtx);
+            callback(null);
+        }
+    } else {
+        log("Request schema successfully validated, no query parameter found.", logCtx);
+        callback(null);
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -268,5 +321,8 @@ module.exports = {
     validateJoinRoom: validateJoinRoom,
     validateEndRoom: validateEndRoom,
     validateGetEventByID: validateGetEventByID,
-    validatePostAnnouncement: validatePostAnnouncement
+    validatePostAnnouncement: validatePostAnnouncement,
+    validatePostMeetHistory: validatePostMeetHistory,
+    validateGetIAPProjects: validateGetIAPProjects,
+    validateGetRoomStatus: validateGetRoomStatus
 }

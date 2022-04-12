@@ -118,9 +118,9 @@ function registerStudent (userID, body, callback) {
     var department = body.department;
     var gradDate = body.grad_date;
     var isPM = body.ispm;
-    var validatedmember = body.validatedmember;
-    var query = "insert into student_researchers (userid, department, grad_date, ispm, validatedmember) values ($1, $2, $3, $4, $5)";
-    var values = [userID, department, gradDate, isPM, validatedmember];
+    // var validatedmember = body.validatedmember;
+    var query = "insert into student_researchers (userid, department, grad_date, ispm) values ($1, $2, $3, $4)";
+    var values = [userID, department, gradDate, isPM];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -197,12 +197,13 @@ function comparePasswords (email, plaintextPassword, callback) {
     async.waterfall([
         function (callback) {
             //Get hash from database (and retrieve user ID)
-            fetchHashAndUserID(email, (error, hash, userID) => { //TODO: test
+            fetchHashAndUserID(email, (error, hash, userID, user_role) => { //TODO: test
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
                     result.userID = userID; //Add user iD to result object
+                    result.user_role = user_role;
                     callback(null, hash);
                 }
             });
@@ -252,7 +253,7 @@ function comparePasswords (email, plaintextPassword, callback) {
 
 function fetchHashAndUserID (email, callback) {
     logCtx.fn = 'fetchHashAndUserID';
-    var query = "select userid, password from users where email = $1";
+    var query = "select userid, password, user_role from users where email = $1";
     var values = [email];
     var queryCb = (error, res) => { 
         if (error) {
@@ -267,7 +268,8 @@ function fetchHashAndUserID (email, callback) {
             } else {
                 let userID = res.rows[0].userid;
                 let hash = res.rows[0].password;
-                callback(null, hash, userID); //Success
+                let role = res.rows[0].user_role;
+                callback(null, hash, userID, role); //Success
             }
         }
     };
@@ -350,11 +352,12 @@ function createEvents (eventList, callback) {
     });
 }
 
-function getEvents(upcoming, time, date, callback) {
+function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false";
+    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null"; //project id not null to make sure we only select project events
     var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false";
-    var query = upcoming ? getUpcoming : getAll;
+    var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -377,6 +380,8 @@ function getEvents(upcoming, time, date, callback) {
     };
     if (upcoming) {
         dbUtils.makeQueryWithParams(pool, query, [time, date], callback, queryCb);
+    } else if (byDate) {
+        dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
     } else {
         dbUtils.makeQuery(pool, query, callback, queryCb);
     }
@@ -507,6 +512,87 @@ function getRoleAndName (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
+function getStudentProject (userID, projectID, callback) { //TODO: test
+    logCtx.fn = 'getStudentProject';
+    var query = "select userid, projectid from participates where userid = $1 and projectid = $2"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = false;
+            if (res.rows.length != 0) result = true; //Set as true since this student is linked with the project
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID, projectID], callback, queryCb);
+}
+
+function postMeetHistory (userID, meetingID, callback) {
+    logCtx.fn = 'postMeetHistory';
+    var query = "insert into meethistory (meetid, userid, jointime) values ($1, $2, $3)";
+    var values = [meetingID, userID, new Date(Date.now()).toISOString()]; //TODO: current time seems to be in different time zone? it's 4 hours ahead
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function postToShowroomProjects (iapProjects, callback) {
+    logCtx.fn = 'postToShowroomProjects';
+    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4) returning projectid, iapproject_title";
+    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows[0]; //returns {projectid: '#', iapproject_title: 'abc'}
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchUserIDsAndRoles (projectID, callback) {
+    logCtx.fn = 'fetchUserIDsAndRoles';
+    var query = "select u.userid, u.user_role from users u left join meethistory m on u.userid = m.userid where m.meetid = $1";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns [{userid: '#', user_role: 'abc'}, {userid: '#', user_role: 'abc'}]
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+}
+
+function fetchProjects(sessionID, callback) { //TODO: test
+    logCtx.fn = 'fetchProjects';
+    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns array of json objects
+            callback(null, result);
+        }
+    });
+}
+
 function endPool() {
     logCtx.fn = 'endPool';
     //Close the connection pool when server closes
@@ -528,5 +614,10 @@ module.exports = {
     getRoleAndName: getRoleAndName,
     getEventByID: getEventByID,
     getUserInfo: getUserInfo,
-    postAnnouncements: postAnnouncements
+    postAnnouncements: postAnnouncements,
+    postMeetHistory: postMeetHistory,
+    postToShowroomProjects: postToShowroomProjects,
+    fetchProjects: fetchProjects,
+    getStudentProject: getStudentProject,
+    fetchUserIDsAndRoles: fetchUserIDsAndRoles
 }

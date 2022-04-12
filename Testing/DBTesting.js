@@ -25,10 +25,44 @@ let logCtx = {
 // testIAPValidateEmail();
 // testShowroomValidateEmail();
 // testRegisterGeneralUser();
-testGetRoleAndName();
+// testGetRoleAndName();
+// testPostMeetHistory();
+// testGetRolesAndNameFromMeetHistory();
+testGetStudentProject();
 
 
 //test functions:
+
+function testGetStudentProject() {
+    logCtx.fn = 'testGetStudentProject';
+    logTest("Start test", logCtx);
+    var projectID = 1;
+    var userID = 20;
+    showroomDB.getStudentProject(userID, projectID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testGetRolesAndNameFromMeetHistory() {
+    logCtx.fn = 'testGetRolesAndNameFromMeetHistory';
+    logTest("Start test", logCtx);
+    var projectID = 47;
+    showroomDB.fetchUserIDsAndRoles(projectID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testGetRoleAndName () {
     logCtx.fn = 'testGetRoleAndName';
@@ -42,7 +76,24 @@ function testGetRoleAndName () {
         }
         logTest(" result: ", logCtx);
         console.log(result);
-        iapDB.endPool();
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
+
+function testPostMeetHistory () {
+    logCtx.fn = 'testPostMeetHistory';
+    logTest("Start test", logCtx);
+    var meetingID = '47';
+    var userID = '1';
+    showroomDB.postMeetHistory(userID, meetingID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        } else {
+            logTest("result", logCtx);
+            console.log(result);
+        }
+        showroomDB.endPool();
         logTest("End test", logCtx);
     });
 }
@@ -198,11 +249,11 @@ function testUpdateEvent() {
 function testGetEvents() {
     logCtx.fn = 'testGetEvents';    
     logTest("Start Test", logCtx);
-    // var upcoming = false;
-    var upcoming = true;
+    var upcoming = false;
+    // var upcoming = true;
     var time = '7:30 AM';
     var date = '04-25-22';
-    showroomDB.getEvents( upcoming, time, date, (error, result) => {
+    showroomDB.getEvents(true, upcoming, time, date, (error, result) => {
         if (error) logError(error, logCtx);
         if (result) {
             logTest("result: ", logCtx);
@@ -228,7 +279,9 @@ function iapProjectsTest () {
         if (error) {
             logError(error, logCtx);
         }
-        logTest("Returned data: " + data, logCtx);
+        logTest("Returned data: ", logCtx);
+        console.log(data);
+        iapDB.endPool();
         logTest("Test ended", logCtx);
     });
 }

@@ -11,7 +11,7 @@ const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 
 const userRoles = {
-    studentResearcher: 'student_researcher',
+    studentResearcher: 'Student Researcher',
     companyRep: 'company_representative',
     advisor: 'advisor'
 }
@@ -19,10 +19,11 @@ const userRoles = {
 //BigBlueButton API variables
 const BBB_SECRET = env.BBB_SECRET || 'testbbbsecret';
 const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
+const ATTENDEE_PASSWORD = env.ATTENDEE_PASSWORD || 'attpw';
 
 //Endpoint parts
 const BBB_HOST = 'iapstream.ece.uprm.edu';
-const SHOWROOM_HOST = 'iapshowroon.ece.uprm.edu';
+const SHOWROOM_HOST = 'iapshowroom.ece.uprm.edu';
 
 const showroom_prefix = '/api/showroom';
 const stream_prefix = '/api/meet';
@@ -31,7 +32,7 @@ const bbb_prefix = '/bigbluebutton/api';
 
 //CORS configuration options
 const corsOptions = {
-    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : 'http://localhost:3000',
+    origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : ['http://localhost:3000','http://localhost:3001'],
     optionsSuccessStatus: 200,
     credentials: true
 }
@@ -69,6 +70,7 @@ module.exports = {
     session_secret: session_secret,
     BBB_SECRET: BBB_SECRET,
     MOD_PASSWORD: MOD_PASSWORD,
+    ATTENDEE_PASSWORD: ATTENDEE_PASSWORD,
     prod: prod,
     logDebug: logDebug,
     corsOptions: corsOptions,
