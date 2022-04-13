@@ -12,8 +12,8 @@ const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 
 const userRoles = {
     studentResearcher: 'Student Researcher',
-    companyRep: 'company_representative',
-    advisor: 'advisor'
+    companyRep: 'Company Representative',
+    advisor: 'Advisor'
 }
 
 //BigBlueButton API variables
