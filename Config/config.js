@@ -30,6 +30,9 @@ const stream_prefix = '/api/meet';
 const auth_prefix = '/api/auth';
 const bbb_prefix = '/bigbluebutton/api';
 
+//https://iapstream.ece.uprm.edu/bigbluebutton/api
+var bbbUrlPrefix = "https://" + BBB_HOST + bbb_prefix;
+
 //CORS configuration options
 const corsOptions = {
     origin: prod ? ['https://' + BBB_HOST, 'https://' + SHOWROOM_HOST] : ['http://localhost:3000','http://localhost:3001'],
@@ -75,5 +78,6 @@ module.exports = {
     logDebug: logDebug,
     corsOptions: corsOptions,
     SESSION_MAX_AGE: SESSION_MAX_AGE,
-    userRoles: userRoles
+    userRoles: userRoles,
+    bbbUrlPrefix: bbbUrlPrefix
 };

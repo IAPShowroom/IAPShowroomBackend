@@ -14,9 +14,6 @@ const axios = require('axios').default;
 const { XMLParser } = require('fast-xml-parser');
 const xmlParser = new XMLParser({ ignoreAttributes: false });
 
-//https://iapstream.ece.uprm.edu/bigbluebutton/api
-var urlPrefix = "https://" + config.BBB_HOST + config.bbb_prefix;
-
 let logCtx = {
     fileName: 'VideoStreamingHandlers',
     fn: ''
@@ -37,17 +34,18 @@ function createRoom (meetingName, projectID, callback) {
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('create', queryString);
-            var url = urlPrefix + "/create?" + queryString + "&checksum=" + checksum;
+            var url = config.bbbUrlPrefix + "/create?" + queryString + "&checksum=" + checksum;
             callback(null, url);
         },
         function (url, callback) {
+            logCtx.fn = "createRoom:axios";
             //Make BBB API call
             axios.post(url).then((response) => {
                 log("Successful response for BBB create call.", logCtx);
-                callback(null, response);
-            }).catch((error) => {
-                logError(error, logCtx);
-                callback(error, null);
+                callback(null);
+            }).catch((axiosError) => {
+                logError(axiosError, logCtx);
+                callback(axiosError);
             });
         }
     ], (error) => {
@@ -98,7 +96,7 @@ function joinRoom (req, res, next) {
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('join', queryString);
-            var url = urlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+            var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
             callback(null, { url: url });
         }
     ], (error, result) => {
@@ -134,7 +132,7 @@ function endRoom (req, res, next) {
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('end', queryString);
-            var url = urlPrefix + "/end?" + queryString + "&checksum=" + checksum;
+            var url = config.bbbUrlPrefix + "/end?" + queryString + "&checksum=" + checksum;
             callback(null, url);
         },
         function (url, callback) {
@@ -170,6 +168,8 @@ function getBBBRoleAndName(data, projectID, callback) {
     var userID = data.userID;
     var isAdmin = data.admin;
     var isPM = data.isPM;
+    console.log("data"); //testing
+    console.log(data); //testing
     showroomDB.getRoleAndName(userID, (error, result) => {
         if (error) {
             errorStatus = 500;
@@ -210,7 +210,7 @@ function getMeetingInfo (meetingID, callback) {
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('getMeetingInfo', queryString);
-            var url = urlPrefix + "/getMeetingInfo?" + queryString + "&checksum=" + checksum;
+            var url = config.bbbUrlPrefix + "/getMeetingInfo?" + queryString + "&checksum=" + checksum;
             callback(null, url);
         },
         function (url, callback) {
@@ -245,7 +245,7 @@ function isMeetingRunning (meetingID, callback) {
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('isMeetingRunning', queryString);
-            var url = urlPrefix + "/isMeetingRunning?" + queryString + "&checksum=" + checksum;
+            var url = config.bbbUrlPrefix + "/isMeetingRunning?" + queryString + "&checksum=" + checksum;
             callback(null, url);
         },
         function (url, callback) {

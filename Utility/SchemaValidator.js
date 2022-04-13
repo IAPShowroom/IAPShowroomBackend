@@ -32,7 +32,7 @@ const studentSchema = userSchema.append({
     projectids: Joi.array().items(Joi.number()).required(), 
     department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
-    ispm: Joi.boolean().required(),
+    ispm: Joi.boolean().required()
 //    validatedmember: Joi.boolean().required() X
 });
 

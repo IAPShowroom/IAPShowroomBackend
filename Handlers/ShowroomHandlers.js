@@ -22,13 +22,13 @@ function getStats (req, res, next) {
 
 }
 
-function getRoomStatus (req, res, next) {
+function getRoomStatus (req, res, next) { //TODO: test with pid instead of eid
     logCtx.fn = 'getRoomStatus';
     var errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateGetRoomStatus(req, (error) => { //TODO: implement and test
+            validator.validateGetRoomStatus(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -59,7 +59,7 @@ function getRoomStatus (req, res, next) {
             });
         },
         function (events, callback) {
-            getStatusForEvents(events, (error, result) => { //TODO: test
+            getStatusForEvents(events, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -80,7 +80,7 @@ function getRoomStatus (req, res, next) {
     });
 }
 
-function getStatusForEvents (allEvents, mainCallback) {
+function getStatusForEvents (allEvents, mainCallback) { //TODO: test with pid instead of eid
     logCtx.fn = 'getStatusForEvents';
     var result = [];
     var userList;
@@ -193,10 +193,11 @@ function getQnARoomInfo (req, res, next) {
     logCtx.fn = 'getQnARoomInfo';
     var finalResult = {};
     var errorStatus, errorMsg, bbbRole, firstName, lastName, meetingName, projectID;
+    var userID = req.session.data["userID"];
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateQNARoomInfo(req, (error) => { //TODO: test
+            validator.validateQNARoomInfo(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -269,7 +270,6 @@ function getQnARoomInfo (req, res, next) {
             }
         },
         // function (callback) {
-        //     var userID = req.session.data["userID"];
         //     //Record join history
         //     showroomDB.postMeetHistory(userID, projectID, (error, result) => { //TODO: check projectID vs eventID
         //         if (error) {
@@ -286,7 +286,7 @@ function getQnARoomInfo (req, res, next) {
         function (callback) {
             //Construct URL for BBB API call
             var queryParams = {
-                meetingID: req.body.meeting_id,
+                meetingID: "0" + req.body.meeting_id,
                 fullName: firstName + " " + lastName,
                 userID: userID,
                 role: bbbRole
@@ -294,15 +294,16 @@ function getQnARoomInfo (req, res, next) {
             //Choose password property based on BBB role
             switch (bbbRole) {
                 case 'moderator':
-                    queryParams.moderatorPW = config.MOD_PASSWORD;
+                    // queryParams.moderatorPW = config.MOD_PASSWORD;
+                    queryParams.password = config.MOD_PASSWORD;
                     break;
                 case 'viewer':                    
                     queryParams.password = config.ATTENDEE_PASSWORD;
                     break;
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
-            var checksum = generateChecksum('join', queryString);
-            var url = urlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+            var checksum = meetingHandler.generateChecksum('join', queryString);
+            var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
             finalResult.join_url = url;
             callback(null);
         }

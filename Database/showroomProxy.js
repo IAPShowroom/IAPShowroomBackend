@@ -203,9 +203,10 @@ function comparePasswords (email, plaintextPassword, callback) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
-                    result.userID = userID; //Add user iD to result object
+                    //Add user information to result object, this is later on the session data
+                    result.userID = userID;
                     result.user_role = user_role;
-                    if (user_role == config.userRoles.studentResearcher) result.isPM = isPM;
+                    result.isPM = isPM;
                     callback(null, hash);
                 }
             });
