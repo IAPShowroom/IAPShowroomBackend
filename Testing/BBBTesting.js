@@ -24,8 +24,8 @@ let logCtx = {
 // testReadXML();
 // testGetMeetingInfoURL();
 // testGetMeetingInfo();
-testIsMeetingRunning();
-// testCreateRoom();
+// testIsMeetingRunning();
+testCreateRoom();
  
  
  //test functions:

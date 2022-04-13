@@ -22,7 +22,7 @@ let logCtx = {
     fn: ''
 }
 
-function createRoom (meetingName, projectID, callback) { //TODO: test and finish implementing
+function createRoom (meetingName, projectID, callback) {
     logCtx.fn = "createRoom";
     async.waterfall([
         function (callback) {
@@ -33,13 +33,11 @@ function createRoom (meetingName, projectID, callback) { //TODO: test and finish
                 moderatorPW: config.MOD_PASSWORD,
                 attendeePW: config.ATTENDEE_PASSWORD
                 // ,
-                // isBreakout: "true" //testing
+                // isBreakout: true //For some reason BBB doesn't accept the url if it has isBreakout query param
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('create', queryString);
             var url = urlPrefix + "/create?" + queryString + "&checksum=" + checksum;
-            console.log("url"); //testing
-            console.log(url); //testing
             callback(null, url);
         },
         function (url, callback) {
@@ -57,7 +55,8 @@ function createRoom (meetingName, projectID, callback) { //TODO: test and finish
     });
 }
 
-function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
+//Leaving endpoint exposed just in case it's useful
+function joinRoom (req, res, next) {
     logCtx.fn = "joinRoom";
     var errorStatus, errorMsg, bbbRole, firstName, lastName;
     var userID = req.session.data.userID;
@@ -89,33 +88,6 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
             });
         },
         function (callback) {
-            //Check role
-            switch (bbbRole) {
-                case "moderator":
-                    joinModerator(); //TODO: call create -> cb(null)
-                    break;
-                case "viewer":
-                    joinViewer(); //TODO: call isMeetingRunning -> if not running fail, if running cb(null)
-                    break;
-            }
-        },
-        function (callback) {
-            var meetingID = req.body.meeting_id;
-            var userID = req.session.data["userID"];
-            //Record join history
-            showroomDB.postMeetHistory(userID, meetingID, (error, result) => {
-                if (error) {
-                    errorStatus = 500;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                    callback(error, null);
-                } else {
-                    log("Response data: " + JSON.stringify(result), logCtx);
-                    callback(null, result);
-                }
-            });
-        },
-        function (callback) {
             //Construct URL for BBB API call
             var queryParams = {
                 meetingID: req.body.meeting_id,
@@ -139,7 +111,7 @@ function joinRoom (req, res, next) { //TODO: test produced url w/ BBB
     });
 }
 
-function endRoom (req, res, next) { //TODO: test produced url w/ BBB
+function endRoom (req, res, next) {
     logCtx.fn = "endRoom";
     var errorStatus, errorMsg;
     async.waterfall([
@@ -157,7 +129,7 @@ function endRoom (req, res, next) { //TODO: test produced url w/ BBB
         function (callback) {
             //Construct URL for BBB API call
             var queryParams = {
-                meetingID: req.body.meeting_id,
+                meetingID: "0" + req.body.meeting_id,
                 password: config.MOD_PASSWORD
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
@@ -167,7 +139,7 @@ function endRoom (req, res, next) { //TODO: test produced url w/ BBB
         },
         function (url, callback) {
             //Make BBB API call
-            axios.post(url).then((response) => { //TODO: test
+            axios.post(url).then((response) => {
                 log("Successful response for BBB end call.", logCtx);
                 callback(null, response);
             }).catch((error) => {
@@ -180,7 +152,7 @@ function endRoom (req, res, next) { //TODO: test produced url w/ BBB
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 200, "Successfully constructed URL.", result);
+            successResponse(res, 200, "Successfully ended room.", result.data.response); //send the response object only
         }
     });
 }
@@ -197,6 +169,7 @@ function getBBBRoleAndName(data, projectID, callback) {
     var role = 'viewer';
     var userID = data.userID;
     var isAdmin = data.admin;
+    var isPM = data.isPM;
     showroomDB.getRoleAndName(userID, (error, result) => {
         if (error) {
             errorStatus = 500;
@@ -217,7 +190,7 @@ function getBBBRoleAndName(data, projectID, callback) {
                 if (result.projectIDs) { //List of project IDs is not null, they are advisor or student researcher
                     //Check if this is room is of one of their projects
                     result.projectIDs.forEach( id => {
-                        if (id == projectID) role = 'moderator';
+                        if (id == projectID && isPM) role = 'moderator';
                     });
                 }
             }
@@ -273,8 +246,6 @@ function isMeetingRunning (meetingID, callback) {
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('isMeetingRunning', queryString);
             var url = urlPrefix + "/isMeetingRunning?" + queryString + "&checksum=" + checksum;
-            console.log("url"); //testing
-            console.log(url); //testing
             callback(null, url);
         },
         function (url, callback) {
@@ -305,5 +276,6 @@ module.exports = {
     endRoom: endRoom,
     generateChecksum: generateChecksum,
     getMeetingInfo: getMeetingInfo,
-    isMeetingRunning: isMeetingRunning
+    isMeetingRunning: isMeetingRunning,
+    getBBBRoleAndName: getBBBRoleAndName
 }

@@ -190,7 +190,130 @@ function getStatusForEvents (allEvents, mainCallback) {
 }
 
 function getQnARoomInfo (req, res, next) {
-    
+    logCtx.fn = 'getQnARoomInfo';
+    var finalResult = {};
+    var errorStatus, errorMsg, bbbRole, firstName, lastName, meetingName, projectID;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateQNARoomInfo(req, (error) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch title, abstract, and users associated with project (Student Researchers and Advisors in the participates table)
+            projectID = req.body.meeting_id;
+            showroomDB.getQnARoomInfo(projectID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No records found.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    finalResult.project_members = result; //Add list of participating users to the final result
+                    meetingName = result[0].iapproject_title; //Save meeting name for create room call
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            //Get name and role for BBB room
+            var userData = req.session.data;
+            meetingHandler.getBBBRoleAndName(userData, req.body.meeting_id, (error, role, first_name, last_name) => {
+                if (error) {
+                    logError(error, logCtx);
+                } else {
+                    bbbRole = role;
+                    firstName = first_name;
+                    lastName = last_name;
+                }
+                callback(error); //Null if no error
+            });
+        },
+        function (callback) {
+            //Check role
+            switch (bbbRole) {
+                case "moderator":
+                    //Create room before joining if they are moderators
+                    meetingHandler.createRoom(meetingName, projectID, callback);
+                    break;
+                case "viewer":
+                    //Check if the meeting is running, fail the call if it's not
+                    meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
+                        if (error) {
+                            logError(error, logCtx);
+                            callback(error);
+                        } else {
+                            if (!isRunning) {
+                                errorStatus = 500;
+                                errorMsg = "Meeting is not running.";
+                                logError(errorMsg, logCtx);
+                                callback(new Error(errorMsg));
+                            } else {
+                                callback(null); //All good, meeting is running, proceed
+                            }
+                        }
+                    });
+                    break;
+            }
+        },
+        // function (callback) {
+        //     var userID = req.session.data["userID"];
+        //     //Record join history
+        //     showroomDB.postMeetHistory(userID, projectID, (error, result) => { //TODO: check projectID vs eventID
+        //         if (error) {
+        //             errorStatus = 500;
+        //             errorMsg = error.toString();
+        //             logError(error, logCtx);
+        //             callback(error, null);
+        //         } else {
+        //             log("Response data: " + JSON.stringify(result), logCtx);
+        //             callback(null);
+        //         }
+        //     });
+        // },
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: req.body.meeting_id,
+                fullName: firstName + " " + lastName,
+                userID: userID,
+                role: bbbRole
+            }
+            //Choose password property based on BBB role
+            switch (bbbRole) {
+                case 'moderator':
+                    queryParams.moderatorPW = config.MOD_PASSWORD;
+                    break;
+                case 'viewer':                    
+                    queryParams.password = config.ATTENDEE_PASSWORD;
+                    break;
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('join', queryString);
+            var url = urlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+            finalResult.join_url = url;
+            callback(null);
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved room information and produced join URL.", finalResult);
+        }
+    });
 }
 
 function getIAPSessions (req, res, next) {

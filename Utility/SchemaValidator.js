@@ -262,6 +262,28 @@ function validateGetIAPProjects (req, callback) {
     }
 }
 
+function validateQNARoomInfo (req, callback) { //TODO: test
+    logCtx.fn = 'validateQNARoomInfo';
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        if (!isNaN(parseInt(req.params.projectID, 10))) {
+            if (req.body != undefined && Object.keys(req.body).length != 0) {
+                validateRequest(req, joinRoomSchema, callback);
+            } else {
+                logError("Missing request body.", logCtx);
+                callback(new Error("Missing request body."));
+            }
+        } else {
+            var errorMsg = "Invalid data type for path parameter.";
+            logError(errorMsg, logCtx);
+            callback(new Error(errorMsg));
+        }
+    } else {
+        var errorMsg = "Missing request path parameters.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
 function validateGetRoomStatus (req, callback) { //TODO: test
     logCtx.fn = 'validateGetRoomStatus';
     if (req.query && Object.keys(req.query).length != 0) {
@@ -308,5 +330,6 @@ module.exports = {
     validateGetEventByID: validateGetEventByID,
     validatePostMeetHistory: validatePostMeetHistory,
     validateGetIAPProjects: validateGetIAPProjects,
-    validateGetRoomStatus: validateGetRoomStatus
+    validateGetRoomStatus: validateGetRoomStatus,
+    validateQNARoomInfo: validateQNARoomInfo
 }
