@@ -185,19 +185,17 @@ function logIn (req, res, next) {
                     //Insert session token with user ID in request objet
                     req.session.data = result; //JSON object with user ID and admin role if applicable
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    //Will test integration by passing userid and admin payload, but redis sessions should be included
-                    successResponse(res, 200, "User successfully logged in.",result);
-                    callback(null);
+                    callback(null, result);
                 }
             });
         }
-    ], (error) => {
+    ], (error, result) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
-        } 
-        // else {
-        //     successResponse(res, 200, "User successfully logged in.");
-        // }
+        } else {
+            //Will test integration by passing userid and admin payload, but redis sessions should be included
+            successResponse(res, 200, "User successfully logged in.", result);
+        }
     });
 }
 
