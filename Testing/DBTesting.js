@@ -26,9 +26,9 @@ let logCtx = {
 // testShowroomValidateEmail();
 // testRegisterGeneralUser();
 // testGetRoleAndName();
-// testPostMeetHistory();
+testPostMeetHistory();
 // testGetRolesAndNameFromMeetHistory();
-testGetStudentProject();
+// testGetStudentProject();
 
 
 //test functions:
@@ -84,7 +84,8 @@ function testGetRoleAndName () {
 function testPostMeetHistory () {
     logCtx.fn = 'testPostMeetHistory';
     logTest("Start test", logCtx);
-    var meetingID = '47';
+    var meetingID = '1';
+    // var meetingID = '47';
     var userID = '1';
     showroomDB.postMeetHistory(userID, meetingID, (error, result) => {
         if (error) {
