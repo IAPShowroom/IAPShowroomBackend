@@ -19,7 +19,7 @@ let logCtx = {
 }
 
 let SSE = {}; //Object to expose sendEvent
-let sseRequest; //Store the request object for the SSE connection (maybe change this for an array for multiple clients?)
+let sseRequests = []; //Store the request object for the SSE connection (maybe change this for an array for multiple clients?)
 
 function getStats (req, res, next) {
 
@@ -215,12 +215,16 @@ function sseConnect (req, res, next) {
 
     //TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
     var eventHistory = []; //Keep track of which events have been sent
+    sseRequests.push(res); //Add response object to the array of connections
 
     res.writeHead(200, {
         "Cache-Control": "no-cache",
         "Content-type": "text/event-stream",
         "Connection": "keep-alive"
     });
+
+    log("Sending test message", logCtx);
+    res.write(`data: ${JSON.stringify({ announcementid: "1", a_content: "Testing testing 1 2 3", a_date: "5-6-22 8:00 AM" })}\n\n`); //Initial testing, let's try to get one event going
 
     //TODO: test with the connection staying on longer than 2 minutes, if it times out then uncomment this
     //Disable timeout so the connection can stay alive for as long as we want
@@ -232,8 +236,10 @@ function sseConnect (req, res, next) {
     //Define function to send events
     SSE.sendEvent = (data) => {
         log("Sending event with data: ", logCtx);
-        log(data, logCtx);
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
+        console.log(data);
+        sseRequests.forEach((res) => {
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        });
     };
 
     //End response when due
@@ -243,6 +249,21 @@ function sseConnect (req, res, next) {
             res.end();
         }
     });
+}
+
+//TODO: maybe update to use async.forEachLimit to carefully close all before continuing and then call some cb?
+function closeSSEConnections () {
+    logCtx.fn = 'closeSSEConnections';
+    if (sseRequests.length > 0) {
+        var total = sseRequests.length;
+        log("SSE connections to close: " + total, logCtx);
+        sseRequests.forEach((res) => {
+            if (!res.finished) {
+                log("Ending the SSE request: " + total--, logCtx);
+                res.end();
+            }
+        });
+    }
 }
 
 function postAnnouncements (req, res, next) { //TODO: test
@@ -557,5 +578,6 @@ module.exports = {
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
-    sseConnect: sseConnect
+    sseConnect: sseConnect,
+    closeSSEConnections: closeSSEConnections
 }
