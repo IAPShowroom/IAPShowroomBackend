@@ -404,6 +404,26 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function getStats (callback) { //TODO: test
+    logCtx.fn = 'getStats';
+    var query = "select u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid group by user_role, department, gender, grad_date;"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No users found! send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
     var query = "select first_name, last_name, email, user_role, gender, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
@@ -600,5 +620,6 @@ module.exports = {
     postToShowroomProjects: postToShowroomProjects,
     fetchProjects: fetchProjects,
     getStudentProject: getStudentProject,
-    fetchUserIDsAndRoles: fetchUserIDsAndRoles
+    fetchUserIDsAndRoles: fetchUserIDsAndRoles,
+    getStats: getStats
 }

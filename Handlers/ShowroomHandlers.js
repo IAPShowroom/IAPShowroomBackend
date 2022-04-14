@@ -18,8 +18,66 @@ let logCtx = {
     fn: ''
 }
 
-function getStats (req, res, next) {
+function getStats (req, res, next) { //TODO: finish implementing and test
+    logCtx.fn = 'getStats';
+    var errorStatus, errorMsg;
+    var finalResult = {
+        maxParticipants: 0, generalParticipants: 0, researchStudParticipants: 0, 
+        companyRepParticipants: 0, professorParticipants: 0, totalWomen: 0, 
+        totalMen: 0, totalNotDisclosed: 0, resStudICOM: 0, 
+        resStudINEL: 0, resStudINSO: 0, resStudCIIC: 0, 
+        resStudINME: 0, resStudOther: 0, resStudGRAD: 0, 
+        totalResStudWomen: 0, totalResStudMen: 0, totalResStudNotDisclosed: 0, 
+        // activeParticipants: 0, //TODO: will we use it?
+    };
+    async.waterfall([
+        function (callback) {
+            //Fetch stats from DB
+            showroomDB.getStats((error, result) => { //TODO: test
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No users found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (dbResults, callback) {
+            //Filter results from DB and derive statistics
 
+            //TODO: implement
+
+            callback(null); //TODO: placeholder
+        },
+        //TODO: do we want to implement this?
+        // function (events, callback) {
+        //     getActiveParticipants((error, result) => {
+        //         if (error) {
+        //             errorStatus = 500;
+        //             errorMsg = error.toString();
+        //             logError(error, logCtx);
+        //             callback(error, null);
+        //         } else {
+        //             callback(null, result);
+        //         }
+        //     });
+        // }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved statistics.", finalResult);
+        }
+    });
 }
 
 function getRoomStatus (req, res, next) {
@@ -28,7 +86,7 @@ function getRoomStatus (req, res, next) {
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateGetRoomStatus(req, (error) => { //TODO: implement and test
+            validator.validateGetRoomStatus(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -59,7 +117,7 @@ function getRoomStatus (req, res, next) {
             });
         },
         function (events, callback) {
-            getStatusForEvents(events, (error, result) => { //TODO: test
+            getStatusForEvents(events, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
