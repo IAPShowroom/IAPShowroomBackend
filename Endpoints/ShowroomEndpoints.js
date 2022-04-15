@@ -46,6 +46,7 @@ showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.del
 
 // Server Side Events
 showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideUpcomingEvents); //TODO: implement
+showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideProgressBar);
 
 //IAP
 showroomRouter.get(getIAPProjects, auth.authenticate, showroomHandler.getProjects); //TODO - review

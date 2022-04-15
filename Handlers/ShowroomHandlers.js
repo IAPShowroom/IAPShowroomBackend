@@ -9,6 +9,14 @@ const { successResponse, errorResponse, serverSideResponse } = require('../Utili
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 
+let sse_clients = [];
+
+const sse_header = {
+    "Connection": "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+};
+
 let logCtx = {
     fileName: 'ShowroomHandlers',
     fn: ''
@@ -278,63 +286,111 @@ function getServerSideUpcomingEvents(req, res, next){
     const upcoming = true;
     var errorStatus, errorMsg;
 
-    res.writeHead(200, {
-        "Connection": "keep-alive",
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-    });
+    res.writeHead(200, sse_header);
 
-
-    setInterval(() => {
-
-        async.waterfall([
-         
-        //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
+    async.waterfall([
         
-        function (callback) {
-            //Validate request payload
-            validator.validateServerSideEvent(req, (error) => {
-                if (error) {
-                    logError(error, logCtx);
-                    errorStatus = 400;
-                    errorMsg = error.message;
-                }
-                callback(error);
-            });
-        },
-        function (callback) {
-            //Take DB action
+    //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
+    
+    function (callback) {
+        //Validate request payload
+        validator.validateServerSideEvent(req, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                errorStatus = 400;
+                errorMsg = error.message;
+            }
+            callback(error);
+        });
+    },
+    function (callback) {
+        //Take DB action
 
-            const date_obj = new Date();
-            const day = date_obj.toLocaleDateString('en-US');
-            const time = date_obj.toLocaleTimeString('en-US');
+        const date_obj = new Date();
+        const day = date_obj.toLocaleDateString('en-US');
+        const time = date_obj.toLocaleTimeString('en-US');
 
-            showroomDB.getEvents(upcoming, time, day, (error, result) => {
-                if (error) {
-                    errorStatus = 500;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                    callback(error, null);
-                } else if (result == undefined || result == null) {
-                    errorStatus = 404;
-                    errorMsg = "No events found.";
-                    logError(error, logCtx);
-                    callback(new Error(errorMsg), null);
-                } else {
-                    log("Response data: " + JSON.stringify(result), logCtx);
-                    callback(null, result);
-                }
-            });
-        }
-        ], (error, result) => {
-            //Send responses
-            serverSideResponse(res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
-        }, 
-        );
+        showroomDB.getEvents(upcoming, time, day, (error, result) => {
+            if (error) {
+                errorStatus = 500;
+                errorMsg = error.toString();
+                logError(error, logCtx);
+                callback(error, null);
+            } else if (result == undefined || result == null) {
+                errorStatus = 404;
+                errorMsg = "No events found.";
+                logError(error, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                log("Response data: " + JSON.stringify(result), logCtx);
+                callback(null, result);
+            }
+        });
+    }
+    ], (error, result) => {
+        //Send responses
+        serverSideResponse("upcomingevents",res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+    }, 
+    );
                 
                 
-    }, 10000);
+    
 
+}
+
+function getServerSideProgressBar(req, res, next){
+    logCtx.fn = "getServerSideProgressBar";
+    console.log('Client connected');
+
+    const upcoming = true;
+    var errorStatus, errorMsg;
+
+    res.writeHead(200, sse_header);
+
+    async.waterfall([
+        
+    //  this function is meant to serve the updates from the events to the frontend
+    
+    function (callback) {
+        //Validate request payload
+        validator.validateServerSideEvent(req, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                errorStatus = 400;
+                errorMsg = error.message;
+            }
+            callback(error);
+        });
+    },
+    function (callback) {
+        //Take DB action
+
+        const date_obj = new Date();
+        const day = date_obj.toLocaleDateString('en-US');
+        const time = date_obj.toLocaleTimeString('en-US');
+
+        showroomDB.getEvents(upcoming, time, day, (error, result) => {
+            if (error) {
+                errorStatus = 500;
+                errorMsg = error.toString();
+                logError(error, logCtx);
+                callback(error, null);
+            } else if (result == undefined || result == null) {
+                errorStatus = 404;
+                errorMsg = "No events found.";
+                logError(error, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                log("Response data: " + JSON.stringify(result), logCtx);
+                callback(null, result);
+            }
+        });
+    }
+    ], (error, result) => {
+        //Send responses
+        serverSideResponse("progress", res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+    }, 
+    );
 }
 
 module.exports = {
@@ -349,5 +405,6 @@ module.exports = {
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
-    getServerSideUpcomingEvents: getServerSideUpcomingEvents
+    getServerSideUpcomingEvents: getServerSideUpcomingEvents,
+    getServerSideProgressBar: getServerSideProgressBar
 }

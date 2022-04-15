@@ -352,7 +352,7 @@ function createEvents (eventList, callback) {
 function getEvents(upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false";
-    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false";
+    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
     var query = upcoming ? getUpcoming : getAll;
     var queryCb = (error, res) => { 
         if (error) {
