@@ -65,6 +65,11 @@ const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
 });
 
+const qnaInfoSchema = Joi.object({
+    meeting_id: Joi.number().required(),
+    bbb: Joi.boolean()
+});
+
 const sessionIDSchema = Joi.object({
     session_id: Joi.number().required()
 });
@@ -266,11 +271,12 @@ function validateQNARoomInfo (req, callback) { //TODO: test
     logCtx.fn = 'validateQNARoomInfo';
     if (req.params != undefined && Object.keys(req.params).length != 0) {
         if (!isNaN(parseInt(req.params.projectID, 10))) {
-            if (req.body != undefined && Object.keys(req.body).length != 0) {
-                validateRequest(req, joinRoomSchema, callback);
+            if (req.query != undefined && Object.keys(req.query).length != 0) {
+                var obj = {body: req.query}; //Bypass validateRequest's req.body call
+                validateRequest(obj, qnaInfoSchema, callback);
             } else {
-                logError("Missing request body.", logCtx);
-                callback(new Error("Missing request body."));
+                logError("Missing request query parameters.", logCtx);
+                callback(new Error("Missing request query parameters."));
             }
         } else {
             var errorMsg = "Invalid data type for path parameter.";
@@ -284,7 +290,7 @@ function validateQNARoomInfo (req, callback) { //TODO: test
     }
 }
 
-function validateGetRoomStatus (req, callback) { //TODO: test
+function validateGetRoomStatus (req, callback) {
     logCtx.fn = 'validateGetRoomStatus';
     if (req.query && Object.keys(req.query).length != 0) {
         const { error, value } = roomStatusSchema.validate(req.query);

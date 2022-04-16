@@ -22,7 +22,7 @@ function getStats (req, res, next) {
 
 }
 
-function getRoomStatus (req, res, next) { //TODO: test with pid instead of eid
+function getRoomStatus (req, res, next) {
     logCtx.fn = 'getRoomStatus';
     var errorStatus, errorMsg;
     async.waterfall([
@@ -80,7 +80,7 @@ function getRoomStatus (req, res, next) { //TODO: test with pid instead of eid
     });
 }
 
-function getStatusForEvents (allEvents, mainCallback) { //TODO: test with pid instead of eid
+function getStatusForEvents (allEvents, mainCallback) {
     logCtx.fn = 'getStatusForEvents';
     var result = []; //Final result array sent for response
     var userList;
@@ -192,7 +192,7 @@ function getStatusForEvents (allEvents, mainCallback) { //TODO: test with pid in
 function getQnARoomInfo (req, res, next) {
     logCtx.fn = 'getQnARoomInfo';
     var finalResult = {};
-    var errorStatus, errorMsg, bbbRole, firstName, lastName, meetingName, projectID;
+    var errorStatus, errorMsg, bbbRole, firstName, lastName, meetingName, projectID, performBBBOps;
     var userID = req.session.data["userID"];
     async.waterfall([
         function (callback) {
@@ -208,7 +208,8 @@ function getQnARoomInfo (req, res, next) {
         },
         function (callback) {
             //Fetch title, abstract, and users associated with project (Student Researchers and Advisors in the participates table)
-            projectID = req.body.meeting_id;
+            projectID = req.query.meeting_id;
+            performBBBOps = req.query.bbb; //Indicate whether or not to only bring room info or also do BBB operations
             showroomDB.getQnARoomInfo(projectID, (error, result) => {
                 if (error) {
                     errorStatus = 500;
@@ -229,90 +230,99 @@ function getQnARoomInfo (req, res, next) {
             });
         },
         function (callback) {
-            //Get name and role for BBB room
-            var userData = req.session.data;
-            meetingHandler.getBBBRoleAndName(userData, req.body.meeting_id, (error, role, first_name, last_name) => {
-                if (error) {
-                    logError(error, logCtx);
-                } else {
-                    bbbRole = role;
-                    firstName = first_name;
-                    lastName = last_name;
-                }
-                callback(error); //Null if no error
-            });
+            if (performBBBOps && performBBBOps == 'true') {
+                //Get name and role for BBB room
+                var userData = req.session.data;
+                meetingHandler.getBBBRoleAndName(userData, req.query.meeting_id, (error, role, first_name, last_name) => {
+                    if (error) {
+                        logError(error, logCtx);
+                    } else {
+                        bbbRole = role;
+                        firstName = first_name;
+                        lastName = last_name;
+                    }
+                    callback(error); //Null if no error
+                });
+            } else {
+                callback(null);
+            }
         },
         function (callback) {
-            //Check role
-            switch (bbbRole) {
-                case "moderator":
-                    //Create room before joining if they are moderators
-                    meetingHandler.createRoom(meetingName, projectID, callback);
-                    break;
-                case "viewer":
-                    //Check if the meeting is running, fail the call if it's not
-                    meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
-                        if (error) {
-                            logError(error, logCtx);
-                            callback(error);
-                        } else {
-                            if (!isRunning) {
-                                errorStatus = 500;
-                                errorMsg = "Meeting is not running.";
-                                logError(errorMsg, logCtx);
-                                callback(new Error(errorMsg));
+            if (performBBBOps && performBBBOps == 'true') {
+                //Check role
+                switch (bbbRole) {
+                    case "moderator":
+                        //Create room before joining if they are moderators
+                        meetingHandler.createRoom(meetingName, projectID, callback);
+                        break;
+                    case "viewer":
+                        //Check if the meeting is running, fail the call if it's not
+                        meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
+                            if (error) {
+                                logError(error, logCtx);
+                                callback(error);
                             } else {
-                                callback(null); //All good, meeting is running, proceed
+                                if (!isRunning) {
+                                    errorStatus = 500;
+                                    errorMsg = "Meeting is not running.";
+                                    logError(errorMsg, logCtx);
+                                    callback(new Error(errorMsg));
+                                } else {
+                                    callback(null); //All good, meeting is running, proceed
+                                }
                             }
-                        }
-                    });
-                    break;
+                        });
+                        break;
+                }
+            } else {
+                callback(null);
             }
         },
-        // function (callback) {
-        //     //Record join history
-        //     showroomDB.postMeetHistory(userID, projectID, (error, result) => { //TODO: check projectID vs eventID
-        //         if (error) {
-        //             errorStatus = 500;
-        //             errorMsg = error.toString();
-        //             logError(error, logCtx);
-        //             callback(error, null);
-        //         } else {
-        //             log("Response data: " + JSON.stringify(result), logCtx);
-        //             callback(null);
-        //         }
-        //     });
-        // },
         function (callback) {
-            //Construct URL for BBB API call
-            var queryParams = {
-                meetingID: "0" + req.body.meeting_id,
-                fullName: firstName + " " + lastName,
-                userID: userID,
-                role: bbbRole
+            if (performBBBOps && performBBBOps == 'true') {
+                //Record join history
+                showroomDB.postMeetHistory(userID, projectID, (error, result) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                        callback(error, null);
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null);
             }
-            //Choose password property based on BBB role
-            switch (bbbRole) {
-                case 'moderator':
-                    // queryParams.moderatorPW = config.MOD_PASSWORD;
-                    queryParams.password = config.MOD_PASSWORD;
-                    break;
-                case 'viewer':                    
-                    queryParams.password = config.ATTENDEE_PASSWORD;
-                    break;
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Construct URL for BBB API call
+                var queryParams = {
+                    meetingID: "0" + projectID,
+                    fullName: firstName + " " + lastName,
+                    userID: userID,
+                    role: bbbRole,
+                    password: bbbRole == 'moderator' ? config.MOD_PASSWORD : config.ATTENDEE_PASSWORD
+                }
+                var queryString = (new URLSearchParams(queryParams)).toString();
+                var checksum = meetingHandler.generateChecksum('join', queryString);
+                var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+                finalResult.join_url = url;
+                callback(null);
+            } else {
+                callback(null);
             }
-            var queryString = (new URLSearchParams(queryParams)).toString();
-            var checksum = meetingHandler.generateChecksum('join', queryString);
-            var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
-            finalResult.join_url = url;
-            callback(null);
         }
     ], (error) => {
         //Send responses
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 200, "Successfully retrieved room information and produced join URL.", finalResult);
+            var successMessage = "Successfully retrieved room information."
+            if (performBBBOps && performBBBOps == 'true') successMessage = successMessage + " And produced join URL.";
+            successResponse(res, 200, successMessage, finalResult);
         }
     });
 }
