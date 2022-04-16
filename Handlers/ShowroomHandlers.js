@@ -82,18 +82,18 @@ function getRoomStatus (req, res, next) { //TODO: test with pid instead of eid
 
 function getStatusForEvents (allEvents, mainCallback) { //TODO: test with pid instead of eid
     logCtx.fn = 'getStatusForEvents';
-    var result = [];
+    var result = []; //Final result array sent for response
     var userList;
     //Traverse all event objects and get status for each one
     async.forEachLimit(allEvents, MAX_ASYNC, (event, cb) => {
+        //Object that gets added to final result array for response
         var eventObj = {company_representatives: 0, general_users: 0, student_researcher: false};
         eventObj.title = event.title;
         var skip = false;
         async.waterfall([
             function (callback) {
                //Fetch user IDs and roles from meet history table
-            //    showroomDB.fetchUserIDsAndRoles(event.projectid, (error, result) => { //Original, use the one below until meet history uses project id
-               showroomDB.fetchUserIDsAndRoles(event.eventid, (error, result) => { //TODO: remove 
+               showroomDB.fetchUserIDsAndRoles(event.projectid, (error, result) => {
                     if (error) {
                         errorStatus = 500;
                         errorMsg = error.toString();
