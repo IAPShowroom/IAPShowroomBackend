@@ -552,6 +552,21 @@ function postMeetHistory (userID, meetingID, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function getName (userID, callback) {
+    logCtx.fn = 'getName';
+    var query = "select first_name, last_name from users where userid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows[0]);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
 function postToShowroomProjects (iapProjects, callback) {
     logCtx.fn = 'postToShowroomProjects';
     var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4) returning projectid, iapproject_title";
@@ -625,5 +640,6 @@ module.exports = {
     fetchProjects: fetchProjects,
     getStudentProject: getStudentProject,
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
-    getQnARoomInfo: getQnARoomInfo
+    getQnARoomInfo: getQnARoomInfo,
+    getName: getName
 }

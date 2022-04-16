@@ -11,10 +11,12 @@
  var createRoom = '/create';
  var joinRoom = '/join';
  var endRoom = '/end';
- var history = '/meet-history';
+ var joinStage = '/join-stage';
+//  var history = '/meet-history';
  
  streamingRouter.post(createRoom, auth.authorizeAdmin, streamingHandler.createRoom);
  streamingRouter.post(joinRoom, auth.authenticate, streamingHandler.joinRoom);
+ streamingRouter.post(joinStage, auth.authenticate, streamingHandler.joinStage);
  streamingRouter.post(endRoom, auth.authorizeAdmin, streamingHandler.endRoom);
 //  streamingRouter.post(history, auth.authenticate, streamingHandler.postMeetHistory); //Got absolved into join room logic
  

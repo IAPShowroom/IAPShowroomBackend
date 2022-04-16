@@ -26,7 +26,7 @@ function createRoom (meetingName, projectID, callback) {
             //Construct URL for BBB API call
             var queryParams = {
                 name: meetingName,
-                meetingID: "0" + projectID,
+                meetingID: projectID == 'stage' ? 'stage' : "0" + projectID,
                 moderatorPW: config.MOD_PASSWORD,
                 attendeePW: config.ATTENDEE_PASSWORD
                 // ,
@@ -109,6 +109,86 @@ function joinRoom (req, res, next) {
     });
 }
 
+function joinStage (req, res, next) {
+    logCtx.fn = "joinStage";
+    var errorStatus, errorMsg, bbbRole, firstName, lastName;
+    var userID = req.session.data.userID;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateJoinStage(req, (error) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Call BBB API call to create if it's not created yet
+            createRoom("General Stage", 'stage', (error) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 500;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Get name and role for BBB room
+            var userData = req.session.data;
+            getBBBRoleAndNameForStage(userData, (error, role, first_name, last_name) => { //TODO: test
+                if (error) {
+                    logError(error, logCtx);
+                    callback(error, null, null, null);
+                } else {
+                    bbbRole = role;
+                    firstName = first_name;
+                    lastName = last_name;
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            //Construct URL for BBB API call
+            var queryParams = {
+                meetingID: req.body.meeting_id,
+                fullName: firstName + " " + lastName,
+                userID: userID,
+                role: bbbRole,
+                password: bbbRole == 'moderator' ? config.MOD_PASSWORD : config.ATTENDEE_PASSWORD
+            }
+            var queryString = (new URLSearchParams(queryParams)).toString();
+            var checksum = generateChecksum('join', queryString);
+            var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+            callback(null, { url: url });
+        },
+        function (callback) {
+            //Record join history
+            showroomDB.postMeetHistory(userID, 'stage', (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully constructed URL.", result);
+        }
+    });
+}
+
 function endRoom (req, res, next) {
     logCtx.fn = "endRoom";
     var errorStatus, errorMsg;
@@ -162,14 +242,40 @@ function generateChecksum (callName, queryString) {
     return checksum;
 }
 
+function getBBBRoleAndNameForStage(data, callback) { //TODO: test
+    logCtx.fn = "getBBBRoleAndNameForStage";
+    var role = 'viewer';
+    var userID = data.userID;
+    var isAdmin = data.admin;
+    showroomDB.getName(userID, (error, result) => {
+        if (error) {
+            errorStatus = 500;
+            errorMsg = error.toString();
+            logError(error, logCtx);
+            callback(error, null, null, null);
+        } else if (result == undefined || result == null) {
+            errorStatus = 404;
+            errorMsg = "No users found.";
+            logError(error, logCtx);
+            callback(new Error(errorMsg), null, null, null);
+        } else {
+            log("Response data: " + JSON.stringify(result), logCtx);
+            //Check if role should be moderator
+            if (isAdmin) { //Auto mod if admin
+                role = 'moderator';
+            } 
+            log("Set role as " + role + " for user " + result.first_name + " " + result.last_name, logCtx);
+            callback(null, role, result.first_name, result.last_name);
+        }
+    });
+}
+
 function getBBBRoleAndName(data, projectID, callback) {
     logCtx.fn = "getBBBRoleAndName";
     var role = 'viewer';
     var userID = data.userID;
     var isAdmin = data.admin;
     var isPM = data.isPM;
-    console.log("data"); //testing
-    console.log(data); //testing
     showroomDB.getRoleAndName(userID, (error, result) => {
         if (error) {
             errorStatus = 500;
@@ -273,6 +379,7 @@ function isMeetingRunning (meetingID, callback) {
 module.exports = {
     createRoom: createRoom,
     joinRoom: joinRoom,
+    joinStage: joinStage,
     endRoom: endRoom,
     generateChecksum: generateChecksum,
     getMeetingInfo: getMeetingInfo,

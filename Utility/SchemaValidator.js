@@ -65,6 +65,10 @@ const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
 });
 
+const joinStageSchema = Joi.object({
+    meeting_id: Joi.string().valid('stage').required()
+});
+
 const qnaInfoSchema = Joi.object({
     meeting_id: Joi.number().required(),
     bbb: Joi.boolean()
@@ -229,6 +233,16 @@ function validateJoinRoom (req, callback) {
     }
 }
 
+function validateJoinStage (req, callback) { //TODO: test
+    logCtx.fn = 'validateJoinStage';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinStageSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateEndRoom (req, callback) {
     logCtx.fn = 'validateEndRoom';
     if (req.body != undefined && Object.keys(req.body).length != 0) {
@@ -337,5 +351,6 @@ module.exports = {
     validatePostMeetHistory: validatePostMeetHistory,
     validateGetIAPProjects: validateGetIAPProjects,
     validateGetRoomStatus: validateGetRoomStatus,
-    validateQNARoomInfo: validateQNARoomInfo
+    validateQNARoomInfo: validateQNARoomInfo,
+    validateJoinStage: validateJoinStage
 }
