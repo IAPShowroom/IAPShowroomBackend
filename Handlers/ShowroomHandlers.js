@@ -20,6 +20,9 @@ let logCtx = {
 
 let SSE = {}; //Object to expose sendEvent
 let sseRequests = []; //Store the request object for the SSE connection (maybe change this for an array for multiple clients?)
+//TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
+var announcementHistory = []; //Keep track of which announcements have been sent
+var currAnnouncementID = 1;
 
 function getStats (req, res, next) {
 
@@ -213,9 +216,8 @@ function sseConnect (req, res, next) {
     //This endpoint is used to establish a connection for Server Sent Events
     logCtx.fn = 'sseConnect';
 
-    //TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
-    var eventHistory = []; //Keep track of which events have been sent
-    sseRequests.push(res); //Add response object to the array of connections
+    //Add response object to the array of connections
+    sseRequests.push(res); 
 
     res.writeHead(200, {
         "Cache-Control": "no-cache",
@@ -235,6 +237,8 @@ function sseConnect (req, res, next) {
     //TODO: maybe it makes sense to use wiliel's serverSideResponse utility function and pass the res object to it
     //Define function to send events
     SSE.sendEvent = (data) => {
+
+
         log("Sending event with data: ", logCtx);
         console.log(data);
         sseRequests.forEach((res) => {
