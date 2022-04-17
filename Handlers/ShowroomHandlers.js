@@ -51,94 +51,36 @@ function getStats (req, res, next) { //TODO: finish implementing and test
         },
         function (liveResults, callback) {
             //Fetch records from in-person users table
-            showroomDB.getInPersonStats((error, result) => { //TODO: test
+            showroomDB.getInPersonStats((error, inPersonResults) => { //TODO: test
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null, null);
-                } else if (result == undefined || result == null) {
-                    errorStatus = 404;
-                    errorMsg = "No users found.";
-                    logError(error, logCtx);
-                    callback(new Error(errorMsg), null, null);
+                } else if (inPersonResults == undefined || inPersonResults == null) {
+                    log("No in-person users found.", logCtx);
+                    callback(null, liveResults, null);
                 } else {
-                    log("Response data: " + JSON.stringify(result), logCtx);
+                    log("Response data: " + JSON.stringify(inPersonResults), logCtx);
                     callback(null, liveResults, inPersonResults);
                 }
             });
         },
         function (liveResults, inPersonResults, callback) {
-            //Filter results from DB and derive statistics
+            //Filter live conference records to derive statistics
             liveResults.forEach((obj) => {
                 //Only count them if they have a record in meet history (there exists a join time)
                 if (obj.jointime != null) {
-                    //TODO: make this whole thing --v a function and call it for both loops -- also, piensa si puedes write this more efficiently (avoid duplication)
-                    if (obj.user_role == config.userRoles.studentResearcher) {
-                        //Count student researcher
-                        finalResult.researchStudParticipants =+ obj.count;
-                        //Count student researchers by department
-                        switch (obj.department) {
-                            case config.departments.ICOM:
-                                finalResult.resStudICOM =+ obj.count;
-                                break;
-                            case config.departments.INEL:
-                                finalResult.resStudINEL =+ obj.count;
-                                break;
-                            case config.departments.INSO:
-                                finalResult.resStudINSO =+ obj.count;
-                                break;
-                            case config.departments.INME:
-                                finalResult.resStudINME =+ obj.count;
-                                break;
-                            case config.departments.CIIC:
-                                finalResult.resStudCIIC =+ obj.count;
-                                break;
-                            case config.departments.other:
-                                finalResult.resStudOther =+ obj.count;
-                                break;
-                        }
-                        //Count student researchers by gender
-                        switch (obj.gender) {
-                            case config.userGenders.male:
-                                finalResult.totalResStudMen =+ obj.count;
-                                break;
-                            case config.userGenders.female:
-                                finalResult.totalResStudWomen =+ obj.count;
-                                break;
-                            case config.userGenders.male:
-                                finalResult.totalResStudNotDisclosed =+ obj.count;
-                                break;
-                        }
-                        //Count student researchers soon to graduate
-                        if (new Date(obj.grad_date).getFullYear == new Date(Date.now()).getFullYear) { //TODO: confirm with team
-                            finalResult.resStudGRAD =+ obj.count;
-                        }
-                    } else if (obj.user_role == config.userRoles.advisor) {
-                        
-                    } else if (obj.user_role == config.userRoles.companyRep) {
-
-                    } else {
-                        //Didn't match any of the other roles, count it as a general user
-                        finalResult.generalParticipants =+ obj.count;
-                    }
-                    finalResult.maxParticipants =+ obj.count;
-                    switch (obj.gender) {
-                        case config.userGenders.male:
-                            finalResult.totalMen =+ obj.count;
-                            break;
-                        case config.userGenders.female:
-                            finalResult.totalWomen =+ obj.count;
-                            break;
-                        case config.userGenders.male:
-                            finalResult.totalNotDisclosed =+ obj.count;
-                            break;
-                    }
+                    filterStats(finalResult, obj);
                 }
             });
-            //TODO: implement
-
-            callback(null); //TODO: placeholder
+            //Filter in person records to derive statistics
+            if (inPersonResults != null) {
+                inPersonResults.forEach((obj) => {
+                    filterStats(finalResult, obj);
+                });
+            }
+            callback(null); 
         },
     ], (error) => {
         //Send responses
@@ -148,6 +90,95 @@ function getStats (req, res, next) { //TODO: finish implementing and test
             successResponse(res, 200, "Successfully retrieved statistics.", finalResult);
         }
     });
+}
+
+function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
+    var count = parseInt(obj.count, 10)
+    //Count based on user role
+    if (obj.user_role == config.userRoles.studentResearcher) {
+        //Count student researcher
+        finalResult.researchStudParticipants += count;
+        //Count student researchers by department
+        switch (obj.department) {
+            case config.departments.ICOM:
+                finalResult.resStudICOM += count;
+                break;
+            case config.departments.INEL:
+                finalResult.resStudINEL += count;
+                break;
+            case config.departments.INSO:
+                finalResult.resStudINSO += count;
+                break;
+            case config.departments.INME:
+                finalResult.resStudINME += count;
+                break;
+            case config.departments.CIIC:
+                finalResult.resStudCIIC += count;
+                break;
+            case config.departments.other:
+                finalResult.resStudOther += count;
+                break;
+        }
+        //Take into consideration the major (department) of in-person students
+        if (obj.major != undefined) {
+            switch (obj.major) {
+                case config.departments.ICOM:
+                    finalResult.resStudICOM += count;
+                    break;
+                case config.departments.INEL:
+                    finalResult.resStudINEL += count;
+                    break;
+                case config.departments.INSO:
+                    finalResult.resStudINSO += count;
+                    break;
+                case config.departments.INME:
+                    finalResult.resStudINME += count;
+                    break;
+                case config.departments.CIIC:
+                    finalResult.resStudCIIC += count;
+                    break;
+                case config.departments.other:
+                    finalResult.resStudOther += count;
+                    break;
+            }
+        }
+        //Count student researchers by gender
+        switch (obj.gender) {
+            case config.userGenders.male:
+                finalResult.totalResStudMen += count;
+                break;
+            case config.userGenders.female:
+                finalResult.totalResStudWomen += count;
+                break;
+            case config.userGenders.male:
+                finalResult.totalResStudNotDisclosed += count;
+                break;
+        }
+        //Count student researchers soon to graduate
+        if (new Date(obj.grad_date).getFullYear == new Date(Date.now()).getFullYear) { //TODO: confirm with team
+            finalResult.resStudGRAD += count;
+        }
+    } else if (obj.user_role == config.userRoles.advisor) {
+        finalResult.professorParticipants += count;
+    } else if (obj.user_role == config.userRoles.companyRep) {
+        finalResult.companyRepParticipants += count;
+    } else {
+        //Didn't match any of the other roles, count it as a general user
+        finalResult.generalParticipants += count;
+    }
+    //Do counts general to every user
+    finalResult.maxParticipants += count;
+    switch (obj.gender) {
+        case config.userGenders.male:
+            finalResult.totalMen += count;
+            break;
+        case config.userGenders.female:
+            finalResult.totalWomen += count;
+            break;
+        case config.userGenders.male:
+            finalResult.totalNotDisclosed += count;
+            break;
+    }
 }
 
 function getRoomStatus (req, res, next) {

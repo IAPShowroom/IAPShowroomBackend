@@ -426,7 +426,7 @@ function getLiveStats (callback) { //TODO: test
 
 function getInPersonStats (callback) { //TODO: finish implementing and test
     logCtx.fn = 'getInPersonStats';
-    var query = "select user_role, major, department, gender, grad_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date;"; 
+    var query = "select user_role, major, department, gender, grad_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date, major;"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
