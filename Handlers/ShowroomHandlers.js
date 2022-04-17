@@ -27,13 +27,12 @@ function getStats (req, res, next) { //TODO: finish implementing and test
         totalMen: 0, totalNotDisclosed: 0, resStudICOM: 0, 
         resStudINEL: 0, resStudINSO: 0, resStudCIIC: 0, 
         resStudINME: 0, resStudOther: 0, resStudGRAD: 0, 
-        totalResStudWomen: 0, totalResStudMen: 0, totalResStudNotDisclosed: 0, 
-        // activeParticipants: 0, //TODO: will we use it?
+        totalResStudWomen: 0, totalResStudMen: 0, totalResStudNotDisclosed: 0
     };
     async.waterfall([
         function (callback) {
             //Fetch stats from DB
-            showroomDB.getStats((error, result) => { //TODO: test
+            showroomDB.getLiveStats((error, result) => { //TODO: test
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -50,26 +49,53 @@ function getStats (req, res, next) { //TODO: finish implementing and test
                 }
             });
         },
-        function (dbResults, callback) {
+        function (liveResults, callback) {
+            //Fetch records from in-person users table
+            showroomDB.getInPersonStats((error, result) => { //TODO: test
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No users found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, liveResults, inPersonResults);
+                }
+            });
+        },
+        function (liveResults, inPersonResults, callback) {
             //Filter results from DB and derive statistics
+            liveResults.forEach((obj) => {
+                if (obj.jointime != null) {
+                    if (obj.user_role == config.userRoles.studentResearcher) {
+                        if (obj.department == config.departments.ICOM) {
+                            finalResult.resStudICOM =+ obj.count;
+                            if (obj.gender == config.userGenders.male) {
+                                finalResult.totalMen =+ obj.count;
+                                finalResult.totalResStudMen =+ obj.count;
+                            }
+                            if (obj.gender == config.userGenders.female) {
 
+                            }
+                            if (obj.gender == config.userGenders.other) {
+
+                            }
+                            if (new Date(obj.grad_date).getFullYear == new Date(Date.now()).getFullYear) { //TODO: confirm with team
+
+                            }
+                        }
+                    }
+                }
+            });
             //TODO: implement
 
             callback(null); //TODO: placeholder
         },
-        //TODO: do we want to implement this?
-        // function (events, callback) {
-        //     getActiveParticipants((error, result) => {
-        //         if (error) {
-        //             errorStatus = 500;
-        //             errorMsg = error.toString();
-        //             logError(error, logCtx);
-        //             callback(error, null);
-        //         } else {
-        //             callback(null, result);
-        //         }
-        //     });
-        // }
     ], (error) => {
         //Send responses
         if (error) {

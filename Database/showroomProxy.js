@@ -404,9 +404,29 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
-function getStats (callback) { //TODO: test
-    logCtx.fn = 'getStats';
-    var query = "select u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid group by user_role, department, gender, grad_date;"; 
+function getLiveStats (callback) { //TODO: test
+    logCtx.fn = 'getLiveStats';
+    var query = "select m.jointime,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by user_role, department, gender, grad_date, jointime;"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No users found! send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
+function getInPersonStats (callback) { //TODO: finish implementing and test
+    logCtx.fn = 'getInPersonStats';
+    var query = "select user_role, major, department, gender, grad_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date;"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -621,5 +641,6 @@ module.exports = {
     fetchProjects: fetchProjects,
     getStudentProject: getStudentProject,
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
-    getStats: getStats
+    getLiveStats: getLiveStats,
+    getInPersonStats: getInPersonStats
 }
