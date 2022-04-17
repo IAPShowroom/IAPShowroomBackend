@@ -71,24 +71,68 @@ function getStats (req, res, next) { //TODO: finish implementing and test
         function (liveResults, inPersonResults, callback) {
             //Filter results from DB and derive statistics
             liveResults.forEach((obj) => {
+                //Only count them if they have a record in meet history (there exists a join time)
                 if (obj.jointime != null) {
+                    //TODO: make this whole thing --v a function and call it for both loops -- also, piensa si puedes write this more efficiently (avoid duplication)
                     if (obj.user_role == config.userRoles.studentResearcher) {
-                        if (obj.department == config.departments.ICOM) {
-                            finalResult.resStudICOM =+ obj.count;
-                            if (obj.gender == config.userGenders.male) {
-                                finalResult.totalMen =+ obj.count;
-                                finalResult.totalResStudMen =+ obj.count;
-                            }
-                            if (obj.gender == config.userGenders.female) {
-
-                            }
-                            if (obj.gender == config.userGenders.other) {
-
-                            }
-                            if (new Date(obj.grad_date).getFullYear == new Date(Date.now()).getFullYear) { //TODO: confirm with team
-
-                            }
+                        //Count student researcher
+                        finalResult.researchStudParticipants =+ obj.count;
+                        //Count student researchers by department
+                        switch (obj.department) {
+                            case config.departments.ICOM:
+                                finalResult.resStudICOM =+ obj.count;
+                                break;
+                            case config.departments.INEL:
+                                finalResult.resStudINEL =+ obj.count;
+                                break;
+                            case config.departments.INSO:
+                                finalResult.resStudINSO =+ obj.count;
+                                break;
+                            case config.departments.INME:
+                                finalResult.resStudINME =+ obj.count;
+                                break;
+                            case config.departments.CIIC:
+                                finalResult.resStudCIIC =+ obj.count;
+                                break;
+                            case config.departments.other:
+                                finalResult.resStudOther =+ obj.count;
+                                break;
                         }
+                        //Count student researchers by gender
+                        switch (obj.gender) {
+                            case config.userGenders.male:
+                                finalResult.totalResStudMen =+ obj.count;
+                                break;
+                            case config.userGenders.female:
+                                finalResult.totalResStudWomen =+ obj.count;
+                                break;
+                            case config.userGenders.male:
+                                finalResult.totalResStudNotDisclosed =+ obj.count;
+                                break;
+                        }
+                        //Count student researchers soon to graduate
+                        if (new Date(obj.grad_date).getFullYear == new Date(Date.now()).getFullYear) { //TODO: confirm with team
+                            finalResult.resStudGRAD =+ obj.count;
+                        }
+                    } else if (obj.user_role == config.userRoles.advisor) {
+                        
+                    } else if (obj.user_role == config.userRoles.companyRep) {
+
+                    } else {
+                        //Didn't match any of the other roles, count it as a general user
+                        finalResult.generalParticipants =+ obj.count;
+                    }
+                    finalResult.maxParticipants =+ obj.count;
+                    switch (obj.gender) {
+                        case config.userGenders.male:
+                            finalResult.totalMen =+ obj.count;
+                            break;
+                        case config.userGenders.female:
+                            finalResult.totalWomen =+ obj.count;
+                            break;
+                        case config.userGenders.male:
+                            finalResult.totalNotDisclosed =+ obj.count;
+                            break;
                     }
                 }
             });
