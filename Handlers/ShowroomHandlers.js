@@ -504,7 +504,7 @@ function getServerSideUpcomingEvents(req, res, next){
         const day = date_obj.toLocaleDateString('en-US');
         const time = date_obj.toLocaleTimeString('en-US');
 
-        showroomDB.getEvents(upcoming, time, day, (error, result) => {
+        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
             if (error) {
                 errorStatus = 500;
                 errorMsg = error.toString();
@@ -563,7 +563,7 @@ function getServerSideProgressBar(req, res, next){
         const day = date_obj.toLocaleDateString('en-US');
         const time = date_obj.toLocaleTimeString('en-US');
 
-        showroomDB.getEvents(upcoming, time, day, (error, result) => {
+        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
             if (error) {
                 errorStatus = 500;
                 errorMsg = error.toString();
