@@ -19,6 +19,9 @@ var getRoomStatus = '/rooms/status';
 var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
 
+// Server Sent Event Endpoints
+var serverSideSent = '/sse';
+
 //Schedule Routes
 var getIAPSessions = '/sessions';
 var getIAPProjects = '/schedule/projects';
@@ -40,6 +43,10 @@ showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postSch
 showroomRouter.get(scheduleEventsID, auth.authorizeAdmin, showroomHandler.getScheduleEventByID); //TODO - test and review
 showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.updateScheduleEvent); //TODO - test and review
 showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent); //TODO - test and review
+
+// Server Side Events
+showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideUpcomingEvents); //TODO: implement
+showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideProgressBar);
 
 //IAP
 showroomRouter.get(getIAPProjects, showroomHandler.getProjects); //TODO - review
