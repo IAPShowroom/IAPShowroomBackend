@@ -66,7 +66,7 @@ const joinRoomSchema = Joi.object({
 });
 
 const sessionIDSchema = Joi.object({
-    session_id: Joi.number().required()
+    session_id: Joi.number()
 });
 
 const roomStatusSchema = Joi.object({
@@ -244,21 +244,15 @@ function validatePostMeetHistory (req, callback) {
     }
 }
 
-function validateGetIAPProjects (req, callback) {
+function validateGetIAPProjects (req, callback) { //TODO: finish implementing
     logCtx.fn = 'validateGetIAPProjects';
-    if (req.query != undefined && Object.keys(req.query).length != 0) {
-        const { error, value } = sessionIDSchema.validate(req.query);
-        if (error) { //return comma separated errors
-            logError("Schema validation error for request payload.", logCtx);
-            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
-        } else {
-            log("Request schema successfully validated.", logCtx);
-            callback(null);
-        }
+    const { error, value } = sessionIDSchema.validate(req.query);
+    if (error) { //return comma separated errors
+        logError("Schema validation error for request payload.", logCtx);
+        callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
     } else {
-        var errorMsg = "Missing request query parameters.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        log("Request schema successfully validated.", logCtx);
+        callback(null);
     }
 }
 

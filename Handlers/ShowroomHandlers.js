@@ -207,9 +207,10 @@ function getIAPSessions (req, res, next) {
         if (error) {
             logError(error, logCtx);
             errorResponse(res, 500, error.toString());
+        } else {
+            log("Response data: " + JSON.stringify(result), logCtx);
+            successResponse(res, 200, "Successfully retrieved sessions", result);
         }
-        log("Response data: " + JSON.stringify(result), logCtx);
-        successResponse(res, 200, "Successfully retrieved sessions", result);
     });
 }
 
@@ -439,7 +440,7 @@ function getProjects (req, res, next) { //TODO: finish
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateGetIAPProjects(req, (error) => { //TODO: implement
+            validator.validateGetIAPProjects(req, (error) => { //TODO: finish implementing and test
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -448,6 +449,10 @@ function getProjects (req, res, next) { //TODO: finish
                 callback(error);
             });
         },
+        function (callback) {
+            var latestProjects = req.query.latest
+            // if ()
+        }
         function (callback) {
             //Fetch projects from IAP
             sessionID = req.query.session_id;
