@@ -18,6 +18,8 @@ var getStats = '/stats';
 var getRoomStatus = '/rooms/status';
 var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
+var researchers_advisors = '/researchers_advisors';
+var validateResearchMember = '/validateResearchMember'
 
 // Server Sent Event Endpoints
 var serverSideSent = '/sse';
@@ -34,6 +36,9 @@ var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats); //TODO: implement
 showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: test
 // //showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement - this might be replaced with event listener on client side
+showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getAllMembersFromAllProjects);
+showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
+
 
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: implement

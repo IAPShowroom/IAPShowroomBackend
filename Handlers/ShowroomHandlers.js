@@ -587,6 +587,64 @@ function getServerSideProgressBar(req, res, next){
     );
 }
 
+function getAllMembersFromAllProjects (req, res, next) {
+    logCtx.fn = "getAllMembersFromAllProjects";
+    showroomDB.getAllMembersFromAllProjects( (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+            errorResponse(res, 500, error.toString());
+        }
+        log("Response data: " + JSON.stringify(result), logCtx);
+        successResponse(res, 200, "Successfully retrieved all participating members with projects", result);
+    });
+}
+
+function validateResearchMember(req, res, next){
+    logCtx.fn = 'validateResearchMember';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateMembervalidation(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            var userID = req.body.userid;
+            var user_role = req.body.user_role;
+            showroomDB.validateResearchMember(userID, user_role, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "User cannot be validated";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully validated member.", result);
+        }
+    });
+}
+
+
 module.exports = {
     getProjects: getProjects,
     getStats: getStats,
@@ -600,5 +658,7 @@ module.exports = {
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
     getServerSideUpcomingEvents: getServerSideUpcomingEvents,
-    getServerSideProgressBar: getServerSideProgressBar
+    getServerSideProgressBar: getServerSideProgressBar,
+    getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
+    validateResearchMember: validateResearchMember
 }

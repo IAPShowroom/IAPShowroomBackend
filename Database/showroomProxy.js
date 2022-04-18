@@ -494,6 +494,51 @@ function getRoleAndName (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
+function getAllMembersFromAllProjects(callback){
+    logCtx.fn = 'getAllMembersFromAllProjects';
+    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, r.projectid, r.iapproject_title from users inner join participates p on users.userid = p.userid inner join projects r on p.projectid = r.projectid order by r.projectid;";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No users found, send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns array of json objects
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
+function validateResearchMember(userID, user_role, callback){
+    logCtx.fn = 'validateResearchMember';
+    if(user_role === "Student Researcher"){
+        var query = "update student_researchers set validatedmember=true where userid = $1";
+    } 
+    else if(user_role === "Advisor"){
+        var query = "update advisors set validatedmember=true where userid = $1";
+    } else{
+        callback(null, null);
+    }
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
+
+
 function getStudentProject (userID, projectID, callback) { //TODO: test
     logCtx.fn = 'getStudentProject';
     var query = "select userid, projectid from participates where userid = $1 and projectid = $2"; 
@@ -600,5 +645,7 @@ module.exports = {
     postToShowroomProjects: postToShowroomProjects,
     fetchProjects: fetchProjects,
     getStudentProject: getStudentProject,
-    fetchUserIDsAndRoles: fetchUserIDsAndRoles
+    fetchUserIDsAndRoles: fetchUserIDsAndRoles,
+    getAllMembersFromAllProjects: getAllMembersFromAllProjects,
+    validateResearchMember: validateResearchMember
 }

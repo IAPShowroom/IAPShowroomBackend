@@ -75,6 +75,11 @@ const roomStatusSchema = Joi.object({
 
 const eventListSchema = Joi.array().items(eventSchema);
 
+const validateResearchMemberSchema = Joi.object({
+    userid: Joi.number().required(),
+    user_role: Joi.string().min(1).max(30).required()
+});
+
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
     if (req.body && req.body.user_role != undefined) {
@@ -279,6 +284,16 @@ function validateGetRoomStatus (req, callback) { //TODO: test
     }
 }
 
+function validateMembervalidation(req, callback){
+    logCtx.fn = 'validateMembervalidation';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, validateResearchMemberSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -296,6 +311,7 @@ function validateServerSideEvent(req, callback){
     log("Request schema successfully validated.", logCtx);
     callback(null);
 }
+
 
 //optionally implement this function to add additional sql injection defense
 // function sanitizeInput(input, callback){ //callback: (error) => {}
@@ -315,5 +331,6 @@ module.exports = {
     validatePostMeetHistory: validatePostMeetHistory,
     validateGetIAPProjects: validateGetIAPProjects,
     validateGetRoomStatus: validateGetRoomStatus,
-    validateServerSideEvent: validateServerSideEvent
+    validateServerSideEvent: validateServerSideEvent, 
+    validateMembervalidation: validateMembervalidation
 }
