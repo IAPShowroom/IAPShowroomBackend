@@ -452,7 +452,7 @@ function getProjects (req, res, next) { //TODO: finish
         function (callback) {
             var latestProjects = req.query.latest
             // if ()
-        }
+        },
         function (callback) {
             //Fetch projects from IAP
             sessionID = req.query.session_id;
