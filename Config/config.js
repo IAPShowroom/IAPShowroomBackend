@@ -16,6 +16,21 @@ const userRoles = {
     advisor: 'Advisor'
 }
 
+const departments = {
+    ICOM: 'Computer Engineering',
+    INSO: 'Software Engineering',
+    CIIC: 'Computer Science',
+    INEL: 'Electrical Engineering',
+    INME: 'Mechanical Engineering',
+    other: 'Other'
+}
+
+const userGenders = {
+    male: 'male',
+    female: 'female',
+    other: 'other'
+}
+
 //BigBlueButton API variables
 const BBB_SECRET = env.BBB_SECRET || 'testbbbsecret';
 const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
@@ -79,5 +94,7 @@ module.exports = {
     corsOptions: corsOptions,
     SESSION_MAX_AGE: SESSION_MAX_AGE,
     userRoles: userRoles,
-    bbbUrlPrefix: bbbUrlPrefix
+    bbbUrlPrefix: bbbUrlPrefix,
+    departments: departments,
+    userGenders: userGenders
 };

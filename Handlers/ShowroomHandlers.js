@@ -5,7 +5,7 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse, serverSideResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
@@ -13,13 +13,180 @@ const config = require('../Config/config.js');
 
 const MAX_ASYNC = 1;
 
+let sse_clients = [];
+
+const sse_header = {
+    "Connection": "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+};
+
 let logCtx = {
     fileName: 'ShowroomHandlers',
     fn: ''
 }
 
 function getStats (req, res, next) {
+    logCtx.fn = 'getStats';
+    var errorStatus, errorMsg;
+    var finalResult = {
+        maxParticipants: 0, generalParticipants: 0, researchStudParticipants: 0, 
+        companyRepParticipants: 0, professorParticipants: 0, totalWomen: 0, 
+        totalMen: 0, totalNotDisclosed: 0, resStudICOM: 0, 
+        resStudINEL: 0, resStudINSO: 0, resStudCIIC: 0, 
+        resStudINME: 0, resStudOther: 0, resStudGRAD: 0, 
+        totalResStudWomen: 0, totalResStudMen: 0, totalResStudNotDisclosed: 0
+    };
+    async.waterfall([
+        function (callback) {
+            //Fetch stats from DB
+            showroomDB.getLiveStats((error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No users found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (liveResults, callback) {
+            //Fetch records from in-person users table
+            showroomDB.getInPersonStats((error, inPersonResults) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null, null);
+                } else if (inPersonResults == undefined || inPersonResults == null) {
+                    log("No in-person users found.", logCtx);
+                    callback(null, liveResults, null);
+                } else {
+                    log("Response data: " + JSON.stringify(inPersonResults), logCtx);
+                    callback(null, liveResults, inPersonResults);
+                }
+            });
+        },
+        function (liveResults, inPersonResults, callback) {
+            //Filter live conference records to derive statistics
+            liveResults.forEach((obj) => {
+                //Only count them if they have a record in meet history (there exists a join time)
+                if (obj.jointime != null) {
+                    filterStats(finalResult, obj);
+                }
+            });
+            //Filter in person records to derive statistics
+            if (inPersonResults != null) {
+                inPersonResults.forEach((obj) => {
+                    filterStats(finalResult, obj);
+                });
+            }
+            callback(null); 
+        },
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved statistics.", finalResult);
+        }
+    });
+}
 
+function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
+    var count = parseInt(obj.count, 10)
+    //Count based on user role
+    if (obj.user_role == config.userRoles.studentResearcher) {
+        //Count student researcher
+        finalResult.researchStudParticipants += count;
+        //Count student researchers by department
+        switch (obj.department) {
+            case config.departments.ICOM:
+                finalResult.resStudICOM += count;
+                break;
+            case config.departments.INEL:
+                finalResult.resStudINEL += count;
+                break;
+            case config.departments.INSO:
+                finalResult.resStudINSO += count;
+                break;
+            case config.departments.INME:
+                finalResult.resStudINME += count;
+                break;
+            case config.departments.CIIC:
+                finalResult.resStudCIIC += count;
+                break;
+            case config.departments.other:
+                finalResult.resStudOther += count;
+                break;
+        }
+        //Take into consideration the major (department) of in-person students
+        if (obj.major != undefined) {
+            switch (obj.major) {
+                case config.departments.ICOM:
+                    finalResult.resStudICOM += count;
+                    break;
+                case config.departments.INEL:
+                    finalResult.resStudINEL += count;
+                    break;
+                case config.departments.INSO:
+                    finalResult.resStudINSO += count;
+                    break;
+                case config.departments.INME:
+                    finalResult.resStudINME += count;
+                    break;
+                case config.departments.CIIC:
+                    finalResult.resStudCIIC += count;
+                    break;
+                case config.departments.other:
+                    finalResult.resStudOther += count;
+                    break;
+            }
+        }
+        //Count student researchers by gender
+        switch (obj.gender) {
+            case config.userGenders.male:
+                finalResult.totalResStudMen += count;
+                break;
+            case config.userGenders.female:
+                finalResult.totalResStudWomen += count;
+                break;
+            case config.userGenders.other:
+                finalResult.totalResStudNotDisclosed += count;
+                break;
+        }
+        //Count student researchers soon to graduate
+        if (new Date(obj.grad_date).getFullYear() == new Date(Date.now()).getFullYear()) {
+            finalResult.resStudGRAD += count;
+        }
+    } else if (obj.user_role == config.userRoles.advisor) {
+        finalResult.professorParticipants += count;
+    } else if (obj.user_role == config.userRoles.companyRep) {
+        finalResult.companyRepParticipants += count;
+    } else {
+        //Didn't match any of the other roles, count it as a general user
+        finalResult.generalParticipants += count;
+    }
+    //Do counts general to every user
+    finalResult.maxParticipants += count;
+    switch (obj.gender) {
+        case config.userGenders.male:
+            finalResult.totalMen += count;
+            break;
+        case config.userGenders.female:
+            finalResult.totalWomen += count;
+            break;
+        case config.userGenders.other:
+            finalResult.totalNotDisclosed += count;
+            break;
+    }
 }
 
 function getRoomStatus (req, res, next) {
@@ -599,6 +766,120 @@ function getProjects (req, res, next) { //TODO: finish
     });
 }
 
+function getServerSideUpcomingEvents(req, res, next){
+    logCtx.fn = "getServerSideUpcomingEvents";
+    console.log('Client connected');
+
+    const upcoming = true;
+    var errorStatus, errorMsg;
+
+    res.writeHead(200, sse_header);
+
+    async.waterfall([
+        
+    //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
+    
+    function (callback) {
+        //Validate request payload
+        validator.validateServerSideEvent(req, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                errorStatus = 400;
+                errorMsg = error.message;
+            }
+            callback(error);
+        });
+    },
+    function (callback) {
+        //Take DB action
+
+        const date_obj = new Date();
+        const day = date_obj.toLocaleDateString('en-US');
+        const time = date_obj.toLocaleTimeString('en-US');
+
+        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
+            if (error) {
+                errorStatus = 500;
+                errorMsg = error.toString();
+                logError(error, logCtx);
+                callback(error, null);
+            } else if (result == undefined || result == null) {
+                errorStatus = 404;
+                errorMsg = "No events found.";
+                logError(error, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                log("Response data: " + JSON.stringify(result), logCtx);
+                callback(null, result);
+            }
+        });
+    }
+    ], (error, result) => {
+        //Send responses
+        serverSideResponse("upcomingevents",res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+    }, 
+    );
+                
+                
+    
+
+}
+
+function getServerSideProgressBar(req, res, next){
+    logCtx.fn = "getServerSideProgressBar";
+    console.log('Client connected');
+
+    const upcoming = true;
+    var errorStatus, errorMsg;
+
+    res.writeHead(200, sse_header);
+
+    async.waterfall([
+        
+    //  this function is meant to serve the updates from the events to the frontend
+    
+    function (callback) {
+        //Validate request payload
+        validator.validateServerSideEvent(req, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                errorStatus = 400;
+                errorMsg = error.message;
+            }
+            callback(error);
+        });
+    },
+    function (callback) {
+        //Take DB action
+
+        const date_obj = new Date();
+        const day = date_obj.toLocaleDateString('en-US');
+        const time = date_obj.toLocaleTimeString('en-US');
+
+        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
+            if (error) {
+                errorStatus = 500;
+                errorMsg = error.toString();
+                logError(error, logCtx);
+                callback(error, null);
+            } else if (result == undefined || result == null) {
+                errorStatus = 404;
+                errorMsg = "No events found.";
+                logError(error, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                log("Response data: " + JSON.stringify(result), logCtx);
+                callback(null, result);
+            }
+        });
+    }
+    ], (error, result) => {
+        //Send responses
+        serverSideResponse("progress", res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+    }, 
+    );
+}
+
 module.exports = {
     getProjects: getProjects,
     getStats: getStats,
@@ -610,5 +891,8 @@ module.exports = {
     updateScheduleEvent: updateScheduleEvent,
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
-    getScheduleEventByID: getScheduleEventByID
+    getScheduleEventByID: getScheduleEventByID,
+    filterStats: filterStats,
+    getServerSideUpcomingEvents: getServerSideUpcomingEvents,
+    getServerSideProgressBar: getServerSideProgressBar
 }

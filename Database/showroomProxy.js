@@ -357,7 +357,7 @@ function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false";
     var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null"; //project id not null to make sure we only select project events
-    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false";
+    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
     var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
     var queryCb = (error, res) => { 
         if (error) {
@@ -420,12 +420,53 @@ function getQnARoomInfo (projectID, callback) {
             if (res.rowCount == 0) {
                 callback(null, null); //No info found, send null result to provoke 404 error
             } else {
-                var result = res.rows; //Returns list of objs for each user related to the project ID
+                var result = res.rows; //returns counts for users
                 callback(null, result);
             }
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
+function getLiveStats (callback) { //TODO: test
+    logCtx.fn = 'getLiveStats';
+    var query = "select m.jointime,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by user_role, department, gender, grad_date, jointime;"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found, send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
+function getInPersonStats (callback) { //TODO: finish implementing and test
+    logCtx.fn = 'getInPersonStats';
+    var query = "select user_role, major, department, gender, grad_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date, major;"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No users found! send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
 }
 
 function getUserInfo (userID, callback) {
@@ -641,5 +682,7 @@ module.exports = {
     getStudentProject: getStudentProject,
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
     getQnARoomInfo: getQnARoomInfo,
-    getName: getName
+    getName: getName,
+    getLiveStats: getLiveStats,
+    getInPersonStats: getInPersonStats
 }
