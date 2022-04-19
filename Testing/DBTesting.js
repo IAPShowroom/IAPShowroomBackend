@@ -29,10 +29,26 @@ let logCtx = {
 // testPostMeetHistory();
 // testGetRolesAndNameFromMeetHistory();
 // testGetStudentProject();
-testGetQnARoomInfo();
+// testGetQnARoomInfo();
+testGetSessions();
 
 
 //test functions:
+
+function testGetSessions() {
+    logCtx.fn = 'testGetSessions';
+    logTest("Test started", logCtx);
+    var latest = true;
+    iapDB.getSessions(latest, (error, data) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned data: ", logCtx);
+        console.log(data);
+        iapDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testGetQnARoomInfo() {
     logCtx.fn = 'testGetQnARoomInfo';

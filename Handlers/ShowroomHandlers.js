@@ -496,7 +496,8 @@ function getQnARoomInfo (req, res, next) {
 
 function getIAPSessions (req, res, next) {
     logCtx.fn = "getIAPSessions";
-    iapDB.getSessions( (error, result) => {
+    var latest = false; //If false, get all sessions; if true, only retrieve info for latest session
+    iapDB.getSessions(latest, (error, result) => {
         if (error) {
             logError(error, logCtx);
             errorResponse(res, 500, error.toString());
@@ -727,13 +728,13 @@ function deleteScheduleEvent (req, res, next) {
     });
 }
 
-function getProjects (req, res, next) { //TODO: finish
+function getProjects (req, res, next) {
     logCtx.fn = "getProjects";
     var sessionID, errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateGetIAPProjects(req, (error) => { //TODO: finish implementing and test
+            validator.validateGetIAPProjects(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -743,12 +744,28 @@ function getProjects (req, res, next) { //TODO: finish
             });
         },
         function (callback) {
-            var latestProjects = req.query.latest
-            // if ()
+            sessionID = req.query.session_id;
+            if (sessionID == undefined) {
+                var latest = true; //If session ID was missing in request, retrieve latest one from IAP DB
+                iapDB.getSessions(latest, (error, result) => {
+                    if (error) {
+                        logError(error, logCtx);
+                        errorMsg = error.toString();
+                        errorStatus = 500;
+                        callback(error);
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        sessionID = result[0].session_id;
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null); //Session ID was provided, skip
+            }
         },
         function (callback) {
+            logCtx.fn = "getProjects";
             //Fetch projects from IAP
-            sessionID = req.query.session_id;
             showroomDB.fetchProjects(sessionID, (error, iapProjects) => { //result is array of objs with project info
                 if (error) {
                     errorStatus = 500;
@@ -756,8 +773,15 @@ function getProjects (req, res, next) { //TODO: finish
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    log("Response data: " + JSON.stringify(iapProjects), logCtx);
-                    callback(null, iapProjects);
+                    if (iapProjects == null || iapProjects.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No projects found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(iapProjects), logCtx);
+                        callback(null, iapProjects);
+                    }
                 }
             });
         }

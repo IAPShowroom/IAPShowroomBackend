@@ -35,9 +35,13 @@ function fetchProjects(sessionID, callback) {
     });
 }
 
-function getSessions(callback) {
+function getSessions(latest, callback) {
     logCtx.fn = 'getSessions';
-    dbUtils.makeQuery(pool, "select year_id as session_id, start_date, end_date from iap_session", callback, (error, res) => {
+    var query = "select year_id as session_id, start_date, end_date from iap_session";
+    if (latest) {
+        query = "select year_id as session_id, start_date, end_date from iap_session where start_date = (select max(start_date) from iap_session)";
+    }
+    dbUtils.makeQuery(pool, query, callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
