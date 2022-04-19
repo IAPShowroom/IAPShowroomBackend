@@ -18,7 +18,7 @@ let logCtx = {
     fn: ''
 }
 
-function getStats (req, res, next) { //TODO: finish implementing and test
+function getStats (req, res, next) {
     logCtx.fn = 'getStats';
     var errorStatus, errorMsg;
     var finalResult = {
@@ -32,7 +32,7 @@ function getStats (req, res, next) { //TODO: finish implementing and test
     async.waterfall([
         function (callback) {
             //Fetch stats from DB
-            showroomDB.getLiveStats((error, result) => { //TODO: test
+            showroomDB.getLiveStats((error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -51,7 +51,7 @@ function getStats (req, res, next) { //TODO: finish implementing and test
         },
         function (liveResults, callback) {
             //Fetch records from in-person users table
-            showroomDB.getInPersonStats((error, inPersonResults) => { //TODO: test
+            showroomDB.getInPersonStats((error, inPersonResults) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -150,12 +150,12 @@ function filterStats (finalResult, obj) { //TODO: finish testing and get it work
             case config.userGenders.female:
                 finalResult.totalResStudWomen += count;
                 break;
-            case config.userGenders.male:
+            case config.userGenders.other:
                 finalResult.totalResStudNotDisclosed += count;
                 break;
         }
         //Count student researchers soon to graduate
-        if (new Date(obj.grad_date).getFullYear == new Date(Date.now()).getFullYear) { //TODO: confirm with team
+        if (new Date(obj.grad_date).getFullYear() == new Date(Date.now()).getFullYear()) {
             finalResult.resStudGRAD += count;
         }
     } else if (obj.user_role == config.userRoles.advisor) {
@@ -175,7 +175,7 @@ function filterStats (finalResult, obj) { //TODO: finish testing and get it work
         case config.userGenders.female:
             finalResult.totalWomen += count;
             break;
-        case config.userGenders.male:
+        case config.userGenders.other:
             finalResult.totalNotDisclosed += count;
             break;
     }
@@ -635,5 +635,6 @@ module.exports = {
     updateScheduleEvent: updateScheduleEvent,
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
-    getScheduleEventByID: getScheduleEventByID
+    getScheduleEventByID: getScheduleEventByID,
+    filterStats: filterStats
 }

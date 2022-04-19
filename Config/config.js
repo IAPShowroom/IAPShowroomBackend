@@ -28,7 +28,7 @@ const departments = {
 const userGenders = {
     male: 'male',
     female: 'female',
-    other: 'undisclosed'
+    other: 'other'
 }
 
 //BigBlueButton API variables
