@@ -16,6 +16,21 @@ const userRoles = {
     advisor: 'Advisor'
 }
 
+const departments = {
+    ICOM: 'Computer Engineering',
+    INSO: 'Software Engineering',
+    CIIC: 'Computer Science',
+    INEL: 'Electrical Engineering',
+    INME: 'Mechanical Engineering',
+    other: 'Other'
+}
+
+const userGenders = {
+    male: 'male',
+    female: 'female',
+    other: 'other'
+}
+
 //BigBlueButton API variables
 const BBB_SECRET = env.BBB_SECRET || 'testbbbsecret';
 const MOD_PASSWORD = env.MOD_PASSWORD || 'modpw';
@@ -29,6 +44,9 @@ const showroom_prefix = '/api/showroom';
 const stream_prefix = '/api/meet';
 const auth_prefix = '/api/auth';
 const bbb_prefix = '/bigbluebutton/api';
+
+//https://iapstream.ece.uprm.edu/bigbluebutton/api
+var bbbUrlPrefix = "https://" + BBB_HOST + bbb_prefix;
 
 //CORS configuration options
 const corsOptions = {
@@ -75,5 +93,8 @@ module.exports = {
     logDebug: logDebug,
     corsOptions: corsOptions,
     SESSION_MAX_AGE: SESSION_MAX_AGE,
-    userRoles: userRoles
+    userRoles: userRoles,
+    bbbUrlPrefix: bbbUrlPrefix,
+    departments: departments,
+    userGenders: userGenders
 };

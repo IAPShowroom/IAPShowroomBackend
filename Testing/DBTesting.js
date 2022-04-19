@@ -28,10 +28,26 @@ let logCtx = {
 // testGetRoleAndName();
 // testPostMeetHistory();
 // testGetRolesAndNameFromMeetHistory();
-testGetStudentProject();
+// testGetStudentProject();
+testGetQnARoomInfo();
 
 
 //test functions:
+
+function testGetQnARoomInfo() {
+    logCtx.fn = 'testGetQnARoomInfo';
+    logTest("Start test", logCtx);
+    var projectID = 1;
+    showroomDB.getQnARoomInfo(projectID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testGetStudentProject() {
     logCtx.fn = 'testGetStudentProject';

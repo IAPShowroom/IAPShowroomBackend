@@ -27,7 +27,166 @@ let logCtx = {
 }
 
 function getStats (req, res, next) {
+    logCtx.fn = 'getStats';
+    var errorStatus, errorMsg;
+    var finalResult = {
+        maxParticipants: 0, generalParticipants: 0, researchStudParticipants: 0, 
+        companyRepParticipants: 0, professorParticipants: 0, totalWomen: 0, 
+        totalMen: 0, totalNotDisclosed: 0, resStudICOM: 0, 
+        resStudINEL: 0, resStudINSO: 0, resStudCIIC: 0, 
+        resStudINME: 0, resStudOther: 0, resStudGRAD: 0, 
+        totalResStudWomen: 0, totalResStudMen: 0, totalResStudNotDisclosed: 0
+    };
+    async.waterfall([
+        function (callback) {
+            //Fetch stats from DB
+            showroomDB.getLiveStats((error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No users found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (liveResults, callback) {
+            //Fetch records from in-person users table
+            showroomDB.getInPersonStats((error, inPersonResults) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null, null);
+                } else if (inPersonResults == undefined || inPersonResults == null) {
+                    log("No in-person users found.", logCtx);
+                    callback(null, liveResults, null);
+                } else {
+                    log("Response data: " + JSON.stringify(inPersonResults), logCtx);
+                    callback(null, liveResults, inPersonResults);
+                }
+            });
+        },
+        function (liveResults, inPersonResults, callback) {
+            //Filter live conference records to derive statistics
+            liveResults.forEach((obj) => {
+                //Only count them if they have a record in meet history (there exists a join time)
+                if (obj.jointime != null) {
+                    filterStats(finalResult, obj);
+                }
+            });
+            //Filter in person records to derive statistics
+            if (inPersonResults != null) {
+                inPersonResults.forEach((obj) => {
+                    filterStats(finalResult, obj);
+                });
+            }
+            callback(null); 
+        },
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved statistics.", finalResult);
+        }
+    });
+}
 
+function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
+    var count = parseInt(obj.count, 10)
+    //Count based on user role
+    if (obj.user_role == config.userRoles.studentResearcher) {
+        //Count student researcher
+        finalResult.researchStudParticipants += count;
+        //Count student researchers by department
+        switch (obj.department) {
+            case config.departments.ICOM:
+                finalResult.resStudICOM += count;
+                break;
+            case config.departments.INEL:
+                finalResult.resStudINEL += count;
+                break;
+            case config.departments.INSO:
+                finalResult.resStudINSO += count;
+                break;
+            case config.departments.INME:
+                finalResult.resStudINME += count;
+                break;
+            case config.departments.CIIC:
+                finalResult.resStudCIIC += count;
+                break;
+            case config.departments.other:
+                finalResult.resStudOther += count;
+                break;
+        }
+        //Take into consideration the major (department) of in-person students
+        if (obj.major != undefined) {
+            switch (obj.major) {
+                case config.departments.ICOM:
+                    finalResult.resStudICOM += count;
+                    break;
+                case config.departments.INEL:
+                    finalResult.resStudINEL += count;
+                    break;
+                case config.departments.INSO:
+                    finalResult.resStudINSO += count;
+                    break;
+                case config.departments.INME:
+                    finalResult.resStudINME += count;
+                    break;
+                case config.departments.CIIC:
+                    finalResult.resStudCIIC += count;
+                    break;
+                case config.departments.other:
+                    finalResult.resStudOther += count;
+                    break;
+            }
+        }
+        //Count student researchers by gender
+        switch (obj.gender) {
+            case config.userGenders.male:
+                finalResult.totalResStudMen += count;
+                break;
+            case config.userGenders.female:
+                finalResult.totalResStudWomen += count;
+                break;
+            case config.userGenders.other:
+                finalResult.totalResStudNotDisclosed += count;
+                break;
+        }
+        //Count student researchers soon to graduate
+        if (new Date(obj.grad_date).getFullYear() == new Date(Date.now()).getFullYear()) {
+            finalResult.resStudGRAD += count;
+        }
+    } else if (obj.user_role == config.userRoles.advisor) {
+        finalResult.professorParticipants += count;
+    } else if (obj.user_role == config.userRoles.companyRep) {
+        finalResult.companyRepParticipants += count;
+    } else {
+        //Didn't match any of the other roles, count it as a general user
+        finalResult.generalParticipants += count;
+    }
+    //Do counts general to every user
+    finalResult.maxParticipants += count;
+    switch (obj.gender) {
+        case config.userGenders.male:
+            finalResult.totalMen += count;
+            break;
+        case config.userGenders.female:
+            finalResult.totalWomen += count;
+            break;
+        case config.userGenders.other:
+            finalResult.totalNotDisclosed += count;
+            break;
+    }
 }
 
 function getRoomStatus (req, res, next) {
@@ -198,7 +357,141 @@ function getStatusForEvents (allEvents, mainCallback) {
 }
 
 function getQnARoomInfo (req, res, next) {
-    
+    logCtx.fn = 'getQnARoomInfo';
+    var finalResult = {};
+    var errorStatus, errorMsg, bbbRole, firstName, lastName, meetingName, projectID, performBBBOps;
+    var userID = req.session.data["userID"];
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateQNARoomInfo(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch title, abstract, and users associated with project (Student Researchers and Advisors in the participates table)
+            projectID = req.query.meeting_id;
+            performBBBOps = req.query.bbb; //Indicate whether or not to only bring room info or also do BBB operations
+            showroomDB.getQnARoomInfo(projectID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No records found.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    finalResult.project_members = result; //Add list of participating users to the final result
+                    meetingName = result[0].iapproject_title; //Save meeting name for create room call
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Get name and role for BBB room
+                var userData = req.session.data;
+                meetingHandler.getBBBRoleAndName(userData, req.query.meeting_id, (error, role, first_name, last_name) => {
+                    if (error) {
+                        logError(error, logCtx);
+                    } else {
+                        bbbRole = role;
+                        firstName = first_name;
+                        lastName = last_name;
+                    }
+                    callback(error); //Null if no error
+                });
+            } else {
+                callback(null);
+            }
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Check role
+                switch (bbbRole) {
+                    case "moderator":
+                        //Create room before joining if they are moderators
+                        meetingHandler.createRoom(meetingName, projectID, callback);
+                        break;
+                    case "viewer":
+                        //Check if the meeting is running, fail the call if it's not
+                        meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
+                            if (error) {
+                                logError(error, logCtx);
+                                callback(error);
+                            } else {
+                                if (!isRunning) {
+                                    errorStatus = 500;
+                                    errorMsg = "Meeting is not running.";
+                                    logError(errorMsg, logCtx);
+                                    callback(new Error(errorMsg));
+                                } else {
+                                    callback(null); //All good, meeting is running, proceed
+                                }
+                            }
+                        });
+                        break;
+                }
+            } else {
+                callback(null);
+            }
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Record join history
+                showroomDB.postMeetHistory(userID, projectID, (error, result) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                        callback(error, null);
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null);
+            }
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Construct URL for BBB API call
+                var queryParams = {
+                    meetingID: "0" + projectID,
+                    fullName: firstName + " " + lastName,
+                    userID: userID,
+                    role: bbbRole,
+                    password: bbbRole == 'moderator' ? config.MOD_PASSWORD : config.ATTENDEE_PASSWORD
+                }
+                var queryString = (new URLSearchParams(queryParams)).toString();
+                var checksum = meetingHandler.generateChecksum('join', queryString);
+                var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+                finalResult.join_url = url;
+                callback(null);
+            } else {
+                callback(null);
+            }
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            var successMessage = "Successfully retrieved room information."
+            if (performBBBOps && performBBBOps == 'true') successMessage = successMessage + " And produced join URL.";
+            successResponse(res, 200, successMessage, finalResult);
+        }
+    });
 }
 
 function getIAPSessions (req, res, next) {
@@ -604,6 +897,7 @@ module.exports = {
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
+    filterStats: filterStats,
     getServerSideUpcomingEvents: getServerSideUpcomingEvents,
     getServerSideProgressBar: getServerSideProgressBar
 }
