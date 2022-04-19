@@ -115,19 +115,8 @@ function joinStage (req, res, next) {
     var userID = req.session.data.userID;
     async.waterfall([
         function (callback) {
-            //Validate request payload
-            validator.validateJoinStage(req, (error) => { //TODO: test
-                if (error) {
-                    logError(error, logCtx);
-                    errorStatus = 400;
-                    errorMsg = error.message;
-                }
-                callback(error);
-            });
-        },
-        function (callback) {
             //Call BBB API call to create if it's not created yet
-            createRoom("General Stage", 'stage', (error) => { //TODO: test
+            createRoom("General Stage", 'stage', (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 500;
@@ -139,7 +128,7 @@ function joinStage (req, res, next) {
         function (callback) {
             //Get name and role for BBB room
             var userData = req.session.data;
-            getBBBRoleAndNameForStage(userData, (error, role, first_name, last_name) => { //TODO: test
+            getBBBRoleAndNameForStage(userData, (error, role, first_name, last_name) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error, null, null, null);
@@ -154,7 +143,7 @@ function joinStage (req, res, next) {
         function (callback) {
             //Construct URL for BBB API call
             var queryParams = {
-                meetingID: req.body.meeting_id,
+                meetingID: 'stage',
                 fullName: firstName + " " + lastName,
                 userID: userID,
                 role: bbbRole,
@@ -165,9 +154,9 @@ function joinStage (req, res, next) {
             var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
             callback(null, { url: url });
         },
-        function (callback) {
+        function (payload, callback) {
             //Record join history
-            showroomDB.postMeetHistory(userID, 'stage', (error, result) => {
+            showroomDB.postMeetHistory(userID, 999, (error, result) => { //Using 999 as the meet id for stage, since it has to be integer
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -175,7 +164,7 @@ function joinStage (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    callback(null);
+                    callback(null, payload);
                 }
             });
         }

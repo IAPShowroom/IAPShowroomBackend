@@ -22,10 +22,10 @@ let logCtx = {
 
 //  testChecksum();
 // testReadXML();
-// testGetMeetingInfoURL();
+testGetMeetingInfoURL();
 // testGetMeetingInfo();
 // testIsMeetingRunning();
-testCreateRoom();
+// testCreateRoom();
  
  
  //test functions:
@@ -70,7 +70,7 @@ function testGetMeetingInfoURL () {
     logTest("Start test", logCtx);
     //Construct URL for BBB API call
     var queryParams = {
-        meetingID: "01",
+        meetingID: "stage",
     }
     var queryString = (new URLSearchParams(queryParams)).toString();
     var checksum = streaming.generateChecksum('getMeetingInfo', queryString);
