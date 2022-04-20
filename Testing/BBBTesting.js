@@ -22,10 +22,10 @@ let logCtx = {
 
 //  testChecksum();
 // testReadXML();
-testGetMeetingInfoURL();
+// testGetMeetingInfoURL();
 // testGetMeetingInfo();
 // testIsMeetingRunning();
-// testCreateRoom();
+testCreateRoom();
  
  
  //test functions:
@@ -33,7 +33,7 @@ testGetMeetingInfoURL();
 function testCreateRoom() {
     logCtx.fn = 'testCreateRoom';
     logTest("Start test", logCtx);
-    var meetingName = "Test Meeting";
+    var meetingName = "Test Meeting 1";
     var projectID = 1;
     streaming.createRoom(meetingName, projectID, (error) => {
         if (error) logError(error, logCtx);
