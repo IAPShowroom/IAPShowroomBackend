@@ -640,7 +640,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
 }
 
-function fetchProjects(sessionID, callback) { //TODO: test
+function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
     dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
         if (error) {
