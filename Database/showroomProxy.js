@@ -151,6 +151,19 @@ function registerAdvisor (userID, body, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function changePassword (userID, hashedPW, callback) { //TODO: test
+    logCtx.fn = 'changePassword';
+    var query = "update users set password=$1 where userid = $2";
+    var values = [hashedPW, userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+        } 
+        callback(error); //Null if no error
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function registerCompanyRep (userID, body, callback) {
     logCtx.fn = 'registerCompanyRep';
     var companyName = body.company_name;
@@ -683,5 +696,6 @@ module.exports = {
     getQnARoomInfo: getQnARoomInfo,
     getName: getName,
     getLiveStats: getLiveStats,
-    getInPersonStats: getInPersonStats
+    getInPersonStats: getInPersonStats,
+    changePassword: changePassword
 }

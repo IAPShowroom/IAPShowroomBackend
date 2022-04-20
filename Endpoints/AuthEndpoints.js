@@ -14,7 +14,7 @@ var userInfo = '/user-info';
 var userRole = '/user-role';
 var inPersonTracking = '/in-person';
 var verifyUser = '/verify';
-var changePassword = '/change-pass';
+var forgotPassword = '/forgot-pass';
 
 authRouter.post(register, authHandler.registerUser);
 authRouter.post(logIn, authHandler.logIn);
@@ -23,13 +23,6 @@ authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); //T
 // authRouter.get(userRole, authHandler.authenticate, authHandler.getRoleAndName); 
 // authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
 // authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
-// authRouter.post(changePassword, authHandler.authenticate, authHandler.changePassword); //TODO: implement and test
+authRouter.post(forgotPassword, authHandler.authenticate, authHandler.forgotPassword); //TODO: implement and test
 
 module.exports = authRouter;
-
-/**
- * Developer Notes:
- * 
- * - add an endpoint to change password
- * - add endpoint for isVerified?
- */

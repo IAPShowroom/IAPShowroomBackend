@@ -65,6 +65,10 @@ const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
 });
 
+const forgotPasswordSchema = Joi.object({
+    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+});
+
 const joinStageSchema = Joi.object({
     meeting_id: Joi.string().valid('stage').required()
 });
@@ -263,6 +267,16 @@ function validatePostMeetHistory (req, callback) {
     }
 }
 
+function validateChangePassword (req, callback) { //TODO: test
+    logCtx.fn = 'validateChangePassword';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, forgotPasswordSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateGetIAPProjects (req, callback) {
     logCtx.fn = 'validateGetIAPProjects';
     if (req.query != undefined && Object.keys(req.query).length != 0) {
@@ -359,5 +373,6 @@ module.exports = {
     validateGetRoomStatus: validateGetRoomStatus,
     validateQNARoomInfo: validateQNARoomInfo,
     validateJoinStage: validateJoinStage,
-    validateServerSideEvent: validateServerSideEvent
+    validateServerSideEvent: validateServerSideEvent,
+    validateChangePassword: validateChangePassword 
 }

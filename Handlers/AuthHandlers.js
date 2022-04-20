@@ -211,6 +211,57 @@ function logOut (req, res, next) {
     }
 }
 
+function forgotPassword (req, res, next) { //TODO: finish implementing and test
+    logCtx.fn = 'forgotPassword';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateChangePassword(req, (error) => { //TODO: implement and test
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Get hash from database and compare
+            var newPassword = req.body.new_password;
+            var saltRounds = 10;
+            bcrypt.hash(newPassword, saltRounds, (error, hash) => {
+                if (error) {
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    callback(null, hash);
+                }
+            });
+        },
+        function (hashedPW, callback) {
+            var userID = req.session.data.userID;
+            //Update users table with new password
+            showroomDB.changePassword(userID, hashedPW, (error) => { //TODO: implement and test
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    
+                }
+                callback(error); //Null if no error
+            });
+        }
+    ], (error, result) => {
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } 
+        else {
+            successResponse(res, 200, "Password successfully changed.", result);
+        }
+    });
+}
+
 function authenticate (req, res, next) {
     logCtx.fn = 'authenticate';
     if (req.session.data) {
@@ -253,7 +304,8 @@ module.exports = {
     authorizeAdmin: authorizeAdmin,
     logOut: logOut,
     logIn: logIn,
-    checkSession: checkSession
+    checkSession: checkSession,
+    forgotPassword: forgotPassword
 }
 
 /**
