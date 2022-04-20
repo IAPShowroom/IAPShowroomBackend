@@ -41,8 +41,16 @@ function createRoom (meetingName, projectID, callback) {
             logCtx.fn = "createRoom:axios";
             //Make BBB API call
             axios.post(url).then((response) => {
-                log("Successful response for BBB create call.", logCtx);
-                callback(null);
+                var jsonObj = xmlParser.parse(response.data);
+                if (jsonObj.response.returncode == "FAILED") {
+                    errorMsg = jsonObj.response.message;
+                    errorStatus = 500;
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                } else {
+                    log("Successful response for BBB create room call.", logCtx);
+                    callback(null);
+                }
             }).catch((axiosError) => {
                 logError(axiosError, logCtx);
                 callback(axiosError);
@@ -205,10 +213,20 @@ function endRoom (req, res, next) {
             callback(null, url);
         },
         function (url, callback) {
+            console.log("TESTING: url"); //testing
+            console.log(url); //testing
             //Make BBB API call
             axios.post(url).then((response) => {
-                log("Successful response for BBB end call.", logCtx);
-                callback(null, response);
+                var jsonObj = xmlParser.parse(response.data);
+                if (jsonObj.response.returncode == "FAILED") {
+                    errorMsg = jsonObj.response.message;
+                    errorStatus = 500;
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Successful response for BBB end call.", logCtx);
+                    callback(null, jsonObj.response);
+                }
             }).catch((error) => {
                 logError(error, logCtx);
                 callback(error, null);
@@ -219,7 +237,7 @@ function endRoom (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 200, "Successfully ended room.", result.data.response); //send the response object only
+            successResponse(res, 200, "Successfully ended room.", result); //send the response object only
         }
     });
 }
@@ -312,7 +330,7 @@ function getMeetingInfo (meetingID, callback) {
             logCtx.fn = "getMeetingInfo";
             //Make BBB API call
             axios.post(url).then((response) => {
-                log("Successful response for BBB end call.", logCtx);
+                log("Successful response for BBB getMeetingInfo call.", logCtx);
                 callback(null, response);
             }).catch((error) => {
                 logError(error, logCtx);
