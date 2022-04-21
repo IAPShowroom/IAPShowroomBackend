@@ -272,8 +272,8 @@ function validateChangePassword (req, callback) { //TODO: test
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, forgotPasswordSchema, callback); //re-use schema for join room request, same parameters for now
     } else {
-        logError("Missing request body.", logCtx);
-        callback(new Error("Missing request body."));
+        logError("Missing or invalid request body.", logCtx);
+        callback(new Error("Missing or invalid request body."));
     }
 }
 

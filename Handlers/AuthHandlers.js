@@ -9,6 +9,7 @@ const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 const config = require('../Config/config.js');
+const bcrypt = require('bcrypt');
 
 let logCtx = {
     fileName: 'AuthHandlers',
@@ -61,7 +62,7 @@ function registerUser (req, res, next) {
         },
         function (callback) {
             //Persist user data based on role
-            showroomDB.registerUser(req, (error, result) => { //TODO: test
+            showroomDB.registerUser(req, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -211,13 +212,13 @@ function logOut (req, res, next) {
     }
 }
 
-function forgotPassword (req, res, next) { //TODO: finish implementing and test
+function forgotPassword (req, res, next) {
     logCtx.fn = 'forgotPassword';
     var errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateChangePassword(req, (error) => { //TODO: implement and test
+            validator.validateChangePassword(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -242,7 +243,7 @@ function forgotPassword (req, res, next) { //TODO: finish implementing and test
         function (hashedPW, callback) {
             var userID = req.session.data.userID;
             //Update users table with new password
-            showroomDB.changePassword(userID, hashedPW, (error) => { //TODO: implement and test
+            showroomDB.changePassword(userID, hashedPW, (error) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -252,12 +253,11 @@ function forgotPassword (req, res, next) { //TODO: finish implementing and test
                 callback(error); //Null if no error
             });
         }
-    ], (error, result) => {
+    ], (error) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
-        } 
-        else {
-            successResponse(res, 200, "Password successfully changed.", result);
+        } else {
+            successResponse(res, 201, "Password successfully changed.");
         }
     });
 }
