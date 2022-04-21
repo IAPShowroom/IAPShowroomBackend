@@ -30,29 +30,29 @@ function registerUser (req, res, next) {
                 callback(error);
             });
         },
-        // function (callback) { //Commented while testing since test emails are not in IAP
-        //     //Check email against IAP if it's an advisor
-        //     if (req.body.user_role == config.userRoles.advisor) { //TODO: test
-        //         var userEmail = req.body.email;
-        //         iapDB.validateEmail(userEmail, (error) => {
-        //             if (error) {
-        //                 errorStatus = 400;
-        //                 errorMsg = error.toString();
-        //                 logError(error, logCtx);
-        //             }
-        //             callback(error);
-        //         });
-        //     } else {
-        //         //Skip
-        //         callback(null);
-        //     }
-        // },
+        function (callback) {
+            //Check email against IAP if it's an advisor
+            if (req.body.user_role == config.userRoles.advisor) {
+                var userEmail = req.body.email;
+                iapDB.validateEmail(userEmail, (error) => {
+                    if (error) {
+                        errorStatus = 400;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error);
+                });
+            } else {
+                //Skip
+                callback(null);
+            }
+        },
         function (callback) {
             //Check email is not already in use
             var userEmail = req.body.email;
             showroomDB.validateEmail(userEmail, (error) => {
                 if (error) {
-                    errorStatus = 400;
+                    errorStatus = 409; //Conflict
                     errorMsg = error.toString();
                     logError(error, logCtx);
                 }
@@ -61,7 +61,7 @@ function registerUser (req, res, next) {
         },
         function (callback) {
             //Persist user data based on role
-            showroomDB.registerUser(req, (error, result) => { //TODO: test
+            showroomDB.registerUser(req, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -177,7 +177,7 @@ function logIn (req, res, next) {
             var userPassword = req.body.password;
             showroomDB.comparePasswords(userEmail, userPassword, (error, result) => {
                 if (error) {
-                    errorStatus = 400;
+                    errorStatus = 401; //Invalid email or password
                     errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error);
@@ -185,19 +185,17 @@ function logIn (req, res, next) {
                     //Insert session token with user ID in request objet
                     req.session.data = result; //JSON object with user ID and admin role if applicable
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    //Will test integration by passing userid and admin payload, but redis sessions should be included
-                    successResponse(res, 200, "User successfully logged in.",result);
-                    callback(null);
+                    callback(null, result);
                 }
             });
         }
-    ], (error) => {
+    ], (error, result) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
-        } 
-        // else {
-        //     successResponse(res, 200, "User successfully logged in.");
-        // }
+        } else {
+            //Will test integration by passing userid and admin payload, but redis sessions should be included
+            successResponse(res, 200, "User successfully logged in.", result);
+        }
     });
 }
 

@@ -311,7 +311,7 @@ function validateEmail (email, callback) { //TODO: test
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length > 0 ) {
-                var errorMsg = "Email is already in use.";
+                var errorMsg = "This email is already registered.";
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg));
             } else {

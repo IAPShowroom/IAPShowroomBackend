@@ -101,8 +101,8 @@ function validateRegisterUser (req, callback) {
                 validateRequest(req, userSchema, callback);
         }
     } else {
-        logError("Missing role in request body.", logCtx);
-        callback(new Error("Missing role information in request body."));
+        logError("Missing request body information.", logCtx);
+        callback(new Error("Missing request body information."));
     }
 }
 
@@ -208,8 +208,8 @@ function validateLogIn (req, callback) {
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, logInSchema, callback);
     } else {
-        logError("Missing request body.", logCtx);
-        callback(new Error("Missing request body."));
+        logError("Missing or invalid login credentials.", logCtx);
+        callback(new Error("Missing or invalid login credentials."));
     }
 }
 
