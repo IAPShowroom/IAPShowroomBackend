@@ -10,6 +10,7 @@ const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 const config = require('../Config/config.js');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 let logCtx = {
     fileName: 'AuthHandlers',
@@ -75,12 +76,14 @@ function registerUser (req, res, next) {
                 }
             });
         },
-        // function (result, callback) {
-        //     //Send verification email //TODO: implement
-        //     //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
-        //     //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
-        //     callback(null);
-        // }
+        function (result, callback) {
+            //Send verification email //TODO: implement
+            //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
+            var emailUUID = crypto.randomUUID();
+            //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
+            var verifyURL = "https://" + config.SHOWROOM_HOST + "/api/auth/verify/" + result.userID + "/" + emailUUID
+            callback(null);
+        }
     ], (error) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
@@ -262,6 +265,43 @@ function forgotPassword (req, res, next) {
     });
 }
 
+function verifyUserFromEmail (req, res, next) {
+    logCtx.fn = 'verifyUserFromEmail';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateVerifyEmail(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Update users table to specify verified
+            var userID = req.params.userID;
+            var emailUUID = req.params.euuid; //TODO: go through emailuuid table and verify 
+            showroomDB.verifyEmail(userID, (error) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                }
+                callback(error); //Null if no error
+            });
+        }
+    ], (error) => {
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Email successfully verified.");
+        }
+    });
+}
+
 function authenticate (req, res, next) {
     logCtx.fn = 'authenticate';
     if (req.session.data) {
@@ -305,7 +345,8 @@ module.exports = {
     logOut: logOut,
     logIn: logIn,
     checkSession: checkSession,
-    forgotPassword: forgotPassword
+    forgotPassword: forgotPassword,
+    verifyUserFromEmail: verifyUserFromEmail
 }
 
 /**

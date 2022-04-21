@@ -13,7 +13,7 @@ var logOut = '/logout';
 var userInfo = '/user-info';
 var userRole = '/user-role';
 var inPersonTracking = '/in-person';
-var verifyUser = '/verify';
+var verifyUser = '/verify/:userID/:euuid';
 var forgotPassword = '/forgot-pass';
 
 authRouter.post(register, authHandler.registerUser);
@@ -22,7 +22,7 @@ authRouter.post(logOut, authHandler.logOut);
 authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); //TODO: implement and test
 // authRouter.get(userRole, authHandler.authenticate, authHandler.getRoleAndName); 
 // authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
-// authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
+authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
 authRouter.post(forgotPassword, authHandler.authenticate, authHandler.forgotPassword); //TODO: implement and test
 
 module.exports = authRouter;

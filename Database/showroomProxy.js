@@ -441,6 +441,23 @@ function getQnARoomInfo (projectID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
 }
 
+function verifyEmail (userID, callback) {
+    logCtx.fn = 'verifyEmail';
+    var query = "update users set verifiedemail=true where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function getLiveStats (callback) {
     logCtx.fn = 'getLiveStats';
     var query = "select m.jointime,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by user_role, department, gender, grad_date, jointime;"; 
@@ -483,7 +500,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -697,5 +714,6 @@ module.exports = {
     getName: getName,
     getLiveStats: getLiveStats,
     getInPersonStats: getInPersonStats,
-    changePassword: changePassword
+    changePassword: changePassword,
+    verifyEmail: verifyEmail
 }
