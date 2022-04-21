@@ -76,14 +76,14 @@ function registerUser (req, res, next) {
                 }
             });
         },
-        function (result, callback) {
-            //Send verification email //TODO: implement
-            //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
-            var emailUUID = crypto.randomUUID();
-            //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
-            var verifyURL = "https://" + config.SHOWROOM_HOST + "/api/auth/verify/" + result.userID + "/" + emailUUID
-            callback(null);
-        }
+        // function (result, callback) {
+        //     //Send verification email //TODO: implement
+        //     //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
+        //     var emailUUID = crypto.randomUUID();
+        //     //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
+        //     var verifyURL = "https://" + config.SHOWROOM_HOST + "/api/auth/verify/" + result.userID + "/" + emailUUID
+        //     callback(null);
+        // }
     ], (error) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
