@@ -15,7 +15,7 @@ let logCtx = {
 
 //run test:
 
-// iapProjectsTest();
+iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
 // testGetEvents();
@@ -30,7 +30,7 @@ let logCtx = {
 // testGetRolesAndNameFromMeetHistory();
 // testGetStudentProject();
 // testGetQnARoomInfo();
-testGetSessions();
+// testGetSessions();
 
 
 //test functions:
@@ -307,12 +307,10 @@ function iapProjectsTest () {
     logCtx.fn = 'iapProjectsTest';
     logTest("Test started", logCtx);
     var session_id = '14';
-    iapDB.fetchProjects(session_id, (error, data) => {
+    iapDB.fetchProjects(session_id, (error) => {
         if (error) {
             logError(error, logCtx);
         }
-        logTest("Returned data: ", logCtx);
-        console.log(data);
         iapDB.endPool();
         logTest("Test ended", logCtx);
     });

@@ -609,16 +609,15 @@ function getName (userID, callback) {
 
 function postToShowroomProjects (iapProjects, callback) {
     logCtx.fn = 'postToShowroomProjects';
-    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4) returning projectid, iapproject_title";
+    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4)";
     var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
-            callback(error, null);
+            callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows[0]; //returns {projectid: '#', iapproject_title: 'abc'}
-            callback(null, result);
+            callback(null);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
