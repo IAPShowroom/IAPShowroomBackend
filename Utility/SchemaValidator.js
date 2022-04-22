@@ -65,6 +65,15 @@ const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
 });
 
+const forgotPasswordSchema = Joi.object({
+    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+});
+
+const verifyEmailSchema = Joi.object({
+    userID: Joi.number().required(),
+    euuid: Joi.string().required()
+});
+
 const joinStageSchema = Joi.object({
     meeting_id: Joi.string().valid('stage').required()
 });
@@ -263,6 +272,26 @@ function validatePostMeetHistory (req, callback) {
     }
 }
 
+function validateChangePassword (req, callback) { //TODO: test
+    logCtx.fn = 'validateChangePassword';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, forgotPasswordSchema, callback);
+    } else {
+        logError("Missing or invalid request body.", logCtx);
+        callback(new Error("Missing or invalid request body."));
+    }
+}
+
+function validateVerifyEmail (req, callback) {
+    logCtx.fn = 'validateChangePassword';
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        validateRequest(req.params, verifyEmailSchema, callback);
+    } else {
+        logError("Missing or invalid path parameters.", logCtx);
+        callback(new Error("Missing or invalid path parameters."));
+    }
+}
+
 function validateGetIAPProjects (req, callback) {
     logCtx.fn = 'validateGetIAPProjects';
     if (req.query != undefined && Object.keys(req.query).length != 0) {
@@ -359,5 +388,7 @@ module.exports = {
     validateGetRoomStatus: validateGetRoomStatus,
     validateQNARoomInfo: validateQNARoomInfo,
     validateJoinStage: validateJoinStage,
-    validateServerSideEvent: validateServerSideEvent
+    validateServerSideEvent: validateServerSideEvent,
+    validateChangePassword: validateChangePassword,
+    validateVerifyEmail: validateVerifyEmail
 }

@@ -2,7 +2,12 @@
  * Database proxy file, used to interface with the Showroom's database.
  */
 
-const { Pool } = require('pg');
+const pg = require('pg');
+const Pool = pg.Pool;
+var types = pg.types;
+types.setTypeParser(1114, function(stringValue) {
+    return stringValue;
+});
 const config = require('../Config/config');
 const dbConfig = config.showroomDBConfig;
 const { logError, log } = require('../Utility/Logger.js');
@@ -147,6 +152,19 @@ function registerAdvisor (userID, body, callback) {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             associateProjectsWithUser(userID, projectIDList, callback);
         }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function changePassword (userID, hashedPW, callback) { //TODO: test
+    logCtx.fn = 'changePassword';
+    var query = "update users set password=$1 where userid = $2";
+    var values = [hashedPW, userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+        } 
+        callback(error); //Null if no error
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
@@ -355,9 +373,9 @@ function createEvents (eventList, callback) {
 
 function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
-    var getAll = "select * from iap_events where isdeleted = false";
-    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null"; //project id not null to make sure we only select project events
-    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
+    var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
+    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
+    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false order by starttime asc";
     var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
     var queryCb = (error, res) => { 
         if (error) {
@@ -390,7 +408,7 @@ function getEvents(byDate, upcoming, time, date, callback) {
 
 function getEventByID (eventID, callback) {
     logCtx.fn = 'getEventByID';
-    var query = "select * from iap_events where eventid = $1 and isdeleted = false"; 
+    var query = "select * from iap_events where meetid = $1 and isdeleted = false"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -426,6 +444,23 @@ function getQnARoomInfo (projectID, callback) {
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+}
+
+function verifyEmail (userID, callback) {
+    logCtx.fn = 'verifyEmail';
+    var query = "update users set verifiedemail=true where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
 function getLiveStats (callback) {
@@ -470,7 +505,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -494,7 +529,7 @@ function getUserInfo (userID, callback) {
 
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
-    var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
+    var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where meetid = $7";
     var values = [event.adminid, event.starttime, event.duration, event.title, event.projectid, event.e_date, eventID];
     var queryCb = (error, res) => { 
         if (error) {
@@ -511,7 +546,7 @@ function updateEvent (eventID, event, callback) {
 
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
-    var query = "update iap_events set isdeleted=true where eventid = $1"; 
+    var query = "update iap_events set isdeleted=true where meetid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -683,5 +718,7 @@ module.exports = {
     getQnARoomInfo: getQnARoomInfo,
     getName: getName,
     getLiveStats: getLiveStats,
-    getInPersonStats: getInPersonStats
+    getInPersonStats: getInPersonStats,
+    changePassword: changePassword,
+    verifyEmail: verifyEmail
 }
