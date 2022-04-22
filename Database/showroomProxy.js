@@ -408,7 +408,7 @@ function getEvents(byDate, upcoming, time, date, callback) {
 
 function getEventByID (eventID, callback) {
     logCtx.fn = 'getEventByID';
-    var query = "select * from iap_events where eventid = $1 and isdeleted = false"; 
+    var query = "select * from iap_events where meetid = $1 and isdeleted = false"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -529,7 +529,7 @@ function getUserInfo (userID, callback) {
 
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
-    var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
+    var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where meetid = $7";
     var values = [event.adminid, event.starttime, event.duration, event.title, event.projectid, event.e_date, eventID];
     var queryCb = (error, res) => { 
         if (error) {
@@ -546,7 +546,7 @@ function updateEvent (eventID, event, callback) {
 
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
-    var query = "update iap_events set isdeleted=true where eventid = $1"; 
+    var query = "update iap_events set isdeleted=true where meetid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
