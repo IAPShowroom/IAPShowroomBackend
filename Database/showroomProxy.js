@@ -2,7 +2,12 @@
  * Database proxy file, used to interface with the Showroom's database.
  */
 
-const { Pool } = require('pg');
+ const pg = require('pg');
+ const Pool = pg.Pool;
+ var types = pg.types;
+ types.setTypeParser(1114, function(stringValue) {
+     return stringValue;
+ });
 const config = require('../Config/config');
 const dbConfig = config.showroomDBConfig;
 const { logError, log } = require('../Utility/Logger.js');
