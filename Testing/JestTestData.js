@@ -1,8 +1,29 @@
 /**
- * File to centralize testing data.
+ * File to centralize testing data for Jest test runs.
  */
 
 //Test data:
+
+const genericStats = {
+    maxParticipants: 13,
+    generalParticipants: 1,
+    researchStudParticipants: 9,
+    companyRepParticipants: 2,
+    professorParticipants: 1,
+    totalWomen: 8,
+    totalMen: 3,
+    totalNotDisclosed: 2,
+    resStudICOM: 1,
+    resStudINEL: 0,
+    resStudINSO: 0,
+    resStudCIIC: 0,
+    resStudINME: 1,
+    resStudOther: 0,
+    resStudGRAD: 9,
+    totalResStudWomen: 6,
+    totalResStudMen: 2,
+    totalResStudNotDisclosed: 1
+}
 
 const adminUser = {
     first_name: 'TestUser',
@@ -78,8 +99,6 @@ const exEvent4 = {
 
 const exEventList = [exEvent2, exEvent3, exEvent4];
 
-const getMeetingInfoXMLSuccessResponse = "<response><returncode>SUCCESS</returncode><running>true</running></response>";
-
 module.exports = {
     exEvent: exEvent,
     exEvent2: exEvent2,
@@ -89,6 +108,5 @@ module.exports = {
     exEventUpdateDate: exEventUpdateDate,
     adminUser: adminUser,
     normalUser: normalUser,
-    notInDBUser: notInDBUser,
-    getMeetingInfoXMLSuccessResponse: getMeetingInfoXMLSuccessResponse
+    notInDBUser: notInDBUser
 }
