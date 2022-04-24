@@ -14,13 +14,13 @@ let logCtx = {
 
 const logInSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
-    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+    password: Joi.string().required
 });
 
 //TODO: review and make more accurate
 const userSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
-    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
+    password: Joi.string().required(),
     first_name: Joi.string().alphanum().min(1).max(30).required(),
     last_name: Joi.string().alphanum().min(1).max(30).required(),
     gender: Joi.string().alphanum().min(1).max(30).required(),

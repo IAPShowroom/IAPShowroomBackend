@@ -593,9 +593,10 @@ function getAllMembersFromAllProjects (req, res, next) {
         if (error) {
             logError(error, logCtx);
             errorResponse(res, 500, error.toString());
-        }
+        } else{
         log("Response data: " + JSON.stringify(result), logCtx);
         successResponse(res, 200, "Successfully retrieved all participating members with projects", result);
+        }
     });
 }
 

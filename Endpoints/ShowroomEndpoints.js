@@ -18,7 +18,7 @@ var getStats = '/stats';
 var getRoomStatus = '/rooms/status';
 var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
-var researchers_advisors = '/researchers_advisors';
+var researchers_advisors = '/researchers-advisors';
 var validateResearchMember = '/validateResearchMember'
 
 // Server Sent Event Endpoints

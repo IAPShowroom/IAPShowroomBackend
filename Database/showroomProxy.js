@@ -516,10 +516,10 @@ function getAllMembersFromAllProjects(callback){
 
 function validateResearchMember(userID, user_role, callback){
     logCtx.fn = 'validateResearchMember';
-    if(user_role === "Student Researcher"){
+    if(user_role === config.userRoles.studentResearcher){
         var query = "update student_researchers set validatedmember=true where userid = $1";
     } 
-    else if(user_role === "Advisor"){
+    else if(user_role === config.userRoles.advisor){
         var query = "update advisors set validatedmember=true where userid = $1";
     } else{
         callback(null, null);
