@@ -2,12 +2,12 @@
  * Database proxy file, used to interface with the Showroom's database.
  */
 
- const pg = require('pg');
- const Pool = pg.Pool;
- var types = pg.types;
- types.setTypeParser(1114, function(stringValue) {
-     return stringValue;
- });
+const pg = require('pg');
+const Pool = pg.Pool;
+var types = pg.types;
+types.setTypeParser(1114, function(stringValue) {
+    return stringValue;
+});
 const config = require('../Config/config');
 const dbConfig = config.showroomDBConfig;
 const { logError, log } = require('../Utility/Logger.js');
@@ -34,7 +34,7 @@ const pool = new Pool({
     },
 });
 
-function registerUser (req, callback) { //TODO: test
+function registerUser (req, callback) {
     logCtx.fn = 'registerUser';
     var result = {};
     var saltRounds = 10;
@@ -62,6 +62,7 @@ function registerUser (req, callback) { //TODO: test
             var role = req.body.user_role;
             switch (role) {
                 case config.userRoles.studentResearcher:
+                    result.isPM = req.body.ispm; //Add isPM 
                     registerStudent(userID, req.body, callback);
                     break;
                 case config.userRoles.advisor:
@@ -155,6 +156,19 @@ function registerAdvisor (userID, body, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function changePassword (userID, hashedPW, callback) { //TODO: test
+    logCtx.fn = 'changePassword';
+    var query = "update users set password=$1 where userid = $2";
+    var values = [hashedPW, userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+        } 
+        callback(error); //Null if no error
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function registerCompanyRep (userID, body, callback) {
     logCtx.fn = 'registerCompanyRep';
     var companyName = body.company_name;
@@ -202,13 +216,15 @@ function comparePasswords (email, plaintextPassword, callback) {
     async.waterfall([
         function (callback) {
             //Get hash from database (and retrieve user ID)
-            fetchHashAndUserID(email, (error, hash, userID, user_role) => { //TODO: test
+            fetchHashAndUserID(email, (error, hash, userID, user_role, isPM) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
-                    result.userID = userID; //Add user iD to result object
+                    //Add user information to result object, this is later on the session data
+                    result.userID = userID;
                     result.user_role = user_role;
+                    result.isPM = isPM;
                     callback(null, hash);
                 }
             });
@@ -258,7 +274,7 @@ function comparePasswords (email, plaintextPassword, callback) {
 
 function fetchHashAndUserID (email, callback) {
     logCtx.fn = 'fetchHashAndUserID';
-    var query = "select userid, password, user_role from users where email = $1";
+    var query = "select u.userid, u.password, u.user_role, s.ispm from users u left join student_researchers s on u.userid = s.userid where email = $1";
     var values = [email];
     var queryCb = (error, res) => { 
         if (error) {
@@ -274,7 +290,8 @@ function fetchHashAndUserID (email, callback) {
                 let userID = res.rows[0].userid;
                 let hash = res.rows[0].password;
                 let role = res.rows[0].user_role;
-                callback(null, hash, userID, role); //Success
+                let ispm = res.rows[0].ispm;
+                callback(null, hash, userID, role, ispm); //Success
             }
         }
     };
@@ -315,7 +332,7 @@ function validateEmail (email, callback) { //TODO: test
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length > 0 ) {
-                var errorMsg = "Email is already in use.";
+                var errorMsg = "This email is already registered.";
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg));
             } else {
@@ -359,9 +376,9 @@ function createEvents (eventList, callback) {
 
 function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
-    var getAll = "select * from iap_events where isdeleted = false";
-    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null"; //project id not null to make sure we only select project events
-    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false";
+    var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
+    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
+    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false order by starttime asc";
     var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
     var queryCb = (error, res) => { 
         if (error) {
@@ -394,7 +411,7 @@ function getEvents(byDate, upcoming, time, date, callback) {
 
 function getEventByID (eventID, callback) {
     logCtx.fn = 'getEventByID';
-    var query = "select * from iap_events where eventid = $1 and isdeleted = false"; 
+    var query = "select * from iap_events where meetid = $1 and isdeleted = false"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -412,9 +429,86 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function getQnARoomInfo (projectID, callback) {
+    logCtx.fn = 'getQnARoomInfo';
+    var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found, send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+}
+
+function verifyEmail (userID, callback) {
+    logCtx.fn = 'verifyEmail';
+    var query = "update users set verifiedemail=true where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function getLiveStats (callback) {
+    logCtx.fn = 'getLiveStats';
+    var query = "select m.jointime,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by user_role, department, gender, grad_date, jointime;"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found, send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
+function getInPersonStats (callback) {
+    logCtx.fn = 'getInPersonStats';
+    var query = "select user_role, major, department, gender, grad_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date, major;"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No users found! send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -438,7 +532,7 @@ function getUserInfo (userID, callback) {
 
 function updateEvent (eventID, event, callback) {
     logCtx.fn = 'updateEvent';
-    var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where eventid = $7";
+    var query = "update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where meetid = $7";
     var values = [event.adminid, event.starttime, event.duration, event.title, event.projectid, event.e_date, eventID];
     var queryCb = (error, res) => { 
         if (error) {
@@ -455,7 +549,7 @@ function updateEvent (eventID, event, callback) {
 
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
-    var query = "update iap_events set isdeleted=true where eventid = $1"; 
+    var query = "update iap_events set isdeleted=true where meetid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -551,18 +645,32 @@ function postMeetHistory (userID, meetingID, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function postToShowroomProjects (iapProjects, callback) {
-    logCtx.fn = 'postToShowroomProjects';
-    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4) returning projectid, iapproject_title";
-    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
+function getName (userID, callback) {
+    logCtx.fn = 'getName';
+    var query = "select first_name, last_name from users where userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
             callback(error, null);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var result = res.rows[0]; //returns {projectid: '#', iapproject_title: 'abc'}
-            callback(null, result);
+            callback(null, res.rows[0]);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
+function postToShowroomProjects (iapProjects, callback) {
+    logCtx.fn = 'postToShowroomProjects';
+    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4)";
+    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
@@ -584,7 +692,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
 }
 
-function fetchProjects(sessionID, callback) { //TODO: test
+function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
     dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
         if (error) {
@@ -624,5 +732,11 @@ module.exports = {
     postToShowroomProjects: postToShowroomProjects,
     fetchProjects: fetchProjects,
     getStudentProject: getStudentProject,
-    fetchUserIDsAndRoles: fetchUserIDsAndRoles
+    fetchUserIDsAndRoles: fetchUserIDsAndRoles,
+    getQnARoomInfo: getQnARoomInfo,
+    getName: getName,
+    getLiveStats: getLiveStats,
+    getInPersonStats: getInPersonStats,
+    changePassword: changePassword,
+    verifyEmail: verifyEmail
 }

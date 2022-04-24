@@ -99,7 +99,7 @@ function closeDbConnections(cb) {
     log("Safely closed IAP DB connection pool.", logCtx);
     showroomDB.endPool();})
   .then(result => {
-    log("Safely closed IAP DB connection pool.", logCtx);
+    log("Safely closed Showroom DB connection pool.", logCtx);
     cb();}) //call the callback to exit server
   .catch(reason => logError(reason, logCtx));
 }

@@ -5,13 +5,21 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse, serverSideResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
 const config = require('../Config/config.js');
 
 const MAX_ASYNC = 1;
+
+let sse_clients = [];
+
+const sse_header = {
+    "Connection": "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+};
 
 let logCtx = {
     fileName: 'ShowroomHandlers',
@@ -25,7 +33,166 @@ var announcementHistory = []; //Keep track of which announcements have been sent
 var currAnnouncementID = 1;
 
 function getStats (req, res, next) {
+    logCtx.fn = 'getStats';
+    var errorStatus, errorMsg;
+    var finalResult = {
+        maxParticipants: 0, generalParticipants: 0, researchStudParticipants: 0, 
+        companyRepParticipants: 0, professorParticipants: 0, totalWomen: 0, 
+        totalMen: 0, totalNotDisclosed: 0, resStudICOM: 0, 
+        resStudINEL: 0, resStudINSO: 0, resStudCIIC: 0, 
+        resStudINME: 0, resStudOther: 0, resStudGRAD: 0, 
+        totalResStudWomen: 0, totalResStudMen: 0, totalResStudNotDisclosed: 0
+    };
+    async.waterfall([
+        function (callback) {
+            //Fetch stats from DB
+            showroomDB.getLiveStats((error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No users found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (liveResults, callback) {
+            //Fetch records from in-person users table
+            showroomDB.getInPersonStats((error, inPersonResults) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null, null);
+                } else if (inPersonResults == undefined || inPersonResults == null) {
+                    log("No in-person users found.", logCtx);
+                    callback(null, liveResults, null);
+                } else {
+                    log("Response data: " + JSON.stringify(inPersonResults), logCtx);
+                    callback(null, liveResults, inPersonResults);
+                }
+            });
+        },
+        function (liveResults, inPersonResults, callback) {
+            //Filter live conference records to derive statistics
+            liveResults.forEach((obj) => {
+                //Only count them if they have a record in meet history (there exists a join time)
+                if (obj.jointime != null) {
+                    filterStats(finalResult, obj);
+                }
+            });
+            //Filter in person records to derive statistics
+            if (inPersonResults != null) {
+                inPersonResults.forEach((obj) => {
+                    filterStats(finalResult, obj);
+                });
+            }
+            callback(null); 
+        },
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved statistics.", finalResult);
+        }
+    });
+}
 
+function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
+    var count = parseInt(obj.count, 10)
+    //Count based on user role
+    if (obj.user_role == config.userRoles.studentResearcher) {
+        //Count student researcher
+        finalResult.researchStudParticipants += count;
+        //Count student researchers by department
+        switch (obj.department) {
+            case config.departments.ICOM:
+                finalResult.resStudICOM += count;
+                break;
+            case config.departments.INEL:
+                finalResult.resStudINEL += count;
+                break;
+            case config.departments.INSO:
+                finalResult.resStudINSO += count;
+                break;
+            case config.departments.INME:
+                finalResult.resStudINME += count;
+                break;
+            case config.departments.CIIC:
+                finalResult.resStudCIIC += count;
+                break;
+            case config.departments.other:
+                finalResult.resStudOther += count;
+                break;
+        }
+        //Take into consideration the major (department) of in-person students
+        if (obj.major != undefined) {
+            switch (obj.major) {
+                case config.departments.ICOM:
+                    finalResult.resStudICOM += count;
+                    break;
+                case config.departments.INEL:
+                    finalResult.resStudINEL += count;
+                    break;
+                case config.departments.INSO:
+                    finalResult.resStudINSO += count;
+                    break;
+                case config.departments.INME:
+                    finalResult.resStudINME += count;
+                    break;
+                case config.departments.CIIC:
+                    finalResult.resStudCIIC += count;
+                    break;
+                case config.departments.other:
+                    finalResult.resStudOther += count;
+                    break;
+            }
+        }
+        //Count student researchers by gender
+        switch (obj.gender) {
+            case config.userGenders.male:
+                finalResult.totalResStudMen += count;
+                break;
+            case config.userGenders.female:
+                finalResult.totalResStudWomen += count;
+                break;
+            case config.userGenders.other:
+                finalResult.totalResStudNotDisclosed += count;
+                break;
+        }
+        //Count student researchers soon to graduate
+        if (new Date(obj.grad_date).getFullYear() == new Date(Date.now()).getFullYear()) {
+            finalResult.resStudGRAD += count;
+        }
+    } else if (obj.user_role == config.userRoles.advisor) {
+        finalResult.professorParticipants += count;
+    } else if (obj.user_role == config.userRoles.companyRep) {
+        finalResult.companyRepParticipants += count;
+    } else {
+        //Didn't match any of the other roles, count it as a general user
+        finalResult.generalParticipants += count;
+    }
+    //Do counts general to every user
+    finalResult.maxParticipants += count;
+    switch (obj.gender) {
+        case config.userGenders.male:
+            finalResult.totalMen += count;
+            break;
+        case config.userGenders.female:
+            finalResult.totalWomen += count;
+            break;
+        case config.userGenders.other:
+            finalResult.totalNotDisclosed += count;
+            break;
+    }
 }
 
 function getRoomStatus (req, res, next) {
@@ -34,7 +201,7 @@ function getRoomStatus (req, res, next) {
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateGetRoomStatus(req, (error) => { //TODO: implement and test
+            validator.validateGetRoomStatus(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -65,7 +232,7 @@ function getRoomStatus (req, res, next) {
             });
         },
         function (events, callback) {
-            getStatusForEvents(events, (error, result) => { //TODO: test
+            getStatusForEvents(events, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -88,18 +255,18 @@ function getRoomStatus (req, res, next) {
 
 function getStatusForEvents (allEvents, mainCallback) {
     logCtx.fn = 'getStatusForEvents';
-    var result = [];
+    var result = []; //Final result array sent for response
     var userList;
     //Traverse all event objects and get status for each one
     async.forEachLimit(allEvents, MAX_ASYNC, (event, cb) => {
+        //Object that gets added to final result array for response
         var eventObj = {company_representatives: 0, general_users: 0, student_researcher: false};
         eventObj.title = event.title;
         var skip = false;
         async.waterfall([
             function (callback) {
                //Fetch user IDs and roles from meet history table
-            //    showroomDB.fetchUserIDsAndRoles(event.projectid, (error, result) => { //Original, use the one below until meet history uses project id
-               showroomDB.fetchUserIDsAndRoles(event.eventid, (error, result) => { //TODO: remove 
+               showroomDB.fetchUserIDsAndRoles(event.projectid, (error, result) => {
                     if (error) {
                         errorStatus = 500;
                         errorMsg = error.toString();
@@ -196,18 +363,154 @@ function getStatusForEvents (allEvents, mainCallback) {
 }
 
 function getQnARoomInfo (req, res, next) {
-    
+    logCtx.fn = 'getQnARoomInfo';
+    var finalResult = {};
+    var errorStatus, errorMsg, bbbRole, firstName, lastName, meetingName, projectID, performBBBOps;
+    var userID = req.session.data["userID"];
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateQNARoomInfo(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch title, abstract, and users associated with project (Student Researchers and Advisors in the participates table)
+            projectID = req.query.meeting_id;
+            performBBBOps = req.query.bbb; //Indicate whether or not to only bring room info or also do BBB operations
+            showroomDB.getQnARoomInfo(projectID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No records found.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    finalResult.project_members = result; //Add list of participating users to the final result
+                    meetingName = result[0].iapproject_title; //Save meeting name for create room call
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Get name and role for BBB room
+                var userData = req.session.data;
+                meetingHandler.getBBBRoleAndName(userData, req.query.meeting_id, (error, role, first_name, last_name) => {
+                    if (error) {
+                        logError(error, logCtx);
+                    } else {
+                        bbbRole = role;
+                        firstName = first_name;
+                        lastName = last_name;
+                    }
+                    callback(error); //Null if no error
+                });
+            } else {
+                callback(null);
+            }
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Check role
+                switch (bbbRole) {
+                    case "moderator":
+                        //Create room before joining if they are moderators
+                        meetingHandler.createRoom(meetingName, projectID, callback);
+                        break;
+                    case "viewer":
+                        //Check if the meeting is running, fail the call if it's not
+                        meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
+                            if (error) {
+                                logError(error, logCtx);
+                                callback(error);
+                            } else {
+                                if (!isRunning) {
+                                    errorStatus = 500;
+                                    errorMsg = "Meeting is not running.";
+                                    logError(errorMsg, logCtx);
+                                    callback(new Error(errorMsg));
+                                } else {
+                                    callback(null); //All good, meeting is running, proceed
+                                }
+                            }
+                        });
+                        break;
+                }
+            } else {
+                callback(null);
+            }
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Record join history
+                showroomDB.postMeetHistory(userID, projectID, (error, result) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                        callback(error, null);
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null);
+            }
+        },
+        function (callback) {
+            if (performBBBOps && performBBBOps == 'true') {
+                //Construct URL for BBB API call
+                var queryParams = {
+                    meetingID: "0" + projectID,
+                    fullName: firstName + " " + lastName,
+                    userID: userID,
+                    role: bbbRole,
+                    password: bbbRole == 'moderator' ? config.MOD_PASSWORD : config.ATTENDEE_PASSWORD
+                }
+                var queryString = (new URLSearchParams(queryParams)).toString();
+                var checksum = meetingHandler.generateChecksum('join', queryString);
+                var url = config.bbbUrlPrefix + "/join?" + queryString + "&checksum=" + checksum;
+                finalResult.join_url = url;
+                callback(null);
+            } else {
+                callback(null);
+            }
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            var successMessage = "Successfully retrieved room information."
+            if (performBBBOps && performBBBOps == 'true') successMessage = successMessage + " And produced join URL.";
+            successResponse(res, 200, successMessage, finalResult);
+        }
+    });
 }
 
 function getIAPSessions (req, res, next) {
     logCtx.fn = "getIAPSessions";
-    iapDB.getSessions( (error, result) => {
+    var latest = false; //If false, get all sessions; if true, only retrieve info for latest session
+    iapDB.getSessions(latest, (error, result) => {
         if (error) {
             logError(error, logCtx);
             errorResponse(res, 500, error.toString());
+        } else {
+            log("Response data: " + JSON.stringify(result), logCtx);
+            successResponse(res, 200, "Successfully retrieved sessions", result);
         }
-        log("Response data: " + JSON.stringify(result), logCtx);
-        successResponse(res, 200, "Successfully retrieved sessions", result);
     });
 }
 
@@ -530,13 +833,13 @@ function deleteScheduleEvent (req, res, next) {
     });
 }
 
-function getProjects (req, res, next) { //TODO: finish
+function getProjects (req, res, next) {
     logCtx.fn = "getProjects";
     var sessionID, errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateGetIAPProjects(req, (error) => { //TODO: implement
+            validator.validateGetIAPProjects(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -546,8 +849,28 @@ function getProjects (req, res, next) { //TODO: finish
             });
         },
         function (callback) {
-            //Fetch projects from IAP
             sessionID = req.query.session_id;
+            if (sessionID == undefined) {
+                var latest = true; //If session ID was missing in request, retrieve latest one from IAP DB
+                iapDB.getSessions(latest, (error, result) => {
+                    if (error) {
+                        logError(error, logCtx);
+                        errorMsg = error.toString();
+                        errorStatus = 500;
+                        callback(error);
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        sessionID = result[0].session_id;
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null); //Session ID was provided, skip
+            }
+        },
+        function (callback) {
+            logCtx.fn = "getProjects";
+            //Fetch projects from IAP
             showroomDB.fetchProjects(sessionID, (error, iapProjects) => { //result is array of objs with project info
                 if (error) {
                     errorStatus = 500;
@@ -555,8 +878,15 @@ function getProjects (req, res, next) { //TODO: finish
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    log("Response data: " + JSON.stringify(iapProjects), logCtx);
-                    callback(null, iapProjects);
+                    if (iapProjects == null || iapProjects.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No projects found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(iapProjects), logCtx);
+                        callback(null, iapProjects);
+                    }
                 }
             });
         }
@@ -568,6 +898,120 @@ function getProjects (req, res, next) { //TODO: finish
             successResponse(res, 200, "Successfully retrieved projects.", result && result.length > 0 ? result : null);
         }
     });
+}
+
+function getServerSideUpcomingEvents(req, res, next){
+    logCtx.fn = "getServerSideUpcomingEvents";
+    console.log('Client connected');
+
+    const upcoming = true;
+    var errorStatus, errorMsg;
+
+    res.writeHead(200, sse_header);
+
+    async.waterfall([
+        
+    //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
+    
+    function (callback) {
+        //Validate request payload
+        validator.validateServerSideEvent(req, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                errorStatus = 400;
+                errorMsg = error.message;
+            }
+            callback(error);
+        });
+    },
+    function (callback) {
+        //Take DB action
+
+        const date_obj = new Date();
+        const day = date_obj.toLocaleDateString('en-US');
+        const time = date_obj.toLocaleString('en-US');
+
+        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
+            if (error) {
+                errorStatus = 500;
+                errorMsg = error.toString();
+                logError(error, logCtx);
+                callback(error, null);
+            } else if (result == undefined || result == null) {
+                errorStatus = 404;
+                errorMsg = "No events found.";
+                logError(error, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                log("Response data: " + JSON.stringify(result), logCtx);
+                callback(null, result);
+            }
+        });
+    }
+    ], (error, result) => {
+        //Send responses
+        serverSideResponse("upcomingevents",res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+    }, 
+    );
+                
+                
+    
+
+}
+
+function getServerSideProgressBar(req, res, next){
+    logCtx.fn = "getServerSideProgressBar";
+    console.log('Client connected');
+
+    const upcoming = true;
+    var errorStatus, errorMsg;
+
+    res.writeHead(200, sse_header);
+
+    async.waterfall([
+        
+    //  this function is meant to serve the updates from the events to the frontend
+    
+    function (callback) {
+        //Validate request payload
+        validator.validateServerSideEvent(req, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                errorStatus = 400;
+                errorMsg = error.message;
+            }
+            callback(error);
+        });
+    },
+    function (callback) {
+        //Take DB action
+
+        const date_obj = new Date();
+        const day = date_obj.toLocaleDateString('en-US');
+        const time = date_obj.toLocaleString('en-US');
+
+        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
+            if (error) {
+                errorStatus = 500;
+                errorMsg = error.toString();
+                logError(error, logCtx);
+                callback(error, null);
+            } else if (result == undefined || result == null) {
+                errorStatus = 404;
+                errorMsg = "No events found.";
+                logError(error, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                log("Response data: " + JSON.stringify(result), logCtx);
+                callback(null, result);
+            }
+        });
+    }
+    ], (error, result) => {
+        //Send responses
+        serverSideResponse("progress", res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
+    }, 
+    );
 }
 
 module.exports = {
@@ -583,5 +1027,8 @@ module.exports = {
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
     sseConnect: sseConnect,
-    closeSSEConnections: closeSSEConnections
+    closeSSEConnections: closeSSEConnections,
+    filterStats: filterStats,
+    getServerSideUpcomingEvents: getServerSideUpcomingEvents,
+    getServerSideProgressBar: getServerSideProgressBar
 }

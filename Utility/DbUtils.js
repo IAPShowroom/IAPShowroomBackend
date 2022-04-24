@@ -17,8 +17,18 @@ function successResponse (res, status, msg, payload) {
     res.status(status).send(data);
 }
 
+function serverSideResponse (callerEvent, res, status, msg, payload) {
+    logCtx.fn = "serverSideResponse"
+    var data = { message: msg }
+    if (payload) data.payload = payload;
+    log(msg + ' status: ' + status, logCtx);
+    log(JSON.stringify(data.payload),logCtx);
+    res.write(`event: ${callerEvent}\ndata: ${JSON.stringify(data.payload)}\n\n`);
+}
+
 function errorResponse (res, status, msg) {
-    successResponse(res, status, 'Error: ' + msg);
+    // successResponse(res, status, 'Error: ' + msg); //Remove 'Error' injection
+    successResponse(res, status, msg);
 }
 
 function makeQuery(pool, query, callback, queryCb) {
@@ -56,6 +66,7 @@ function makeQueryWithParams(pool, query, values, callback, queryCb) {
 module.exports = {
     successResponse: successResponse,
     errorResponse: errorResponse,
+    serverSideResponse: serverSideResponse,
     makeQuery: makeQuery,
     makeQueryWithParams: makeQueryWithParams
 }

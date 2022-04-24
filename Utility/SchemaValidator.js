@@ -32,7 +32,7 @@ const studentSchema = userSchema.append({
     projectids: Joi.array().items(Joi.number()).required(), 
     department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
-    ispm: Joi.boolean().required(),
+    ispm: Joi.boolean().required()
 //    validatedmember: Joi.boolean().required() X
 });
 
@@ -70,8 +70,26 @@ const joinRoomSchema = Joi.object({
     meeting_id: Joi.number().required()
 });
 
+const forgotPasswordSchema = Joi.object({
+    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+});
+
+const verifyEmailSchema = Joi.object({
+    userID: Joi.number().required(),
+    euuid: Joi.string().required()
+});
+
+const joinStageSchema = Joi.object({
+    meeting_id: Joi.string().valid('stage').required()
+});
+
+const qnaInfoSchema = Joi.object({
+    meeting_id: Joi.number().required(),
+    bbb: Joi.boolean()
+});
+
 const sessionIDSchema = Joi.object({
-    session_id: Joi.number().required()
+    session_id: Joi.number()
 });
 
 const roomStatusSchema = Joi.object({
@@ -97,8 +115,8 @@ function validateRegisterUser (req, callback) {
                 validateRequest(req, userSchema, callback);
         }
     } else {
-        logError("Missing role in request body.", logCtx);
-        callback(new Error("Missing role information in request body."));
+        logError("Missing request body information.", logCtx);
+        callback(new Error("Missing request body information."));
     }
 }
 
@@ -204,8 +222,8 @@ function validateLogIn (req, callback) {
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, logInSchema, callback);
     } else {
-        logError("Missing request body.", logCtx);
-        callback(new Error("Missing request body."));
+        logError("Missing or invalid login credentials.", logCtx);
+        callback(new Error("Missing or invalid login credentials."));
     }
 }
 
@@ -223,6 +241,16 @@ function validateJoinRoom (req, callback) {
     logCtx.fn = 'validateJoinRoom';
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, joinRoomSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateJoinStage (req, callback) { //TODO: test
+    logCtx.fn = 'validateJoinStage';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinStageSchema, callback);
     } else {
         logError("Missing request body.", logCtx);
         callback(new Error("Missing request body."));
@@ -259,25 +287,62 @@ function validatePostMeetHistory (req, callback) {
     }
 }
 
+function validateChangePassword (req, callback) {
+    logCtx.fn = 'validateChangePassword';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, forgotPasswordSchema, callback);
+    } else {
+        logError("Missing or invalid request body.", logCtx);
+        callback(new Error("Missing or invalid request body."));
+    }
+}
+
+function validateVerifyEmail (req, callback) {
+    logCtx.fn = 'validateChangePassword';
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        validateRequest(req.params, verifyEmailSchema, callback);
+    } else {
+        logError("Missing or invalid path parameters.", logCtx);
+        callback(new Error("Missing or invalid path parameters."));
+    }
+}
+
 function validateGetIAPProjects (req, callback) {
     logCtx.fn = 'validateGetIAPProjects';
-    if (req.query != undefined && Object.keys(req.query).length != 0) {
-        const { error, value } = sessionIDSchema.validate(req.query);
-        if (error) { //return comma separated errors
-            logError("Schema validation error for request payload.", logCtx);
-            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+    const { error, value } = sessionIDSchema.validate(req.query);
+    if (error) { //return comma separated errors
+        logError("Schema validation error for request payload.", logCtx);
+        callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+    } else {
+        log("Request schema successfully validated.", logCtx);
+        callback(null);
+    }
+}
+
+function validateQNARoomInfo (req, callback) { //TODO: test
+    logCtx.fn = 'validateQNARoomInfo';
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        if (!isNaN(parseInt(req.params.projectID, 10))) {
+            if (req.query != undefined && Object.keys(req.query).length != 0) {
+                var obj = {body: req.query}; //Bypass validateRequest's req.body call
+                validateRequest(obj, qnaInfoSchema, callback);
+            } else {
+                logError("Missing request query parameters.", logCtx);
+                callback(new Error("Missing request query parameters."));
+            }
         } else {
-            log("Request schema successfully validated.", logCtx);
-            callback(null);
+            var errorMsg = "Invalid data type for path parameter.";
+            logError(errorMsg, logCtx);
+            callback(new Error(errorMsg));
         }
     } else {
-        var errorMsg = "Missing request query parameters.";
+        var errorMsg = "Missing request path parameters.";
         logError(errorMsg, logCtx);
         callback(new Error(errorMsg));
     }
 }
 
-function validateGetRoomStatus (req, callback) { //TODO: test
+function validateGetRoomStatus (req, callback) {
     logCtx.fn = 'validateGetRoomStatus';
     if (req.query && Object.keys(req.query).length != 0) {
         const { error, value } = roomStatusSchema.validate(req.query);
@@ -306,6 +371,12 @@ function validateRequest (req, schema, callback) {
     }
 }
 
+function validateServerSideEvent(req, callback){
+    logCtx.fn = 'validateServerSideEvent';
+    log("Request schema successfully validated.", logCtx);
+    callback(null);
+}
+
 //optionally implement this function to add additional sql injection defense
 // function sanitizeInput(input, callback){ //callback: (error) => {}
 // }
@@ -324,5 +395,10 @@ module.exports = {
     validatePostAnnouncement: validatePostAnnouncement,
     validatePostMeetHistory: validatePostMeetHistory,
     validateGetIAPProjects: validateGetIAPProjects,
-    validateGetRoomStatus: validateGetRoomStatus
+    validateGetRoomStatus: validateGetRoomStatus,
+    validateQNARoomInfo: validateQNARoomInfo,
+    validateJoinStage: validateJoinStage,
+    validateServerSideEvent: validateServerSideEvent,
+    validateChangePassword: validateChangePassword,
+    validateVerifyEmail: validateVerifyEmail
 }
