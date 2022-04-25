@@ -1076,18 +1076,17 @@ function postLiveAttendance(req, res, next){
     async.waterfall([
         function (callback) {
             // Post live attendance to db
-            var payload = req.body.payload;
-            console.log(payload);
-            // showroomDB.postAnnouncements(adminID, message, date, (error, result) => {
-            //     if (error) {
-            //         errorStatus = 500;
-            //         errorMsg = error.toString();
-            //         logError(error, logCtx);
-            //         callback(error);
-            //     } else {
-            //         log("Response data: " + JSON.stringify(result), logCtx);
-            //     }
-            // });
+            var payload = req.body;
+            showroomDB.postLiveAttendance(payload, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                }
+            });
         }
     ], (error) => {
         //Send responses
