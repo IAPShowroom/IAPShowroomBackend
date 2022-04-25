@@ -80,7 +80,7 @@ describe('Video Streaming Endpoints: POST /api/meet/end', () => {
 
     let invalidRequestBodyTestCases = [
         ['Missing meeting_id in request body', {}],
-        ['Incorrect properties in request body', { meting_id: 1 }],
+        ['Incorrect properties in request body', { meeting_id: 1 }],
         ['Invalid values in request body', { meeting_id: 'abc' }]
     ];
 
