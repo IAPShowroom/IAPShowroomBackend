@@ -27,7 +27,7 @@ let logCtx = {
 }
 
 let SSE = {}; //Object to expose sendEvent
-let sseRequests = []; //Store the request object for the SSE connection (maybe change this for an array for multiple clients?)
+let sseRequests = []; //Store the response object for the SSE connection (maybe change this for an array for multiple clients?)
 //TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
 var announcementHistory = []; //Keep track of which announcements have been sent
 var currAnnouncementID = 1;
