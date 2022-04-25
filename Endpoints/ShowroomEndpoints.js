@@ -22,6 +22,8 @@ var researchers_advisors = '/researchers-advisors';
 var validateResearchMember = '/validateResearchMember'
 var sseConnect = '/sse-connect'; //used to establish server sent events connection
 
+var inPersonAttendance = '/live-attendance'
+
 // Server Sent Event Endpoints
 var serverSideSent = '/sse';
 
@@ -58,5 +60,8 @@ showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerS
 //IAP
 showroomRouter.get(getIAPProjects, showroomHandler.getProjects); //TODO - review
 showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSessions); //TODO: implement
+
+// Live Attendance
+showroomRouter.post(inPersonAttendance, showroomHandler.postLiveAttendance);
 
 module.exports = showroomRouter;
