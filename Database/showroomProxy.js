@@ -496,7 +496,7 @@ function getRoleAndName (userID, callback) {
 
 function getAllMembersFromAllProjects(callback){
     logCtx.fn = 'getAllMembersFromAllProjects';
-    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, r.projectid, r.iapproject_title from users inner join participates p on users.userid = p.userid inner join projects r on p.projectid = r.projectid order by r.projectid;";
+    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, r.projectid, r.iapproject_title, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid inner join projects r on p.projectid = r.projectid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by r.projectid, users.userid, sr.validatedmember, a.validatedmember;";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
