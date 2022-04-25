@@ -80,7 +80,7 @@ function getSessions(latest, callback) {
     });
 }
 
-function validateEmail (email, callback) { //TODO: test
+function validateEmail (email, callback) { 
     //Verify that email is registered in IAP 
     logCtx.fn = 'validateEmail';
     var query = "select user_id from users where email = $1";
@@ -98,6 +98,11 @@ function validateEmail (email, callback) { //TODO: test
             } else {
                 callback(null); //Success
             }
+            // var isInIAP = false;
+            // if (res.rows.length != 0 ) {
+            //     isInIAP = true;
+            // }
+            // callback(null, isInIAP); //Making it not fail, but just give out warning
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
@@ -116,9 +121,3 @@ module.exports = {
     validateEmail: validateEmail,
     getSessions: getSessions
 }
-
-/**
- * Development Notes:
- * 
- * - en el query podemos poner un sql to try to use the SP in the db
-*/

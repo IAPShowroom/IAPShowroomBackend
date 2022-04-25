@@ -4,6 +4,7 @@
 
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
+const authHandler = require('../Handlers/AuthHandlers.js');
 const testData = require('./TestData.js');
 const { logError, logDebug, logTest } = require('../Utility/Logger.js');
 
@@ -15,7 +16,7 @@ let logCtx = {
 
 //run test:
 
-iapProjectsTest();
+// iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
 // testGetEvents();
@@ -26,14 +27,47 @@ iapProjectsTest();
 // testShowroomValidateEmail();
 // testRegisterGeneralUser();
 // testGetRoleAndName();
-testPostMeetHistory();
+// testPostMeetHistory();
 // testGetRolesAndNameFromMeetHistory();
 // testGetStudentProject();
 // testGetQnARoomInfo();
 // testGetSessions();
+// testSendEmail();
+testGenerateEUUID();
 
 
 //test functions:
+
+function testGenerateEUUID() {
+    logCtx.fn = 'testGenerateEUUID';
+    logTest("Test started", logCtx);
+    var userID = 3;
+    authHandler.generateEUUID(userID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testSendEmail() {
+    logCtx.fn = 'testSendEmail';
+    logTest("Test started", logCtx);
+    var email = "jorge.e.vega6@gmail.com";
+    var subject = "test subject";
+    var message = "Hello world, 1 2 3";
+    authHandler.sendEmail(email, subject, message, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testGetSessions() {
     logCtx.fn = 'testGetSessions';

@@ -11,6 +11,16 @@ const async = require('async');
 const config = require('../Config/config.js');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+
+let transporter = nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    auth: {
+        user: config.showroomEmail.email,
+        pass: config.showroomEmail.password
+    }
+});
 
 let logCtx = {
     fileName: 'AuthHandlers',
@@ -19,7 +29,7 @@ let logCtx = {
 
 function registerUser (req, res, next) {
     logCtx.fn = 'registerUser';
-    var errorStatus, errorMsg;
+    var errorStatus, errorMsg, userEmail;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -32,26 +42,28 @@ function registerUser (req, res, next) {
                 callback(error);
             });
         },
-        function (callback) {
-            //Check email against IAP if it's an advisor
-            if (req.body.user_role == config.userRoles.advisor) {
-                var userEmail = req.body.email;
-                iapDB.validateEmail(userEmail, (error) => {
-                    if (error) {
-                        errorStatus = 400;
-                        errorMsg = error.toString();
-                        logError(error, logCtx);
-                    }
-                    callback(error);
-                });
-            } else {
-                //Skip
-                callback(null);
-            }
-        },
+        // function (callback) {
+        //     //Check email against IAP if it's an advisor
+        //     if (req.body.user_role == config.userRoles.advisor) {
+        //         var userEmail = req.body.email;
+        //         iapDB.validateEmail(userEmail, (error, isInIAP) => {
+        //             if (error) {
+        //                 errorStatus = 400;
+        //                 errorMsg = error.toString();
+        //                 logError(error, logCtx);
+        //             } else {
+
+        //             }
+        //             callback(error);
+        //         });
+        //     } else {
+        //         //Skip
+        //         callback(null);
+        //     }
+        // },
         function (callback) {
             //Check email is not already in use
-            var userEmail = req.body.email;
+            userEmail = req.body.email;
             showroomDB.validateEmail(userEmail, (error) => {
                 if (error) {
                     errorStatus = 409; //Conflict
@@ -76,19 +88,78 @@ function registerUser (req, res, next) {
                 }
             });
         },
-        // function (result, callback) {
-        //     //Send verification email //TODO: implement
-        //     //maybe generate a unique string that is destroyed once its used? UUID.randomUUID().toString() or expires after some time (1hour?)
-        //     var emailUUID = crypto.randomUUID();
-        //     //and send an email with a constructued url for them to click on (showroom host + auth prefix + path params with: user id + pre-filled unique string)?
-        //     var verifyURL = "https://" + config.SHOWROOM_HOST + "/api/auth/verify/" + result.userID + "/" + emailUUID
-        //     callback(null);
-        // }
+        function (result, callback) {
+            //Generate email unique ID for the verify email link
+            generateEUUID(result.userID, (error, emailUUID) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null, null);
+                } else {
+                    log("Successfully generated email UUID.", logCtx);
+                    callback(null, result, emailUUID);
+                }
+            });
+        },
+        function (result, emailUUID, callback) {
+            //Send verification email 
+            var verifyURL = "https://" + config.SHOWROOM_HOST + "/api/auth/verify/" + result.userID + "/" + emailUUID
+            var subject = "Confirm your email address"
+            var message = "Thank you for registering with IAP Showroom. Please click the following link to verify your email address. " + verifyURL; 
+            sendEmail(userEmail, subject, message, (error, info) => {
+                if (error) {
+                    logError(error, logCtx);
+                } else {
+                    log("Successfully sent verification email for user " + userEmail, logCtx);
+                }
+                callback(null);
+            });
+        }
     ], (error) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 201, "User registered. Please check email for verification.");
+        }
+    });
+}
+
+function generateEUUID (userID, callback) {
+    logCtx.fn = 'generateEUUID';
+    //Generate new email UUID and expire time
+    var emailUUID = crypto.randomUUID();
+    var expireInMiliseconds = new Date() + config.EMAIL_VERIFY_MAX_AGE;
+    var expireTime = new Date(expireInMiliseconds).toISOString();
+
+    //Post euuid to table
+    showroomDB.postToEUUID(userID, emailUUID, expireTime, (error) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            callback(null, emailUUID); //Pass the emailUUID to the next function
+        }
+    });
+}
+
+function sendEmail(destEmail, subject, message, callback) {
+    logCtx.fn = 'sendEmail';
+    const mail = {
+        from: config.showroomEmail.email,
+        to: destEmail, 
+        subject: subject,
+        text: message,
+        // html: //TODO: add prettiness
+      };
+
+    transporter.sendMail(mail, function (error, info) {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Email sent:" + info.response, logCtx);
+            callback(null, info);
         }
     });
 }
@@ -345,11 +416,7 @@ module.exports = {
     logIn: logIn,
     checkSession: checkSession,
     forgotPassword: forgotPassword,
-    verifyUserFromEmail: verifyUserFromEmail
+    verifyUserFromEmail: verifyUserFromEmail,
+    sendEmail: sendEmail,
+    generateEUUID: generateEUUID
 }
-
-/**
- * Developer Notes:
- * 
- * - Maybe implement retry mechanics to keep trying to connect session if it fails
- */

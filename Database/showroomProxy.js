@@ -721,6 +721,22 @@ function postToShowroomProjects (iapProjects, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function postToEUUID (userID, eeuuid, expires, callback) {
+    logCtx.fn = 'postToEUUID';
+    var query = "insert into emailuuid (userid, euuid, expiration) values ($1, $2, $3)";
+    var values = [userID, eeuuid, expires];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function fetchUserIDsAndRoles (projectID, callback) {
     logCtx.fn = 'fetchUserIDsAndRoles';
     var query = "select u.userid, u.user_role from users u left join meethistory m on u.userid = m.userid where m.meetid = $1";
@@ -804,5 +820,6 @@ module.exports = {
     getInPersonStats: getInPersonStats,
     changePassword: changePassword,
     verifyEmail: verifyEmail,
-    postLiveAttendance: postLiveAttendance
+    postLiveAttendance: postLiveAttendance,
+    postToEUUID: postToEUUID
 }
