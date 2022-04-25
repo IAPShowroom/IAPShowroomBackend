@@ -14,13 +14,13 @@ let logCtx = {
 
 const logInSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
-    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+    password: Joi.string().required()
 });
 
 //TODO: review and make more accurate
 const userSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
-    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
+    password: Joi.string().required(),
     first_name: Joi.string().alphanum().min(1).max(30).required(),
     last_name: Joi.string().alphanum().min(1).max(30).required(),
     gender: Joi.string().alphanum().min(1).max(30).required(),
@@ -97,6 +97,11 @@ const roomStatusSchema = Joi.object({
 });
 
 const eventListSchema = Joi.array().items(eventSchema);
+
+const validateResearchMemberSchema = Joi.object({
+    userid: Joi.number().required(),
+    user_role: Joi.string().min(1).max(30).required()
+});
 
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
@@ -359,6 +364,16 @@ function validateGetRoomStatus (req, callback) {
     }
 }
 
+function validateMembervalidation(req, callback){
+    logCtx.fn = 'validateMembervalidation';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, validateResearchMemberSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validateRequest (req, schema, callback) {
     logCtx.fn = 'validateRequest';
     const { error, value } = schema.validate(req.body);
@@ -376,6 +391,7 @@ function validateServerSideEvent(req, callback){
     log("Request schema successfully validated.", logCtx);
     callback(null);
 }
+
 
 //optionally implement this function to add additional sql injection defense
 // function sanitizeInput(input, callback){ //callback: (error) => {}
@@ -396,6 +412,8 @@ module.exports = {
     validatePostMeetHistory: validatePostMeetHistory,
     validateGetIAPProjects: validateGetIAPProjects,
     validateGetRoomStatus: validateGetRoomStatus,
+    validateServerSideEvent: validateServerSideEvent, 
+    validateMembervalidation: validateMembervalidation,
     validateQNARoomInfo: validateQNARoomInfo,
     validateJoinStage: validateJoinStage,
     validateServerSideEvent: validateServerSideEvent,
