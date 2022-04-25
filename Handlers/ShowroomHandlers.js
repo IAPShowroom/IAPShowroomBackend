@@ -1072,6 +1072,32 @@ function validateResearchMember(req, res, next){
     });
 }
 
+function postLiveAttendance(req, res, next){
+    async.waterfall([
+        function (callback) {
+            // Post live attendance to db
+            var payload = req.body.payload;
+            console.log(payload);
+            // showroomDB.postAnnouncements(adminID, message, date, (error, result) => {
+            //     if (error) {
+            //         errorStatus = 500;
+            //         errorMsg = error.toString();
+            //         logError(error, logCtx);
+            //         callback(error);
+            //     } else {
+            //         log("Response data: " + JSON.stringify(result), logCtx);
+            //     }
+            // });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully posted live attendance.");
+        }
+    });
+}
 
 module.exports = {
     getProjects: getProjects,
@@ -1091,5 +1117,6 @@ module.exports = {
     getServerSideUpcomingEvents: getServerSideUpcomingEvents,
     getServerSideProgressBar: getServerSideProgressBar,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
-    validateResearchMember: validateResearchMember
+    validateResearchMember: validateResearchMember,
+    postLiveAttendance: postLiveAttendance
 }
