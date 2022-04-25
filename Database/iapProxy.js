@@ -6,6 +6,8 @@ const { Pool } = require('pg');
 const config = require('../Config/config');
 const dbConfig = config.iapDBConfig;
 const dbUtils = require('../Utility/DbUtils.js');
+const showroomDB = require('./showroomProxy.js');
+const async = require('async');
 const { logError, log } = require('../Utility/Logger.js');
 
 let logCtx = {
@@ -21,6 +23,22 @@ const pool = new Pool({
     port: dbConfig.port,
 });
 
+//TODO: original --v, using one below temporarily
+// function fetchProjects(sessionID, callback) {
+//     logCtx.fn = 'fetchProjects';
+//     dbUtils.makeQueryWithParams(pool, "select project_id, session_id, title, abstract from projects where session_id = $1", [sessionID], callback, (error, res) => {
+//         if (error) {
+//             logError(error, logCtx);
+//             callback(error, null);
+//         } else {
+//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+//             var result = res.rows; //returns array of json objects
+//             callback(null, result);
+//         }
+//     });
+// }
+
+//TODO: make better
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
     dbUtils.makeQueryWithParams(pool, "select project_id, session_id, title, abstract from projects where session_id = $1", [sessionID], callback, (error, res) => {
@@ -30,14 +48,27 @@ function fetchProjects(sessionID, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             var result = res.rows; //returns array of json objects
-            callback(null, result);
+            async.forEachLimit(result, 1, (iapProject, cb) => {
+                showroomDB.postToShowroomProjects(iapProject, (error) => {
+                    if (error) {
+                        logError(error.toString(), logCtx);
+                    }
+                    cb(error);
+                });
+            }, (error) => {
+                callback(error); //null if no error
+            });
         }
     });
 }
 
-function getSessions(callback) {
+function getSessions(latest, callback) {
     logCtx.fn = 'getSessions';
-    dbUtils.makeQuery(pool, "select year_id as session_id, start_date, end_date from iap_session", callback, (error, res) => {
+    var query = "select year_id as session_id, start_date, end_date from iap_session";
+    if (latest) {
+        query = "select year_id as session_id, start_date, end_date from iap_session where start_date = (select max(start_date) from iap_session)";
+    }
+    dbUtils.makeQuery(pool, query, callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);

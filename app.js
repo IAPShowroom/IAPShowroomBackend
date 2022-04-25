@@ -16,6 +16,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
 const redis  = require('redis');
+const showroomHandlers = require('./Handlers/ShowroomHandlers.js');
 const redisStore = require('connect-redis')(session);
 
 let logCtx = {
@@ -76,8 +77,9 @@ process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
 process.on('SIGTERM', () => { handleKillServer() }); 
 
 function handleKillServer() {
-  logCtx.fn = 'handleKillServer'
+  logCtx.fn = 'handleKillServer';
   log("Gracefully shutting server down.", logCtx);
+  showroomHandlers.closeSSEConnections(); //TODO: maybe update to make it async?
   closeDbConnections(() => {
     logCtx.fn = '';
     store.clear(() => {  //Clear all sessions
@@ -97,7 +99,7 @@ function closeDbConnections(cb) {
     log("Safely closed IAP DB connection pool.", logCtx);
     showroomDB.endPool();})
   .then(result => {
-    log("Safely closed IAP DB connection pool.", logCtx);
+    log("Safely closed Showroom DB connection pool.", logCtx);
     cb();}) //call the callback to exit server
   .catch(reason => logError(reason, logCtx));
 }

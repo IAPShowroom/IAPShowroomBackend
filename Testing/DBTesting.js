@@ -15,7 +15,7 @@ let logCtx = {
 
 //run test:
 
-// iapProjectsTest();
+iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
 // testGetEvents();
@@ -26,12 +26,44 @@ let logCtx = {
 // testShowroomValidateEmail();
 // testRegisterGeneralUser();
 // testGetRoleAndName();
-// testPostMeetHistory();
+testPostMeetHistory();
 // testGetRolesAndNameFromMeetHistory();
-testGetStudentProject();
+// testGetStudentProject();
+// testGetQnARoomInfo();
+// testGetSessions();
 
 
 //test functions:
+
+function testGetSessions() {
+    logCtx.fn = 'testGetSessions';
+    logTest("Test started", logCtx);
+    var latest = true;
+    iapDB.getSessions(latest, (error, data) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned data: ", logCtx);
+        console.log(data);
+        iapDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testGetQnARoomInfo() {
+    logCtx.fn = 'testGetQnARoomInfo';
+    logTest("Start test", logCtx);
+    var projectID = 1;
+    showroomDB.getQnARoomInfo(projectID, (error, result) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest(" result: ", logCtx);
+        console.log(result);
+        showroomDB.endPool();
+        logTest("End test", logCtx);
+    });
+}
 
 function testGetStudentProject() {
     logCtx.fn = 'testGetStudentProject';
@@ -84,7 +116,8 @@ function testGetRoleAndName () {
 function testPostMeetHistory () {
     logCtx.fn = 'testPostMeetHistory';
     logTest("Start test", logCtx);
-    var meetingID = '47';
+    var meetingID = '1';
+    // var meetingID = '47';
     var userID = '1';
     showroomDB.postMeetHistory(userID, meetingID, (error, result) => {
         if (error) {
@@ -275,12 +308,10 @@ function iapProjectsTest () {
     logCtx.fn = 'iapProjectsTest';
     logTest("Test started", logCtx);
     var session_id = '14';
-    iapDB.fetchProjects(session_id, (error, data) => {
+    iapDB.fetchProjects(session_id, (error) => {
         if (error) {
             logError(error, logCtx);
         }
-        logTest("Returned data: ", logCtx);
-        console.log(data);
         iapDB.endPool();
         logTest("Test ended", logCtx);
     });

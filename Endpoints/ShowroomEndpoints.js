@@ -20,6 +20,7 @@ var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
 var researchers_advisors = '/researchers-advisors';
 var validateResearchMember = '/validateResearchMember'
+var sseConnect = '/sse-connect'; //used to establish server sent events connection
 
 // Server Sent Event Endpoints
 var serverSideSent = '/sse';
@@ -39,6 +40,7 @@ showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnno
 showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getAllMembersFromAllProjects);
 showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
 
+showroomRouter.get(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: implement and test
 
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: implement
