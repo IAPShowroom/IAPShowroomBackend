@@ -453,7 +453,7 @@ function resendVerify (userID, mainCallback) {
     logCtx.fn = 'resendVerify';
     var userEmail;
     async.waterfall([
-        function (result, callback) {
+        function (callback) {
             //Generate email unique ID for the verify email link
             generateEUUID(userID, (error, emailUUID) => {
                 if (error) {

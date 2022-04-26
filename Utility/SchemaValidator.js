@@ -303,10 +303,10 @@ function validateChangePassword (req, callback) {
 }
 
 function validateVerifyEmail (req, callback) {
-    logCtx.fn = 'validateChangePassword';
+    logCtx.fn = 'validateVerifyEmail';
     //Check query parameters if included - must be boolean
     if (req.query && req.query.resend) {
-        if (typeof req.query.resend != "boolean") {
+        if (typeof JSON.parse(req.query.resend) != "boolean") { //TODO: catch error in JSON parse
             logError("Invalid query parameter.", logCtx);
             callback(new Error("Invalid query parameter."));
         }
