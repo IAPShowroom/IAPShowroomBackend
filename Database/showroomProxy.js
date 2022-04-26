@@ -156,7 +156,7 @@ function registerAdvisor (userID, body, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function changePassword (userID, hashedPW, callback) { //TODO: test
+function changePassword (userID, hashedPW, callback) {
     logCtx.fn = 'changePassword';
     var query = "update users set password=$1 where userid = $2";
     var values = [hashedPW, userID];
@@ -208,6 +208,50 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
             callback(error); //null if no error
         });
     }
+}
+
+function fetchUserEmail (userID, callback) {
+    logCtx.fn = 'fetchUserEmail';
+    var query = "select email from users where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "Invalid user ID."; 
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                callback(null, res.rows[0]); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchEUUID (userID, callback) {
+    logCtx.fn = 'fetchEUUID';
+    var query = "select euuid, expiration from emailuuid where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "Invalid email confirmation link."; 
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                callback(null, res.rows[0]); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
 function comparePasswords (email, plaintextPassword, callback) {
@@ -802,5 +846,7 @@ module.exports = {
     getInPersonStats: getInPersonStats,
     changePassword: changePassword,
     verifyEmail: verifyEmail,
-    postToEUUID: postToEUUID
+    postToEUUID: postToEUUID,
+    fetchEUUID: fetchEUUID,
+    fetchUserEmail: fetchUserEmail
 }

@@ -33,7 +33,7 @@ let logCtx = {
 // testGetQnARoomInfo();
 // testGetSessions();
 // testSendEmail();
-testGenerateEUUID();
+// testGenerateEUUID();
 
 
 //test functions:
@@ -56,7 +56,7 @@ function testGenerateEUUID() {
 function testSendEmail() {
     logCtx.fn = 'testSendEmail';
     logTest("Test started", logCtx);
-    var email = "jorge.e.vega6@gmail.com";
+    var email = "jorge.e.ve2222233445ga6@gmail.com";
     var subject = "test subject";
     var message = "Hello world, 1 2 3";
     authHandler.sendEmail(email, subject, message, (error, info) => {

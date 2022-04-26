@@ -304,6 +304,14 @@ function validateChangePassword (req, callback) {
 
 function validateVerifyEmail (req, callback) {
     logCtx.fn = 'validateChangePassword';
+    //Check query parameters if included - must be boolean
+    if (req.query && req.query.resend) {
+        if (typeof req.query.resend != "boolean") {
+            logError("Invalid query parameter.", logCtx);
+            callback(new Error("Invalid query parameter."));
+        }
+    }
+    //Check path paramters
     if (req.params != undefined && Object.keys(req.params).length != 0) {
         validateRequest(req.params, verifyEmailSchema, callback);
     } else {

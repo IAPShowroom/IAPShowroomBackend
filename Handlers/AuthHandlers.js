@@ -336,11 +336,11 @@ function forgotPassword (req, res, next) {
 
 function verifyUserFromEmail (req, res, next) {
     logCtx.fn = 'verifyUserFromEmail';
-    var errorStatus, errorMsg;
+    var errorStatus, errorMsg, userID;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateVerifyEmail(req, (error) => {
+            validator.validateVerifyEmail(req, (error) => { //TODO: test the 'resend' query param
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -350,24 +350,116 @@ function verifyUserFromEmail (req, res, next) {
             });
         },
         function (callback) {
-            //Update users table to specify verified
-            var userID = req.params.userID;
-            var emailUUID = req.params.euuid; //TODO: go through emailuuid table and verify 
-            showroomDB.verifyEmail(userID, (error) => {
+            //Fetch user's email
+            showroomDB.fetchUserEmail(userID, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
                     logError(error, logCtx);
+                } else {
+                    log("Successfully retrieved user email", logCtx);
+                    userEmail = result.email;
                 }
                 callback(error); //Null if no error
             });
+        },
+        function (callback) {
+            //Check query parameter to see if regenerate a new link or evaluate the one given
+            var resend = req.query.resend;
+            userID = req.session.data.userID;
+            if (resend == true) {
+                resendVerify(userID, callback);
+            } else {
+                callback(null); //Keep going
+            }
+        },
+        function (callback) {
+            if (resend == false) {
+                //Check if emailUUID isn't expired or invalid
+                var emailUUID = req.params.euuid;
+                showroomDB.fetchEUUID(userID, (error, result) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    } else {
+                        //Check that euuid matches and it's not expired yet
+                        if (result.euuid == emailUUID && new Date() < new Date(result.expiration)) {
+                            log("Email confirmation is valid.", logCtx);
+                            callback(null); //Continue to update the users table
+                        } else {
+                            errorStatus = 400;
+                            errorMsg = "Invalid or expired confirmation link. Please ask to resend a new one."
+                            logError(error, logCtx);
+                            callback(new Error(errorMsg));
+                        }
+                    }
+                });
+            } else {
+                callback(null); //Skip
+            }
+        },
+        function (callback) {
+            if (resend == false) {
+                //Update users table to specify verified
+                showroomDB.verifyEmail(userID, (error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error); //Null if no error
+                });
+            } else {
+                callback(null); //Skip
+            }
         }
     ], (error) => {
         if (error) {
+            //Catch errors that might occur within resendVerify()
+            if (errorStatus == undefined) errorStatus = 500;
+            if (errorMsg == undefined) errorMsg = error.toString();
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 201, "Email successfully verified.");
         }
+    });
+}
+
+
+function resendVerify (userID, mainCallback) {
+    logCtx.fn = 'resendVerify';
+    var userEmail;
+    async.waterfall([
+        function (result, callback) {
+            //Generate email unique ID for the verify email link
+            generateEUUID(userID, (error, emailUUID) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                } else {
+                    log("Successfully generated new email UUID.", logCtx);
+                }
+                callback(error, emailUUID); //Null if no error
+            });
+        },
+        function (emailUUID, callback) {
+            //Send verification email 
+            var verifyURL = "https://" + config.SHOWROOM_HOST + "/api/auth/verify/" + userID + "/" + emailUUID
+            var subject = "Confirm your email address"
+            var message = "Thank you for registering with IAP Showroom. Please click the following link to verify your email address. " + verifyURL; 
+            sendEmail(userEmail, subject, message, (error, info) => {
+                if (error) {
+                    logError(error, logCtx);
+                } else {
+                    log("Successfully sent verification email for user " + userEmail, logCtx);
+                }
+                callback(null);
+            });
+        }
+    ], (error) => {
+        mainCallback(error); //Null if no error
     });
 }
 
