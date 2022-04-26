@@ -13,12 +13,28 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
+//TODO: maybe add the transporter.verify() function to test the connection and be ready to send emails
+
+//Showroom Email configuration
+// let transporter = nodemailer.createTransport({
+//     service: 'gmail',
+//     host: 'smtp.gmail.com',
+//     auth: {
+//         user: config.showroomEmail.email,
+//         pass: config.showroomEmail.password
+//     }
+// });
+
+//IAP Email configuation
 let transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
+    host: 'smtps.ece.uprm.edu',
+    port: 465,
     auth: {
-        user: config.showroomEmail.email,
-        pass: config.showroomEmail.password
+        user: config.iapEmail.email,
+        pass: config.iapEmail.password
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
@@ -42,6 +58,7 @@ function registerUser (req, res, next) {
                 callback(error);
             });
         },
+        //Commented since we decided that advisors will be validated by the administrator
         // function (callback) {
         //     //Check email against IAP if it's an advisor
         //     if (req.body.user_role == config.userRoles.advisor) {
@@ -129,8 +146,10 @@ function generateEUUID (userID, callback) {
     logCtx.fn = 'generateEUUID';
     //Generate new email UUID and expire time
     var emailUUID = crypto.randomUUID();
-    var expireInMiliseconds = new Date() + config.EMAIL_VERIFY_MAX_AGE;
-    var expireTime = new Date(expireInMiliseconds).toISOString();
+    var currentDate = new Date();
+    //Add max age of expire time to the current date
+    currentDate.setDate(currentDate.getDate() + config.EMAIL_VERIFY_MAX_AGE);
+    var expireTime = currentDate.toISOString();
 
     //Post euuid to table
     showroomDB.postToEUUID(userID, emailUUID, expireTime, (error) => {
@@ -146,7 +165,10 @@ function generateEUUID (userID, callback) {
 function sendEmail(destEmail, subject, message, callback) {
     logCtx.fn = 'sendEmail';
     const mail = {
-        from: config.showroomEmail.email,
+        from: {
+            name: config.showroomEmail.name,
+            address: config.iapEmail.email
+        },
         to: destEmail, 
         subject: subject,
         text: message,
@@ -334,7 +356,7 @@ function forgotPassword (req, res, next) {
     });
 }
 
-function verifyUserFromEmail (req, res, next) {
+function verifyUserFromEmail (req, res, next) { //TODO: test
     logCtx.fn = 'verifyUserFromEmail';
     var errorStatus, errorMsg, userID;
     async.waterfall([

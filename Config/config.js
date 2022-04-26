@@ -9,11 +9,18 @@ const ENVIRONMENT = env.ENVIRONMENT || 'dev'; //set NODE_ENV to 'production' wit
 const prod = ENVIRONMENT == 'prod';
 const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 1200000 //20 minutes in ms
-const EMAIL_VERIFY_MAX_AGE = 1000 * 60 * 60 * 24; //1 day in ms
+const EMAIL_VERIFY_MAX_AGE = 1; //1 day 
 
 const showroomEmail = {
+    name: 'IAP Showroom',
     email: env.SHOWROOM_MAIL_EMAIL,
     password: env.SHOWROOM_MAIL_PASSWORD
+}
+
+const iapEmail = {
+    name: 'IAP Team',
+    email: env.IAP_MAIL_EMAIL,
+    password: env.IAP_MAIL_PASSWORD
 }
 
 const userRoles = {
@@ -104,5 +111,6 @@ module.exports = {
     bbbUrlPrefix: bbbUrlPrefix,
     departments: departments,
     userGenders: userGenders,
-    showroomEmail: showroomEmail
+    showroomEmail: showroomEmail,
+    iapEmail: iapEmail
 };
