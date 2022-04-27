@@ -508,7 +508,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);

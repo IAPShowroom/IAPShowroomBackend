@@ -52,7 +52,7 @@ const eventSchema = Joi.object({
     starttime: Joi.string().required(),
     duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
-    projectid: Joi.number().required().prefs({ convert: false }),
+    projectid: Joi.any(),
     e_date: Joi.date().required()
 });
 
