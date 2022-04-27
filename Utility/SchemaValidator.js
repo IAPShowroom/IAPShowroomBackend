@@ -302,21 +302,58 @@ function validateChangePassword (req, callback) {
     }
 }
 
+//I know it's a bit ugly and it duplicates code, it's okay, maybe we can make it prettier later
 function validateVerifyEmail (req, callback) {
     logCtx.fn = 'validateVerifyEmail';
     //Check query parameters if included - must be boolean
-    if (req.query && req.query.resend) {
-        if (typeof JSON.parse(req.query.resend) != "boolean") { //TODO: catch error in JSON parse
-            logError("Invalid query parameter.", logCtx);
-            callback(new Error("Invalid query parameter."));
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        if (req.query.resend) {
+            try {
+                var resendJSON = JSON.parse(req.query.resend);
+                if (typeof resendJSON != "boolean") { 
+                    logError("Invalid query parameter.", logCtx);
+                    callback(new Error("Invalid query parameter."));
+                } else {
+                    //Successful boolean
+                    console.log("resendJSON"); //testing
+                    console.log(resendJSON); //testing
+                    if (resendJSON == true) {
+                        console.log("req.session.data"); //testing
+                        console.log(req.session.data); //testing
+                        //Now check if there is a running session if resend=true
+                        if (req.session.data == undefined) {
+                            logError("Missing session data, please log in.", logCtx);
+                            callback(new Error("Missing session data, please log in."));
+                        } else if (req.params != undefined && Object.keys(req.params).length != 0) { //Check path paramters
+                            validateRequest(req.params, verifyEmailSchema, callback);
+                        } else {
+                            logError("Missing or invalid path parameters.", logCtx);
+                            callback(new Error("Missing or invalid path parameters."));
+                        }
+                    } else if (req.params != undefined && Object.keys(req.params).length != 0) { //Check path paramters
+                        console.log("ding ding ding"); //testing
+                        validateRequest(req.params, verifyEmailSchema, callback);
+                    } else {
+                        logError("Missing or invalid path parameters.", logCtx);
+                        callback(new Error("Missing or invalid path parameters."));
+                    }
+                }
+            } catch(exception) {
+                logError("Invalid path parameters.", logCtx);
+                callback(new Error("Invalid path parameters."));
+            }
+        } else {
+            logError("Invalid path parameters.", logCtx);
+            callback(new Error("Invalid path parameters."));
         }
-    }
-    //Check path paramters
-    if (req.params != undefined && Object.keys(req.params).length != 0) {
-        validateRequest(req.params, verifyEmailSchema, callback);
     } else {
-        logError("Missing or invalid path parameters.", logCtx);
-        callback(new Error("Missing or invalid path parameters."));
+        //Check path paramters
+        if (req.params != undefined && Object.keys(req.params).length != 0) {
+            validateRequest(req.params, verifyEmailSchema, callback);
+        } else {
+            logError("Missing or invalid path parameters.", logCtx);
+            callback(new Error("Missing or invalid path parameters."));
+        }
     }
 }
 

@@ -610,6 +610,23 @@ function updateEvent (eventID, event, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function updateEUUID (userID, emailUUID, expireTime, callback) {
+    logCtx.fn = 'updateEUUID';
+    var query = "update emailuuid set euuid=$1, expiration=$2 where userid = $3";
+    var values = [emailUUID, expireTime, userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
     var query = "update iap_events set isdeleted=true where meetid = $1"; 
@@ -888,5 +905,6 @@ module.exports = {
     fetchUserEmail: fetchUserEmail,
     postLiveAttendance: postLiveAttendance,
     postToEUUID: postToEUUID,
-    fetchAllUsers: fetchAllUsers
+    fetchAllUsers: fetchAllUsers,
+    updateEUUID: updateEUUID
 }

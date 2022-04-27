@@ -107,7 +107,8 @@ function registerUser (req, res, next) {
         },
         function (result, callback) {
             //Generate email unique ID for the verify email link
-            generateEUUID(result.userID, (error, emailUUID) => {
+            var updateEUUID = false;
+            generateEUUID(updateEUUID, result.userID, (error, emailUUID) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -142,7 +143,7 @@ function registerUser (req, res, next) {
     });
 }
 
-function generateEUUID (userID, callback) {
+function generateEUUID (updateEUUID, userID, callback) {
     logCtx.fn = 'generateEUUID';
     //Generate new email UUID and expire time
     var emailUUID = crypto.randomUUID();
@@ -151,15 +152,27 @@ function generateEUUID (userID, callback) {
     currentDate.setDate(currentDate.getDate() + config.EMAIL_VERIFY_MAX_AGE);
     var expireTime = currentDate.toISOString();
 
-    //Post euuid to table
-    showroomDB.postToEUUID(userID, emailUUID, expireTime, (error) => {
-        if (error) {
-            logError(error, logCtx);
-            callback(error, null);
-        } else {
-            callback(null, emailUUID); //Pass the emailUUID to the next function
-        }
-    });
+    if (updateEUUID) {
+        //Update euuid in table
+        showroomDB.updateEUUID(userID, emailUUID, expireTime, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                callback(error, null);
+            } else {
+                callback(null, emailUUID); //Pass the emailUUID to the next function
+            }
+        });
+    } else {
+        //Post euuid to table
+        showroomDB.postToEUUID(userID, emailUUID, expireTime, (error) => {
+            if (error) {
+                logError(error, logCtx);
+                callback(error, null);
+            } else {
+                callback(null, emailUUID); //Pass the emailUUID to the next function
+            }
+        });
+    }
 }
 
 function sendEmail(destEmail, subject, message, callback) {
@@ -358,11 +371,11 @@ function forgotPassword (req, res, next) {
 
 function verifyUserFromEmail (req, res, next) { //TODO: test
     logCtx.fn = 'verifyUserFromEmail';
-    var errorStatus, errorMsg, userID;
+    var errorStatus, errorMsg, userID, resend;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateVerifyEmail(req, (error) => { //TODO: test the 'resend' query param
+            validator.validateVerifyEmail(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -373,6 +386,9 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
         },
         function (callback) {
             //Fetch user's email
+            resend = req.query.resend; 
+            //If 'resend' is true, get user ID from session, else get it from path parameter
+            userID = resend == "true" ? req.session.data.userID : req.params.userID;
             showroomDB.fetchUserEmail(userID, (error, result) => {
                 if (error) {
                     errorStatus = 500;
@@ -387,16 +403,14 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
         },
         function (callback) {
             //Check query parameter to see if regenerate a new link or evaluate the one given
-            var resend = req.query.resend;
-            userID = req.session.data.userID;
-            if (resend == true) {
-                resendVerify(userID, callback);
+            if (resend == "true") {
+                resendVerify(userID, userEmail, callback);
             } else {
                 callback(null); //Keep going
             }
         },
         function (callback) {
-            if (resend == false) {
+            if (resend == "false" || resend == undefined) {
                 //Check if emailUUID isn't expired or invalid
                 var emailUUID = req.params.euuid;
                 showroomDB.fetchEUUID(userID, (error, result) => {
@@ -422,7 +436,7 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
             }
         },
         function (callback) {
-            if (resend == false) {
+            if (resend == "false" || resend == undefined) {
                 //Update users table to specify verified
                 showroomDB.verifyEmail(userID, (error) => {
                     if (error) {
@@ -443,19 +457,19 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
             if (errorMsg == undefined) errorMsg = error.toString();
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Email successfully verified.");
+            successResponse(res, 201, "Successful email operation.");
         }
     });
 }
 
 
-function resendVerify (userID, mainCallback) {
+function resendVerify (userID, userEmail, mainCallback) {
     logCtx.fn = 'resendVerify';
-    var userEmail;
     async.waterfall([
         function (callback) {
             //Generate email unique ID for the verify email link
-            generateEUUID(userID, (error, emailUUID) => {
+            var updateEUUID = true;
+            generateEUUID(updateEUUID, userID, (error, emailUUID) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
