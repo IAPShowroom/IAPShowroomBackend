@@ -515,7 +515,6 @@ function getIAPSessions (req, res, next) {
     });
 }
 
-//TODO: might need to keep record of all request objects that try to make a connection to this endpoint, thinking of having many clients connecting at the same time
 function sseConnect (req, res, next) {
     //This endpoint is used to establish a connection for Server Sent Events
     logCtx.fn = 'sseConnect';
@@ -529,8 +528,9 @@ function sseConnect (req, res, next) {
         "Connection": "keep-alive"
     });
 
-    log("Sending test message", logCtx);
-    res.write(`data: ${JSON.stringify({ announcementid: "1", a_content: "Testing testing 1 2 3", a_date: "5-6-22 8:00 AM" })}\n\n`); //Initial testing, let's try to get one event going
+    //Testing
+    // logTest("Sending test message", logCtx);
+    // res.write(`data: fetch announcements\n\n`); //Initial testing, let's try to get one event going
 
     //TODO: test with the connection staying on longer than 2 minutes, if it times out then uncomment this
     //Disable timeout so the connection can stay alive for as long as we want
@@ -546,7 +546,7 @@ function sseConnect (req, res, next) {
         log("Sending event with data: ", logCtx);
         console.log(data);
         sseRequests.forEach((res) => {
-            res.write(`data: ${JSON.stringify(data)}\n\n`);
+            res.write(`data: ${data}\n\n`);
         });
     };
 
@@ -602,8 +602,9 @@ function postAnnouncements (req, res, next) { //TODO: test
                     callback(error);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    var announcement = result[0];
-                    SSE.sendEvent(announcement); //TODO test
+                    // var announcement = result[0];
+                    // SSE.sendEvent(announcement); 
+                    SSE.sendEvent("Fetch announcements.");
                     callback(null);
                 }
             });
@@ -834,6 +835,46 @@ function deleteScheduleEvent (req, res, next) {
     });
 }
 
+function deleteAnnouncementByID (req, res, next) {
+    logCtx.fn = 'deleteAnnouncementByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateDeleteAnnouncement(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+            var announcementID = req.params.announcementID;
+            showroomDB.deleteAnnouncement(announcementID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully deleted announcement.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
 function getProjects (req, res, next) {
     logCtx.fn = "getProjects";
     var sessionID, errorStatus, errorMsg;
@@ -933,6 +974,42 @@ function getAllUsers (req, res, next) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 200, "Successfully retrieved all users.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
+function getAnnouncements (req, res, next) {
+    logCtx.fn = "getAnnouncements";
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            logCtx.fn = "getAnnouncements";
+            //Fetch projects from IAP
+            showroomDB.fetchAllAnnouncements((error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    if (result == null || result.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No announcements found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null, result);
+                    }
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved all announcements.", result && result.length > 0 ? result : null);
         }
     });
 }
@@ -1155,5 +1232,7 @@ module.exports = {
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
     validateResearchMember: validateResearchMember,
     postLiveAttendance: postLiveAttendance,
-    getAllUsers: getAllUsers 
+    getAllUsers: getAllUsers,
+    getAnnouncements: getAnnouncements,
+    deleteAnnouncementByID: deleteAnnouncementByID
 }
