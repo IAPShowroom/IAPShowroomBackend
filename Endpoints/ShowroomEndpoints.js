@@ -18,6 +18,7 @@ var getStats = '/stats';
 var getRoomStatus = '/rooms/status';
 var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
+var announcementsByID = '/announcement/:announcementID'; //used for DELETE
 var researchers_advisors = '/researchers-advisors';
 var validateResearchMember = '/validateResearchMember'
 var sseConnect = '/sse-connect'; //used to establish server sent events connection
@@ -39,7 +40,8 @@ var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 //Showroom General
 showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats);
 showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: update
-// //showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement - this might be replaced with event listener on client side
+showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement 
+showroomRouter.delete(announcementsByID, auth.authorizeAdmin, showroomHandler.deleteAnnouncementByID); //TODO: implement 
 showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getAllMembersFromAllProjects);
 showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
 showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers); //TODO: update

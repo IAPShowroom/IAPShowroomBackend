@@ -383,6 +383,25 @@ function fetchAllUsers (callback) {
     dbUtils.makeQuery(pool, query, callback, queryCb);
 }
 
+function fetchAllAnnouncements (callback) {
+    logCtx.fn = 'fetchAllAnnouncements';
+    var query = "select * from announcements order by announcementid asc";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                callback(null, null); //Null to evoke 404
+            } else {
+                callback(null, res.rows); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function validateEmail (email, callback) { //TODO: test
     //Verify that email is not already being used
     logCtx.fn = 'validateEmail';
@@ -649,6 +668,28 @@ function deleteEvent (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function deleteAnnouncement (announcementID, callback) {
+    logCtx.fn = 'deleteAnnouncement';
+    var query = "delete from announcements where announcementid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete announcement.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [announcementID], callback, queryCb);
+}
+
 function postAnnouncements (adminID, message, date, callback) {
     logCtx.fn = 'postAnnouncements';
     var query = "insert into announcements (adminid, a_content, a_date) values ($1, $2, $3) returning announcementid, a_content, a_date"; 
@@ -906,5 +947,7 @@ module.exports = {
     postLiveAttendance: postLiveAttendance,
     postToEUUID: postToEUUID,
     fetchAllUsers: fetchAllUsers,
-    updateEUUID: updateEUUID
+    updateEUUID: updateEUUID,
+    fetchAllAnnouncements: fetchAllAnnouncements,
+    deleteAnnouncement: deleteAnnouncement
 }

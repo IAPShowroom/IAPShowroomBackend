@@ -834,6 +834,46 @@ function deleteScheduleEvent (req, res, next) {
     });
 }
 
+function deleteAnnouncementByID (req, res, next) {
+    logCtx.fn = 'deleteAnnouncementByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateDeleteAnnouncement(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+            var announcementID = req.params.announcementID;
+            showroomDB.deleteAnnouncement(announcementID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully deleted announcement.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
 function getProjects (req, res, next) {
     logCtx.fn = "getProjects";
     var sessionID, errorStatus, errorMsg;
@@ -933,6 +973,42 @@ function getAllUsers (req, res, next) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 200, "Successfully retrieved all users.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
+function getAnnouncements (req, res, next) {
+    logCtx.fn = "getAnnouncements";
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            logCtx.fn = "getAnnouncements";
+            //Fetch projects from IAP
+            showroomDB.fetchAllAnnouncements((error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    if (result == null || result.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No announcements found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null, result);
+                    }
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved all announcements.", result && result.length > 0 ? result : null);
         }
     });
 }
@@ -1155,5 +1231,7 @@ module.exports = {
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
     validateResearchMember: validateResearchMember,
     postLiveAttendance: postLiveAttendance,
-    getAllUsers: getAllUsers 
+    getAllUsers: getAllUsers,
+    getAnnouncements: getAnnouncements,
+    deleteAnnouncementByID: deleteAnnouncementByID
 }

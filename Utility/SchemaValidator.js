@@ -74,6 +74,10 @@ const forgotPasswordSchema = Joi.object({
     new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
 });
 
+const verifyDeleteAnnouncementSchema = Joi.object({
+    announcement_id: Joi.number().required()
+});
+
 const verifyEmailSchema = Joi.object({
     userID: Joi.number().required(),
     euuid: Joi.string().required()
@@ -186,6 +190,17 @@ function validateEventWithID (req, callback, bodyCB) {
         errorMsg = "Missing path parameters."
         logError(errorMsg, logCtx);
         callback(new Error(errorMsg));
+    }
+}
+
+function validateDeleteAnnouncement (req, callback) {
+    logCtx.fn = 'validateDeleteAnnouncement';
+    //Check path paramters
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        validateRequest(req.params, verifyDeleteAnnouncementSchema, callback);
+    } else {
+        logError("Missing or invalid path parameters.", logCtx);
+        callback(new Error("Missing or invalid path parameters."));
     }
 }
 
@@ -458,5 +473,6 @@ module.exports = {
     validateJoinStage: validateJoinStage,
     validateServerSideEvent: validateServerSideEvent,
     validateChangePassword: validateChangePassword,
-    validateVerifyEmail: validateVerifyEmail
+    validateVerifyEmail: validateVerifyEmail,
+    validateDeleteAnnouncement: validateDeleteAnnouncement
 }
