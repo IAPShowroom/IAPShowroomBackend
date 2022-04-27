@@ -320,6 +320,25 @@ function isUserAdmin (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function fetchAllUsers (callback) {
+    logCtx.fn = 'fetchAllUsers';
+    var query = "select * from users";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                callback(null, null); //Null to evoke 404
+            } else {
+                callback(null, res.rows); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function validateEmail (email, callback) { //TODO: test
     //Verify that email is not already being used
     logCtx.fn = 'validateEmail';
@@ -821,5 +840,6 @@ module.exports = {
     changePassword: changePassword,
     verifyEmail: verifyEmail,
     postLiveAttendance: postLiveAttendance,
-    postToEUUID: postToEUUID
+    postToEUUID: postToEUUID,
+    fetchAllUsers: fetchAllUsers
 }
