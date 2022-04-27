@@ -364,6 +364,25 @@ function isUserAdmin (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function fetchAllUsers (callback) {
+    logCtx.fn = 'fetchAllUsers';
+    var query = "select * from users";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                callback(null, null); //Null to evoke 404
+            } else {
+                callback(null, res.rows); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function validateEmail (email, callback) { //TODO: test
     //Verify that email is not already being used
     logCtx.fn = 'validateEmail';
@@ -811,6 +830,24 @@ function fetchProjects(sessionID, callback) {
     });
 }
 
+function postLiveAttendance(payload,callback) {
+    logCtx.fn = 'postInPersonAttendance';
+    var query = "insert into inperson_users (first_name, last_name, email, gender, user_role, major, grad_date, department, company_name ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)";
+    var values = [payload.first_name, payload.last_name, payload.email, payload.gender, payload.user_role, payload.major,
+                  payload.grad_date, payload.department, payload.company_name];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+
 function endPool() {
     logCtx.fn = 'endPool';
     //Close the connection pool when server closes
@@ -848,5 +885,8 @@ module.exports = {
     verifyEmail: verifyEmail,
     postToEUUID: postToEUUID,
     fetchEUUID: fetchEUUID,
-    fetchUserEmail: fetchUserEmail
+    fetchUserEmail: fetchUserEmail,
+    postLiveAttendance: postLiveAttendance,
+    postToEUUID: postToEUUID,
+    fetchAllUsers: fetchAllUsers
 }

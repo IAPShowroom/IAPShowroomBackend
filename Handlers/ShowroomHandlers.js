@@ -262,6 +262,7 @@ function getStatusForEvents (allEvents, mainCallback) {
         //Object that gets added to final result array for response
         var eventObj = {company_representatives: 0, general_users: 0, student_researcher: false};
         eventObj.title = event.title;
+        eventObj.project_id = event.projectid;
         var skip = false;
         async.waterfall([
             function (callback) {
@@ -900,6 +901,42 @@ function getProjects (req, res, next) {
     });
 }
 
+function getAllUsers (req, res, next) {
+    logCtx.fn = "getAllUsers";
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            logCtx.fn = "getAllUsers";
+            //Fetch projects from IAP
+            showroomDB.fetchAllUsers((error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    if (result == null || result.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No users found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null, result);
+                    }
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved all users.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
 function getServerSideUpcomingEvents(req, res, next){
     logCtx.fn = "getServerSideUpcomingEvents";
     console.log('Client connected');
@@ -1072,6 +1109,31 @@ function validateResearchMember(req, res, next){
     });
 }
 
+function postLiveAttendance(req, res, next){
+    async.waterfall([
+        function (callback) {
+            // Post live attendance to db
+            var payload = req.body;
+            showroomDB.postLiveAttendance(payload, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                }
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully posted live attendance.");
+        }
+    });
+}
 
 module.exports = {
     getProjects: getProjects,
@@ -1091,5 +1153,7 @@ module.exports = {
     getServerSideUpcomingEvents: getServerSideUpcomingEvents,
     getServerSideProgressBar: getServerSideProgressBar,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
-    validateResearchMember: validateResearchMember
+    validateResearchMember: validateResearchMember,
+    postLiveAttendance: postLiveAttendance,
+    getAllUsers: getAllUsers 
 }
