@@ -9,6 +9,12 @@ const ENVIRONMENT = env.ENVIRONMENT || 'dev'; //set NODE_ENV to 'production' wit
 const prod = ENVIRONMENT == 'prod';
 const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 1200000 //20 minutes in ms
+const EMAIL_VERIFY_MAX_AGE = 1000 * 60 * 60 * 24; //1 day in ms
+
+const showroomEmail = {
+    email: env.SHOWROOM_MAIL_EMAIL,
+    password: env.SHOWROOM_MAIL_PASSWORD
+}
 
 const userRoles = {
     studentResearcher: 'Student Researcher',
@@ -93,8 +99,10 @@ module.exports = {
     logDebug: logDebug,
     corsOptions: corsOptions,
     SESSION_MAX_AGE: SESSION_MAX_AGE,
+    EMAIL_VERIFY_MAX_AGE: EMAIL_VERIFY_MAX_AGE,
     userRoles: userRoles,
     bbbUrlPrefix: bbbUrlPrefix,
     departments: departments,
-    userGenders: userGenders
+    userGenders: userGenders,
+    showroomEmail: showroomEmail
 };
