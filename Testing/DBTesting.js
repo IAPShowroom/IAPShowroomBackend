@@ -33,7 +33,7 @@ let logCtx = {
 // testGetQnARoomInfo();
 // testGetSessions();
 // testSendEmail();
-testGenerateEUUID();
+// testGenerateEUUID();
 
 
 //test functions:

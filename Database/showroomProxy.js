@@ -156,7 +156,7 @@ function registerAdvisor (userID, body, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function changePassword (userID, hashedPW, callback) { //TODO: test
+function changePassword (userID, hashedPW, callback) {
     logCtx.fn = 'changePassword';
     var query = "update users set password=$1 where userid = $2";
     var values = [hashedPW, userID];
@@ -208,6 +208,50 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
             callback(error); //null if no error
         });
     }
+}
+
+function fetchUserEmail (userID, callback) {
+    logCtx.fn = 'fetchUserEmail';
+    var query = "select email from users where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "Invalid user ID."; 
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                callback(null, res.rows[0]); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchEUUID (userID, callback) {
+    logCtx.fn = 'fetchEUUID';
+    var query = "select euuid, expiration from emailuuid where userid = $1";
+    var values = [userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "Invalid email confirmation link."; 
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                callback(null, res.rows[0]); //Success
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
 function comparePasswords (email, plaintextPassword, callback) {
@@ -318,6 +362,44 @@ function isUserAdmin (userID, callback) {
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchAllUsers (callback) {
+    logCtx.fn = 'fetchAllUsers';
+    var query = "select * from users";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                callback(null, null); //Null to evoke 404
+            } else {
+                callback(null, res.rows); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
+function fetchAllAnnouncements (callback) {
+    logCtx.fn = 'fetchAllAnnouncements';
+    var query = "select * from announcements order by announcementid asc";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                callback(null, null); //Null to evoke 404
+            } else {
+                callback(null, res.rows); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
 }
 
 function validateEmail (email, callback) { //TODO: test
@@ -547,6 +629,23 @@ function updateEvent (eventID, event, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function updateEUUID (userID, emailUUID, expireTime, callback) {
+    logCtx.fn = 'updateEUUID';
+    var query = "update emailuuid set euuid=$1, expiration=$2 where userid = $3";
+    var values = [emailUUID, expireTime, userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns []
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function deleteEvent (eventID, callback) {
     logCtx.fn = 'deleteEvent';
     var query = "update iap_events set isdeleted=true where meetid = $1"; 
@@ -567,6 +666,28 @@ function deleteEvent (eventID, callback) {
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
+}
+
+function deleteAnnouncement (announcementID, callback) {
+    logCtx.fn = 'deleteAnnouncement';
+    var query = "delete from announcements where announcementid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete announcement.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [announcementID], callback, queryCb);
 }
 
 function postAnnouncements (adminID, message, date, callback) {
@@ -755,7 +876,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
 
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
+    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
@@ -820,6 +941,13 @@ module.exports = {
     getInPersonStats: getInPersonStats,
     changePassword: changePassword,
     verifyEmail: verifyEmail,
+    postToEUUID: postToEUUID,
+    fetchEUUID: fetchEUUID,
+    fetchUserEmail: fetchUserEmail,
     postLiveAttendance: postLiveAttendance,
-    postToEUUID: postToEUUID
+    postToEUUID: postToEUUID,
+    fetchAllUsers: fetchAllUsers,
+    updateEUUID: updateEUUID,
+    fetchAllAnnouncements: fetchAllAnnouncements,
+    deleteAnnouncement: deleteAnnouncement
 }
