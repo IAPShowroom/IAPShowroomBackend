@@ -739,7 +739,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
 
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
+    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
