@@ -315,11 +315,7 @@ function validateVerifyEmail (req, callback) {
                     callback(new Error("Invalid query parameter."));
                 } else {
                     //Successful boolean
-                    console.log("resendJSON"); //testing
-                    console.log(resendJSON); //testing
                     if (resendJSON == true) {
-                        console.log("req.session.data"); //testing
-                        console.log(req.session.data); //testing
                         //Now check if there is a running session if resend=true
                         if (req.session.data == undefined) {
                             logError("Missing session data, please log in.", logCtx);
@@ -331,7 +327,6 @@ function validateVerifyEmail (req, callback) {
                             callback(new Error("Missing or invalid path parameters."));
                         }
                     } else if (req.params != undefined && Object.keys(req.params).length != 0) { //Check path paramters
-                        console.log("ding ding ding"); //testing
                         validateRequest(req.params, verifyEmailSchema, callback);
                     } else {
                         logError("Missing or invalid path parameters.", logCtx);

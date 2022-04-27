@@ -213,8 +213,6 @@ function endRoom (req, res, next) {
             callback(null, url);
         },
         function (url, callback) {
-            console.log("TESTING: url"); //testing
-            console.log(url); //testing
             //Make BBB API call
             axios.post(url).then((response) => {
                 var jsonObj = xmlParser.parse(response.data);
