@@ -156,10 +156,10 @@ function registerAdvisor (userID, body, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function changePassword (userID, hashedPW, callback) {
+function changePassword (userEmail, hashedPW, callback) {
     logCtx.fn = 'changePassword';
-    var query = "update users set password=$1 where userid = $2";
-    var values = [hashedPW, userID];
+    var query = "update users set password=$1 where email = $2";
+    var values = [hashedPW, userEmail];
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -402,7 +402,7 @@ function fetchAllAnnouncements (callback) {
     dbUtils.makeQuery(pool, query, callback, queryCb);
 }
 
-function validateEmail (email, callback) { //TODO: test
+function validateEmail (email, callback) {
     //Verify that email is not already being used
     logCtx.fn = 'validateEmail';
     var query = "select userid from users where email = $1";
