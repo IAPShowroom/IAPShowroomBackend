@@ -3,6 +3,7 @@
  */
 
 const { log, logError } = require('./Logger.js');
+const path = require('path');
 
 let logCtx = {
     fileName: 'DbUtils',
@@ -15,6 +16,12 @@ function successResponse (res, status, msg, payload) {
     if (payload) data.payload = payload;
     log(msg + ' status: ' + status, logCtx);
     res.status(status).send(data);
+}
+
+function sendHTMLResponse (res, htmlFile) {
+    logCtx.fn = 'sendHTMLResponse';
+    log("Sending HTML file: " + htmlFile, logCtx);
+    res.sendFile(path.join(__dirname, "../Public/" + htmlFile));
 }
 
 function serverSideResponse (callerEvent, res, status, msg, payload) {
@@ -68,5 +75,6 @@ module.exports = {
     errorResponse: errorResponse,
     serverSideResponse: serverSideResponse,
     makeQuery: makeQuery,
-    makeQueryWithParams: makeQueryWithParams
+    makeQueryWithParams: makeQueryWithParams,
+    sendHTMLResponse: sendHTMLResponse 
 }
