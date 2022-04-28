@@ -15,28 +15,30 @@ const nodemailer = require('nodemailer');
 
 //TODO: maybe add the transporter.verify() function to test the connection and be ready to send emails
 
+//TODO: using for testing, comment when in production
 //Showroom Email configuration
-// let transporter = nodemailer.createTransport({
-//     service: 'gmail',
-//     host: 'smtp.gmail.com',
-//     auth: {
-//         user: config.showroomEmail.email,
-//         pass: config.showroomEmail.password
-//     }
-// });
-
-//IAP Email configuation
 let transporter = nodemailer.createTransport({
-    host: 'smtps.ece.uprm.edu',
-    port: 465,
+    service: 'gmail',
+    host: 'smtp.gmail.com',
     auth: {
-        user: config.iapEmail.email,
-        pass: config.iapEmail.password
-    },
-    tls: {
-        rejectUnauthorized: false
+        user: config.showroomEmail.email,
+        pass: config.showroomEmail.password
     }
 });
+
+//TODO: uncomment when using production
+//IAP Email configuation
+// let transporter = nodemailer.createTransport({
+//     host: 'smtps.ece.uprm.edu',
+//     port: 465,
+//     auth: {
+//         user: config.iapEmail.email,
+//         pass: config.iapEmail.password
+//     },
+//     tls: {
+//         rejectUnauthorized: false
+//     }
+// });
 
 let logCtx = {
     fileName: 'AuthHandlers',
