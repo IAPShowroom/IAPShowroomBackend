@@ -5,7 +5,7 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse, sendHTMLResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 const config = require('../Config/config.js');
@@ -416,7 +416,7 @@ function forgotPassword (req, res, next) {
     });
 }
 
-function verifyUserFromEmail (req, res, next) { //TODO: test
+function verifyUserFromEmail (req, res, next) {
     logCtx.fn = 'verifyUserFromEmail';
     var errorStatus, errorMsg, userID, resend;
     async.waterfall([
@@ -500,12 +500,23 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
         }
     ], (error) => {
         if (error) {
-            //Catch errors that might occur within resendVerify()
-            if (errorStatus == undefined) errorStatus = 500;
-            if (errorMsg == undefined) errorMsg = error.toString();
-            errorResponse(res, errorStatus, errorMsg);
+            if (resend == undefined || resend == "false") {
+                //Send HTML response
+                sendHTMLResponse(res, 'ErrorEmailVerify.html');
+            } else {
+                console.log("TESTING: llegue a error response cuando era html"); //testing
+                //Catch errors that might occur within resendVerify()
+                if (errorStatus == undefined) errorStatus = 500;
+                if (errorMsg == undefined) errorMsg = error.toString();
+                errorResponse(res, errorStatus, errorMsg);
+            }
         } else {
-            successResponse(res, 201, "Successful email operation.");
+            if (resend == undefined || resend == "false") {
+                //Send HTML response
+                sendHTMLResponse(res, 'SuccessEmailVerify.html');
+            } else {
+                successResponse(res, 201, "Successful email operation.");                
+            }
         }
     });
 }
