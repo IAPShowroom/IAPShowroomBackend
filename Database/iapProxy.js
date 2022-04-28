@@ -38,7 +38,6 @@ const pool = new Pool({
 //     });
 // }
 
-//TODO: make better
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
     dbUtils.makeQueryWithParams(pool, "select project_id, session_id, title, abstract from projects where session_id = $1", [sessionID], callback, (error, res) => {
@@ -121,3 +120,9 @@ module.exports = {
     validateEmail: validateEmail,
     getSessions: getSessions
 }
+
+/**
+ * Development Notes:
+ * 
+ * - en el query podemos poner un sql to try to use the SP in the db
+*/

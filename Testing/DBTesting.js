@@ -5,6 +5,7 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const authHandler = require('../Handlers/AuthHandlers.js');
+const showroomHandler = require('../Handlers/ShowroomHandlers.js');
 const testData = require('./TestData.js');
 const { logError, logDebug, logTest } = require('../Utility/Logger.js');
 
@@ -34,6 +35,8 @@ let logCtx = {
 // testGetSessions();
 // testSendEmail();
 // testGenerateEUUID();
+// testFetchShowroomSession();
+testCheckSessionAndUpdate();
 
 
 //test functions:
@@ -43,6 +46,35 @@ function testGenerateEUUID() {
     logTest("Test started", logCtx);
     var userID = 3;
     authHandler.generateEUUID(userID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testCheckSessionAndUpdate() {
+    logCtx.fn = 'testCheckSessionAndUpdate';
+    logTest("Test started", logCtx);
+    var sessionID = 8;
+    showroomHandler.checkSessionAndUpdate(sessionID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testFetchShowroomSession() {
+    logCtx.fn = 'testFetchShowroomSession';
+    logTest("Test started", logCtx);
+    showroomDB.fetchShowroomSession((error, info) => {
         if (error) {
             logError(error, logCtx);
         }

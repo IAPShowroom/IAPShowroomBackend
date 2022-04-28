@@ -92,8 +92,9 @@ const qnaInfoSchema = Joi.object({
     bbb: Joi.boolean()
 });
 
-const sessionIDSchema = Joi.object({
-    session_id: Joi.number()
+const getIAPProjectsSchema = Joi.object({
+    session_id: Joi.number(),
+    update: Joi.boolean
 });
 
 const roomStatusSchema = Joi.object({
@@ -369,7 +370,7 @@ function validateVerifyEmail (req, callback) {
 
 function validateGetIAPProjects (req, callback) {
     logCtx.fn = 'validateGetIAPProjects';
-    const { error, value } = sessionIDSchema.validate(req.query);
+    const { error, value } = getIAPProjectsSchema.validate(req.query);
     if (error) { //return comma separated errors
         logError("Schema validation error for request payload.", logCtx);
         callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));

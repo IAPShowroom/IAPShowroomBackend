@@ -254,6 +254,27 @@ function fetchEUUID (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function fetchShowroomSession (callback) {
+    logCtx.fn = 'fetchShowroomSession';
+    var query = "select iapsessionid from projects";
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "No project records found."; 
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                callback(null, res.rows[0].iapsessionid); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function comparePasswords (email, plaintextPassword, callback) {
     logCtx.fn = 'comparePasswords';
     var result = {};
@@ -700,6 +721,30 @@ function deleteAnnouncement (announcementID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [announcementID], callback, queryCb);
 }
 
+//TODO: can't delete projects because of database restrictions
+function deleteAllShowroomProjects (callback) {
+    logCtx.fn = 'deleteAllShowroomProjects';
+    var query = "delete from projects where 1=1"; //Original 
+    // var query = "delete from projects where projectid > 3"; //testing, please delete
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete projects.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
+}
+
 function postAnnouncements (adminID, message, date, callback) {
     logCtx.fn = 'postAnnouncements';
     var query = "insert into announcements (adminid, a_content, a_date) values ($1, $2, $3) returning announcementid, a_content, a_date"; 
@@ -959,5 +1004,7 @@ module.exports = {
     fetchAllUsers: fetchAllUsers,
     updateEUUID: updateEUUID,
     fetchAllAnnouncements: fetchAllAnnouncements,
-    deleteAnnouncement: deleteAnnouncement
+    deleteAnnouncement: deleteAnnouncement,
+    fetchShowroomSession: fetchShowroomSession,
+    deleteAllShowroomProjects: deleteAllShowroomProjects
 }

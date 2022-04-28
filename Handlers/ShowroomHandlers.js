@@ -875,9 +875,9 @@ function deleteAnnouncementByID (req, res, next) {
     });
 }
 
-function getProjects (req, res, next) {
+function getProjects (req, res, next) { //TODO: test 'update' query param
     logCtx.fn = "getProjects";
-    var sessionID, errorStatus, errorMsg;
+    var sessionID, updateProjects, errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -892,6 +892,7 @@ function getProjects (req, res, next) {
         },
         function (callback) {
             sessionID = req.query.session_id;
+            updateProjects = req.query.update;
             if (sessionID == undefined) {
                 var latest = true; //If session ID was missing in request, retrieve latest one from IAP DB
                 iapDB.getSessions(latest, (error, result) => {
@@ -899,15 +900,30 @@ function getProjects (req, res, next) {
                         logError(error, logCtx);
                         errorMsg = error.toString();
                         errorStatus = 500;
-                        callback(error);
                     } else {
                         log("Response data: " + JSON.stringify(result), logCtx);
                         sessionID = result[0].session_id;
-                        callback(null);
                     }
+                    callback(error); //Null if no error
                 });
             } else {
                 callback(null); //Session ID was provided, skip
+            }
+        },
+        function (callback) {
+            if (updateProjects != undefined && updateProjects == "true") {
+                //Fetch the current session used in Showroom's projects
+                //Update table with projects from given session if they don't match
+                checkSessionAndUpdate(sessionID, (error) => {
+                    if (error) {
+                        logError(error, logCtx);
+                        errorMsg = error.toString();
+                        errorStatus = 500;
+                    }
+                    callback(error); //Null if no error
+                });
+            } else {
+                callback(null); //Skip
             }
         },
         function (callback) {
@@ -939,6 +955,68 @@ function getProjects (req, res, next) {
         } else {
             successResponse(res, 200, "Successfully retrieved projects.", result && result.length > 0 ? result : null);
         }
+    });
+}
+
+function checkSessionAndUpdate (iapSession, mainCallback) {
+    logCtx.fn = 'checkSessionAndUpdate';
+    var match = false;
+    async.waterfall([
+        function (callback) {
+            //Fetch session being used in Showroom's projects table
+            showroomDB.fetchShowroomSession((error, showroomSession) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    if (showroomSession == null) {
+                        errorMsg = "No users found.";
+                        logError(errorMsg, logCtx);
+                    } else if (showroomSession == iapSession) {
+                        log("Sessions matched: " + showroomSession, logCtx);
+                        match = true;
+                    } else {
+                        log("Sessions did not match, fetching new projects.", logCtx);
+                    }
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            if (match == false) {
+                //Delete current listing of projects in Showroom's table
+                showroomDB.deleteAllShowroomProjects((error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error);
+                }); 
+            } else {
+                callback(null); //Skip if sessions matched
+            }
+        },
+        function (callback) {
+            if (match == false) {
+                //Fetch projects from IAP database with the given session ID
+                //Post the results to Showroom projects table
+                iapDB.fetchProjects(iapSession, (error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error); //Null if no error
+                }); 
+            } else {
+                callback(null); //Skip if sessions matched
+            }
+        }
+    ], (error) => {
+        mainCallback(error); //Null if no error
     });
 }
 
@@ -1234,5 +1312,6 @@ module.exports = {
     postLiveAttendance: postLiveAttendance,
     getAllUsers: getAllUsers,
     getAnnouncements: getAnnouncements,
-    deleteAnnouncementByID: deleteAnnouncementByID
+    deleteAnnouncementByID: deleteAnnouncementByID,
+    checkSessionAndUpdate, checkSessionAndUpdate
 }
