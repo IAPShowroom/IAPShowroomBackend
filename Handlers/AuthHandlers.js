@@ -418,6 +418,7 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
                         errorStatus = 500;
                         errorMsg = error.toString();
                         logError(error, logCtx);
+                        callback(error);
                     } else {
                         //Check that euuid matches and it's not expired yet
                         if (result.euuid == emailUUID && new Date() < new Date(result.expiration)) {

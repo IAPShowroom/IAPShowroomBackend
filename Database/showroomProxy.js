@@ -590,7 +590,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -601,10 +601,20 @@ function getUserInfo (userID, callback) {
                 callback(null, null); //No users found, send null result to provoke 404 error
             } else {
                 var result = {};
+                //Populate result object
                 Object.keys(res.rows[0]).forEach( key => {
                     //Only fill result obj with necessary properties
-                    if (res.rows[0][key] != null) result[`${key}`] = res.rows[0][key];
+                    if (res.rows[0][key] != null && key != 'projectid') result[`${key}`] = res.rows[0][key];
                 });
+                //Add project ID information
+                if (res.rows.length > 1) { //More than one row means there is more than one project
+                    result.project_ids = [];
+                    res.rows.forEach((row) => {
+                        result.project_ids.push(row.projectid);
+                    });
+                } else {
+                    result.project_ids = res.rows[0].projectid == null ? null : [res.rows[0].projectid];
+                }
                 callback(null, result);
             }
         }

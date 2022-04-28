@@ -22,7 +22,7 @@ authRouter.post(logOut, authHandler.logOut);
 authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); //TODO: implement and test
 // authRouter.get(userRole, authHandler.authenticate, authHandler.getRoleAndName); 
 // authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
-authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
+authRouter.get(verifyUser, authHandler.verifyUserFromEmail); //testing
 authRouter.post(forgotPassword, authHandler.authenticate, authHandler.forgotPassword); //TODO: implement and test
 
 module.exports = authRouter;
