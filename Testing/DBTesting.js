@@ -36,7 +36,7 @@ let logCtx = {
 // testSendEmail();
 // testGenerateEUUID();
 // testFetchShowroomSession();
-testCheckSessionAndUpdate();
+// testCheckSessionAndUpdate();
 
 
 //test functions:
@@ -59,8 +59,8 @@ function testGenerateEUUID() {
 function testCheckSessionAndUpdate() {
     logCtx.fn = 'testCheckSessionAndUpdate';
     logTest("Test started", logCtx);
-    var sessionID = 8;
-    showroomHandler.checkSessionAndUpdate(sessionID, (error, info) => {
+    var iapSessionID = 14;
+    showroomHandler.checkSessionAndUpdate(iapSessionID, (error, info) => {
         if (error) {
             logError(error, logCtx);
         }

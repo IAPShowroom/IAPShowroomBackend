@@ -95,7 +95,7 @@ const qnaInfoSchema = Joi.object({
 
 const getIAPProjectsSchema = Joi.object({
     session_id: Joi.number(),
-    update: Joi.boolean
+    update: Joi.boolean()
 });
 
 const roomStatusSchema = Joi.object({

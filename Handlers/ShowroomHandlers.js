@@ -896,15 +896,15 @@ function getProjects (req, res, next) { //TODO: test 'update' query param
             sessionID = req.query.session_id;
             updateProjects = req.query.update;
             if (sessionID == undefined) {
-                var latest = true; //If session ID was missing in request, retrieve latest one from IAP DB
-                iapDB.getSessions(latest, (error, result) => {
+                //Fetch session being used in Showroom's projects table
+                showroomDB.fetchShowroomSession((error, showroomSession) => {
                     if (error) {
                         logError(error, logCtx);
                         errorMsg = error.toString();
                         errorStatus = 500;
                     } else {
-                        log("Response data: " + JSON.stringify(result), logCtx);
-                        sessionID = result[0].session_id;
+                        log("Response data: " + JSON.stringify(showroomSession), logCtx);
+                        sessionID = showroomSession;
                     }
                     callback(error); //Null if no error
                 });
@@ -916,22 +916,23 @@ function getProjects (req, res, next) { //TODO: test 'update' query param
             if (updateProjects != undefined && updateProjects == "true") {
                 //Fetch the current session used in Showroom's projects
                 //Update table with projects from given session if they don't match
-                checkSessionAndUpdate(sessionID, (error) => {
+                checkSessionAndUpdate(sessionID, (error, latestSession) => {
                     if (error) {
                         logError(error, logCtx);
                         errorMsg = error.toString();
                         errorStatus = 500;
                     }
-                    callback(error); //Null if no error
+                    callback(error, latestSession); //Null if no error
                 });
             } else {
-                callback(null); //Skip
+                callback(null, null); //Skip
             }
         },
-        function (callback) {
+        function (latestSession, callback) {
             logCtx.fn = "getProjects";
+            var finalSessionID = updateProjects != undefined && updateProjects == "true" ? latestSession : sessionID;
             //Fetch projects from IAP
-            showroomDB.fetchProjects(sessionID, (error, iapProjects) => { //result is array of objs with project info
+            showroomDB.fetchProjects(finalSessionID, (error, iapProjects) => { //result is array of objs with project info
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -960,21 +961,23 @@ function getProjects (req, res, next) { //TODO: test 'update' query param
     });
 }
 
-function checkSessionAndUpdate (iapSession, mainCallback) {
+function checkSessionAndUpdate (showroomSession, mainCallback) {
     logCtx.fn = 'checkSessionAndUpdate';
     var match = false;
+    var iapSession;
     async.waterfall([
         function (callback) {
-            //Fetch session being used in Showroom's projects table
-            showroomDB.fetchShowroomSession((error, showroomSession) => {
+            var latest = true; //Retrieve latest session from IAP DB
+            iapDB.getSessions(latest, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    if (showroomSession == null) {
-                        errorMsg = "No users found.";
+                    iapSession = result[0].session_id;
+                    if (iapSession == null) {
+                        errorMsg = "No sessions found.";
                         logError(errorMsg, logCtx);
                     } else if (showroomSession == iapSession) {
                         log("Sessions matched: " + showroomSession, logCtx);
@@ -982,14 +985,14 @@ function checkSessionAndUpdate (iapSession, mainCallback) {
                     } else {
                         log("Sessions did not match, fetching new projects.", logCtx);
                     }
-                    callback(null);
+                    callback(null, showroomSession);
                 }
             });
         },
-        function (callback) {
+        function (showroomSession, callback) {
             if (match == false) {
-                //Delete current listing of projects in Showroom's table
-                showroomDB.deleteAllShowroomProjects((error) => {
+                //Set isLatest to false for the projects of the session that does not match
+                showroomDB.deleteAllShowroomProjects(showroomSession, (error) => {
                     if (error) {
                         errorStatus = 500;
                         errorMsg = error.toString();
@@ -1018,7 +1021,7 @@ function checkSessionAndUpdate (iapSession, mainCallback) {
             }
         }
     ], (error) => {
-        mainCallback(error); //Null if no error
+        mainCallback(error, iapSession); //Null if no error
     });
 }
 

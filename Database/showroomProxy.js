@@ -256,7 +256,7 @@ function fetchEUUID (userID, callback) {
 
 function fetchShowroomSession (callback) {
     logCtx.fn = 'fetchShowroomSession';
-    var query = "select iapsessionid from projects";
+    var query = 'select iapsessionid from projects where "isLatest" = true';
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -721,28 +721,26 @@ function deleteAnnouncement (announcementID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [announcementID], callback, queryCb);
 }
 
-//TODO: can't delete projects because of database restrictions
-function deleteAllShowroomProjects (callback) {
+function deleteAllShowroomProjects (showroomSessionID, callback) {
+    //Doesn't actually delete the projects, rather it sets the isLatest column as false
     logCtx.fn = 'deleteAllShowroomProjects';
-    var query = "delete from projects where 1=1"; //Original 
-    // var query = "delete from projects where projectid > 3"; //testing, please delete
+    var query = 'update projects set "isLatest"=false where iapsessionid = $1'; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
-            callback(error, null);
+            callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rowCount > 0) {
-                var result = res.rows;
-                callback(null, result);
+                callback(null);
             } else {
                 var errorMsg = "Could not delete projects.";
                 logError(errorMsg, logCtx);
-                callback(new Error(errorMsg), null);
+                callback(new Error(errorMsg));
             }
         }
     };
-    dbUtils.makeQuery(pool, query, callback, queryCb);
+    dbUtils.makeQueryWithParams(pool, query, [showroomSessionID], callback, queryCb);
 }
 
 function postAnnouncements (adminID, message, date, callback) {
@@ -883,8 +881,8 @@ function getName (userID, callback) {
 
 function postToShowroomProjects (iapProjects, callback) {
     logCtx.fn = 'postToShowroomProjects';
-    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4)";
-    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
+    var query = 'insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract, "isLatest") values ($1, $2, $3, $4, $5)';
+    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract, true];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -931,7 +929,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
 
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
+    dbUtils.makeQueryWithParams(pool, 'select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1 and "isLatest" = true', [sessionID], callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
