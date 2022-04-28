@@ -66,7 +66,6 @@ function makeQueryWithParams(pool, query, values, callback, queryCb) {
 module.exports = {
     successResponse: successResponse,
     errorResponse: errorResponse,
-    serverSideResponse: serverSideResponse,
     makeQuery: makeQuery,
     makeQueryWithParams: makeQueryWithParams
 }

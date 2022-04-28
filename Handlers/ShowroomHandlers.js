@@ -1,25 +1,19 @@
 /**
  * File to organize handler functions for the Showroom endpoints.
  */
-
+// import { wss } from '../app.js';
+// import { ws_annoucement, ws_progressbar, ws_upcomingevents } from '../Config/config.js';
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse, serverSideResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
 const config = require('../Config/config.js');
+const app = require('../app.js')
 
 const MAX_ASYNC = 1;
-
-let sse_clients = [];
-
-const sse_header = {
-    "Connection": "keep-alive",
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-};
 
 let logCtx = {
     fileName: 'ShowroomHandlers',
@@ -604,8 +598,9 @@ function postAnnouncements (req, res, next) { //TODO: test
                     log("Response data: " + JSON.stringify(result), logCtx);
                     // var announcement = result[0];
                     // SSE.sendEvent(announcement); 
-                    SSE.sendEvent("Fetch announcements.");
-                    callback(null);
+                    // SSE.sendEvent("Fetch announcements.");
+                    // callback(null);
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_annoucement })));
                 }
             });
         }
@@ -615,6 +610,7 @@ function postAnnouncements (req, res, next) { //TODO: test
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 200, "Successfully posted announcement.");
+            
         }
     });
 }
@@ -740,6 +736,8 @@ function postScheduleEvents (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
                     callback(null, result);
                 }
             });
@@ -781,6 +779,8 @@ function updateScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -821,6 +821,8 @@ function deleteScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -1014,120 +1016,6 @@ function getAnnouncements (req, res, next) {
     });
 }
 
-function getServerSideUpcomingEvents(req, res, next){
-    logCtx.fn = "getServerSideUpcomingEvents";
-    console.log('Client connected');
-
-    const upcoming = true;
-    var errorStatus, errorMsg;
-
-    res.writeHead(200, sse_header);
-
-    async.waterfall([
-        
-    //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
-    
-    function (callback) {
-        //Validate request payload
-        validator.validateServerSideEvent(req, (error) => {
-            if (error) {
-                logError(error, logCtx);
-                errorStatus = 400;
-                errorMsg = error.message;
-            }
-            callback(error);
-        });
-    },
-    function (callback) {
-        //Take DB action
-
-        const date_obj = new Date();
-        const day = date_obj.toLocaleDateString('en-US');
-        const time = date_obj.toLocaleString('en-US');
-
-        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
-            if (error) {
-                errorStatus = 500;
-                errorMsg = error.toString();
-                logError(error, logCtx);
-                callback(error, null);
-            } else if (result == undefined || result == null) {
-                errorStatus = 404;
-                errorMsg = "No events found.";
-                logError(error, logCtx);
-                callback(new Error(errorMsg), null);
-            } else {
-                log("Response data: " + JSON.stringify(result), logCtx);
-                callback(null, result);
-            }
-        });
-    }
-    ], (error, result) => {
-        //Send responses
-        serverSideResponse("upcomingevents",res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
-    }, 
-    );
-                
-                
-    
-
-}
-
-function getServerSideProgressBar(req, res, next){
-    logCtx.fn = "getServerSideProgressBar";
-    console.log('Client connected');
-
-    const upcoming = true;
-    var errorStatus, errorMsg;
-
-    res.writeHead(200, sse_header);
-
-    async.waterfall([
-        
-    //  this function is meant to serve the updates from the events to the frontend
-    
-    function (callback) {
-        //Validate request payload
-        validator.validateServerSideEvent(req, (error) => {
-            if (error) {
-                logError(error, logCtx);
-                errorStatus = 400;
-                errorMsg = error.message;
-            }
-            callback(error);
-        });
-    },
-    function (callback) {
-        //Take DB action
-
-        const date_obj = new Date();
-        const day = date_obj.toLocaleDateString('en-US');
-        const time = date_obj.toLocaleString('en-US');
-
-        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
-            if (error) {
-                errorStatus = 500;
-                errorMsg = error.toString();
-                logError(error, logCtx);
-                callback(error, null);
-            } else if (result == undefined || result == null) {
-                errorStatus = 404;
-                errorMsg = "No events found.";
-                logError(error, logCtx);
-                callback(new Error(errorMsg), null);
-            } else {
-                log("Response data: " + JSON.stringify(result), logCtx);
-                callback(null, result);
-            }
-        });
-    }
-    ], (error, result) => {
-        //Send responses
-        serverSideResponse("progress", res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
-    }, 
-    );
-}
-
 function getAllMembersFromAllProjects (req, res, next) {
     logCtx.fn = "getAllMembersFromAllProjects";
     showroomDB.getAllMembersFromAllProjects( (error, result) => {
@@ -1227,8 +1115,6 @@ module.exports = {
     sseConnect: sseConnect,
     closeSSEConnections: closeSSEConnections,
     filterStats: filterStats,
-    getServerSideUpcomingEvents: getServerSideUpcomingEvents,
-    getServerSideProgressBar: getServerSideProgressBar,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
     validateResearchMember: validateResearchMember,
     postLiveAttendance: postLiveAttendance,
