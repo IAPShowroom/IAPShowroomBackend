@@ -529,7 +529,7 @@ function postAnnouncements (req, res, next) { //TODO: test
                     callback(error);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_annoucement })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                 }
             });
         }
@@ -792,6 +792,8 @@ function deleteAnnouncementByID (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    //Send trigger to frontend so it can fetch announcements again
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                     callback(null, result);
                 }
             });

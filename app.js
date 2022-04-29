@@ -81,7 +81,8 @@ var server = app.listen(port, () => {
 });
 
 server.on('upgrade', function (request, socket, head) {
-  console.log('Parsing session from request...');
+  logCtx.fn = 'UpgradeHandler';
+  log('Handling Upgrade...', logCtx);
   // sessionParser(request, {}, () => {
   //   });
   // console.log(request);
