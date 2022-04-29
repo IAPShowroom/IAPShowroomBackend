@@ -24,6 +24,8 @@ let logCtx = {
   fn: ''
 }
 
+const wss = new WebSocket.Server({ clientTracking: true, noServer: true });
+
 const app = express();
 const port = config.PORT;
 
