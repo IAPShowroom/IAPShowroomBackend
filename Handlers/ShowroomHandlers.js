@@ -1,8 +1,7 @@
 /**
  * File to organize handler functions for the Showroom endpoints.
  */
-// import { wss } from '../app.js';
-// import { ws_annoucement, ws_progressbar, ws_upcomingevents } from '../Config/config.js';
+
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
@@ -600,7 +599,9 @@ function postAnnouncements (req, res, next) { //TODO: test
                     // SSE.sendEvent(announcement); 
                     // SSE.sendEvent("Fetch announcements.");
                     // callback(null);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_annoucement })));
+
+                    //Send trigger to frontend so it can fetch announcements again
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                 }
             });
         }
@@ -863,6 +864,8 @@ function deleteAnnouncementByID (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    //Send trigger to frontend so it can fetch announcements again
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                     callback(null, result);
                 }
             });

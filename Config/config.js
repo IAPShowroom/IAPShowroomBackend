@@ -59,7 +59,8 @@ const stream_prefix = '/api/meet';
 const auth_prefix = '/api/auth';
 const bbb_prefix = '/bigbluebutton/api';
 
-const ws_annoucement = "announcement";
+//Web Socket Server event variables
+const ws_announcement = "announcement";
 const ws_progressbar = "progressbar";
 const ws_upcomingevents = "upcomingevents";
 
@@ -107,7 +108,7 @@ module.exports = {
     BBB_SECRET: BBB_SECRET,
     MOD_PASSWORD: MOD_PASSWORD,
     ATTENDEE_PASSWORD: ATTENDEE_PASSWORD,
-    ws_annoucement: ws_annoucement,
+    ws_announcement: ws_announcement,
     ws_progressbar: ws_progressbar,
     ws_upcomingevents: ws_upcomingevents,
     prod: prod,
