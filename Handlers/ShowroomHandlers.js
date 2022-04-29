@@ -665,8 +665,8 @@ function postScheduleEvents (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
                     callback(null, result);
                 }
             });
@@ -708,8 +708,8 @@ function updateScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -750,8 +750,8 @@ function deleteScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
+                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
                     callback(null, result);
                 }
             });
