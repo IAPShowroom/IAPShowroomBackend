@@ -18,23 +18,54 @@ var getStats = '/stats';
 var getRoomStatus = '/rooms/status';
 var getQnARoomInfo = '/qna/info/:projectID';
 var announcements = '/announcement'; //used for GET, POST
+var announcementsByID = '/announcement/:announcementID'; //used for DELETE
+var researchers_advisors = '/researchers-advisors';
+var validateResearchMember = '/validateResearchMember'
+var sseConnect = '/sse-connect'; //used to establish server sent events connection
+var getAllUsers = '/all-users';
+
+var inPersonAttendance = '/live-attendance'
+
+// Server Sent Event Endpoints
+var serverSideSent = '/sse';
 
 //Schedule Routes
-var getProjects = '/schedule/projects';
+var getIAPSessions = '/sessions';
+var getIAPProjects = '/schedule/projects';
 var scheduleEvents = '/schedule/events'; //used for GET, POST
-var scheduleEventsID = scheduleEvents + '/:eventID'; //used for PUT, DELETE
+var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 
-//Bind routes to their handlers
-showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats); //TODO: implement
-showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: implement
-showroomRouter.get(getQnARoomInfo, auth.authenticate, showroomHandler.getQnARoomInfo); //TODO: implement
-// //showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement - this might be replaced with event listener on client side
-showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: implement
+//Bind routes to their handlers:
 
-showroomRouter.get(getProjects, auth.authenticate, showroomHandler.getProjects); //TODO - review
-showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); //TODO - test and review
-showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); //TODO - test and review
-showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.updateScheduleEvent); //TODO - implement
-showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent); //TODO - implement
+//Showroom General
+showroomRouter.get(getStats, auth.authenticate, showroomHandler.getStats);
+showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnnouncements); //TODO: update
+showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements); //TODO: implement 
+showroomRouter.delete(announcementsByID, auth.authorizeAdmin, showroomHandler.deleteAnnouncementByID); //TODO: implement 
+showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getAllMembersFromAllProjects);
+showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
+showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers); //TODO: update
+
+showroomRouter.get(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: update
+
+//Events 
+showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: update 
+showroomRouter.get(getQnARoomInfo, auth.authenticate, showroomHandler.getQnARoomInfo); 
+showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); 
+showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); 
+showroomRouter.get(scheduleEventsID, auth.authorizeAdmin, showroomHandler.getScheduleEventByID);
+showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.updateScheduleEvent);
+showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent);
+
+// Server Side Events
+showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideUpcomingEvents);
+showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideProgressBar);
+
+//IAP
+showroomRouter.get(getIAPProjects, showroomHandler.getProjects); //TODO - review
+showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSessions); //TODO: implement
+
+// Live Attendance
+showroomRouter.post(inPersonAttendance, showroomHandler.postLiveAttendance);
 
 module.exports = showroomRouter;

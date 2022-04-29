@@ -5,6 +5,7 @@
 
 const Joi = require('joi');
 const { logError, log } = require('./Logger');
+const config = require('../Config/config');
 
 let logCtx = {
     fileName: 'SchemaValidator',
@@ -13,36 +14,36 @@ let logCtx = {
 
 const logInSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
-    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+    password: Joi.string().required()
 });
 
-//TODO: review and make more accurate (missing properties in total: dept, grad date, project id, is pm, company name)
+//TODO: review and make more accurate
 const userSchema = Joi.object({
-    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net']}}).required(),
-    password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
-    firstName: Joi.string().alphanum().min(1).max(30).required(),
-    lastName: Joi.ref('firstName'),
-    gender: Joi.string().alphanum().min(1).max(10).required(),
-    role: Joi.string().alphanum().min(1).max(30).required()
+    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
+    password: Joi.string().required(),
+    first_name: Joi.string().alphanum().min(1).max(30).required(),
+    last_name: Joi.string().alphanum().min(1).max(30).required(),
+    gender: Joi.string().alphanum().min(1).max(30).required(),
+    user_role: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectID: Joi.number().required().prefs({ convert: false }),
-    department: Joi.string().alphanum().min(1).max(30).required(),
-    gradDate: Joi.date().required(),
-    isPM: Joi.boolean().required(),
-    validatedMember: Joi.boolean().required()
+    projectids: Joi.array().items(Joi.number()).required(), 
+    department: Joi.string().required().max(30),
+    grad_date: Joi.date().required(),
+    ispm: Joi.boolean().required()
+//    validatedmember: Joi.boolean().required() X
 });
 
 //TODO: review and make more accurate?
 const advisorSchema = userSchema.append({
-    projectIDs: Joi.string().alphanum().required()
+    projectids: Joi.array().items(Joi.number()).required()
 });
 
 //TODO: review and make more accurate?
 const companyRepSchema = userSchema.append({
-    companyName: Joi.string().alphanum().min(1).max(30).required()
+    company_name: Joi.string().min(1).max(30).required()
 });
 
 //TODO: review and make more accurate
@@ -51,32 +52,82 @@ const eventSchema = Joi.object({
     starttime: Joi.string().required(),
     duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
-    projectid: Joi.number().required().prefs({ convert: false }),
-    e_date: Joi.string().required()
+    projectid: Joi.any(),
+    e_date: Joi.date().required()
+});
+
+const postAnnouncementSchema = Joi.object({
+    message: Joi.string().required(),
+    date: Joi.date().required()
+});
+
+const createRoomSchema = Joi.object({
+    meeting_name: Joi.string().required(),
+    projectid: Joi.number().required()
+});
+
+const joinRoomSchema = Joi.object({
+    meeting_id: Joi.number().required()
+});
+
+const forgotPasswordSchema = Joi.object({
+    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
+    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}})
+});
+
+const verifyDeleteAnnouncementSchema = Joi.object({
+    announcement_id: Joi.number().required()
+});
+
+const verifyEmailSchema = Joi.object({
+    userID: Joi.number().required(),
+    euuid: Joi.string().required()
+});
+
+const joinStageSchema = Joi.object({
+    meeting_id: Joi.string().valid('stage').required()
+});
+
+const qnaInfoSchema = Joi.object({
+    meeting_id: Joi.number().required(),
+    bbb: Joi.boolean()
+});
+
+const getIAPProjectsSchema = Joi.object({
+    session_id: Joi.number(),
+    update: Joi.boolean()
+});
+
+const roomStatusSchema = Joi.object({
+    date: Joi.date().required()
 });
 
 const eventListSchema = Joi.array().items(eventSchema);
 
-//TODO: test
+const validateResearchMemberSchema = Joi.object({
+    userid: Joi.number().required(),
+    user_role: Joi.string().min(1).max(30).required()
+});
+
 function validateRegisterUser (req, callback) {
     logCtx.fn = 'validateRegisterUser';
-    if (req.body && req.body.role != undefined) {
-        switch (req.body.role) {
-            case 'student_researcher':
+    if (req.body && req.body.user_role != undefined) {
+        switch (req.body.user_role) {
+            case config.userRoles.studentResearcher:
                 validateRequest(req, studentSchema, callback);
                 break;
-            case 'advisor':
+            case config.userRoles.advisor:
                 validateRequest(req, advisorSchema, callback);
                 break;
-            case 'company_representative':
+            case config.userRoles.companyRep:
                 validateRequest(req, companyRepSchema, callback);
                 break;
             default: //general guest
                 validateRequest(req, userSchema, callback);
         }
     } else {
-        logError("Missing role in request body.", logCtx);
-        callback(new Error("Missing role information in request body."));
+        logError("Missing request body information.", logCtx);
+        callback(new Error("Missing request body information."));
     }
 }
 
@@ -104,6 +155,10 @@ function validateUpdateEvent (req, callback) {
 }
 
 function validateDeleteEvent (req, callback) {
+    validateEventWithID(req, callback, null);
+}
+
+function validateGetEventByID (req, callback) {
     validateEventWithID(req, callback, null);
 }
 
@@ -137,6 +192,17 @@ function validateEventWithID (req, callback, bodyCB) {
         errorMsg = "Missing path parameters."
         logError(errorMsg, logCtx);
         callback(new Error(errorMsg));
+    }
+}
+
+function validateDeleteAnnouncement (req, callback) {
+    logCtx.fn = 'validateDeleteAnnouncement';
+    //Check path paramters
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        validateRequest(req.params, verifyDeleteAnnouncementSchema, callback);
+    } else {
+        logError("Missing or invalid path parameters.", logCtx);
+        callback(new Error("Missing or invalid path parameters."));
     }
 }
 
@@ -178,6 +244,202 @@ function validateLogIn (req, callback) {
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, logInSchema, callback);
     } else {
+        logError("Missing or invalid login credentials.", logCtx);
+        callback(new Error("Missing or invalid login credentials."));
+    }
+}
+
+function validateCreateRoom (req, callback) {
+    logCtx.fn = 'validateCreateRoom';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, createRoomSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateJoinRoom (req, callback) {
+    logCtx.fn = 'validateJoinRoom';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateJoinStage (req, callback) { //TODO: test
+    logCtx.fn = 'validateJoinStage';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinStageSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateEndRoom (req, callback) {
+    logCtx.fn = 'validateEndRoom';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validatePostAnnouncement (req, callback) {
+    logCtx.fn = 'validatePostAnnouncement';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, postAnnouncementSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validatePostMeetHistory (req, callback) {
+    logCtx.fn = 'validatePostMeetHistory';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, joinRoomSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
+function validateChangePassword (req, callback) {
+    logCtx.fn = 'validateChangePassword';
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        if (req.query.sendemail) {
+            try {
+                var sendEmailJSON = JSON.parse(req.query.sendemail);
+                if (typeof sendEmailJSON != "boolean") { 
+                    logError("Invalid query parameter.", logCtx);
+                    return callback(new Error("Invalid query parameter."));
+                }
+            } catch (exception) {
+                logError("Invalid query parameters.", logCtx);
+                return callback(new Error("Invalid query parameters."));
+            }
+        }
+    } 
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, forgotPasswordSchema, callback);
+    } else {
+        logError("Missing or invalid request body.", logCtx);
+        callback(new Error("Missing or invalid request body."));
+    }
+}
+
+//I know it's a bit ugly and it duplicates code, it's okay, maybe we can make it prettier later
+function validateVerifyEmail (req, callback) {
+    logCtx.fn = 'validateVerifyEmail';
+    //Check query parameters if included - must be boolean
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        if (req.query.resend) {
+            try {
+                var resendJSON = JSON.parse(req.query.resend);
+                if (typeof resendJSON != "boolean") { 
+                    logError("Invalid query parameter.", logCtx);
+                    callback(new Error("Invalid query parameter."));
+                } else {
+                    //Successful boolean
+                    if (resendJSON == true) {
+                        //Now check if there is a running session if resend=true
+                        if (req.session.data == undefined) {
+                            logError("Missing session data, please log in.", logCtx);
+                            callback(new Error("Missing session data, please log in."));
+                        } else if (req.params != undefined && Object.keys(req.params).length != 0) { //Check path paramters
+                            validateRequest(req.params, verifyEmailSchema, callback);
+                        } else {
+                            logError("Missing or invalid path parameters.", logCtx);
+                            callback(new Error("Missing or invalid path parameters."));
+                        }
+                    } else if (req.params != undefined && Object.keys(req.params).length != 0) { //Check path paramters
+                        validateRequest(req.params, verifyEmailSchema, callback);
+                    } else {
+                        logError("Missing or invalid path parameters.", logCtx);
+                        callback(new Error("Missing or invalid path parameters."));
+                    }
+                }
+            } catch(exception) {
+                logError("Invalid query parameters.", logCtx);
+                callback(new Error("Invalid query parameters."));
+            }
+        } else {
+            logError("Invalid query parameters.", logCtx);
+            callback(new Error("Invalid query parameters."));
+        }
+    } else {
+        //Check path paramters
+        if (req.params != undefined && Object.keys(req.params).length != 0) {
+            validateRequest(req.params, verifyEmailSchema, callback);
+        } else {
+            logError("Missing or invalid path parameters.", logCtx);
+            callback(new Error("Missing or invalid path parameters."));
+        }
+    }
+}
+
+function validateGetIAPProjects (req, callback) {
+    logCtx.fn = 'validateGetIAPProjects';
+    const { error, value } = getIAPProjectsSchema.validate(req.query);
+    if (error) { //return comma separated errors
+        logError("Schema validation error for request payload.", logCtx);
+        callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+    } else {
+        log("Request schema successfully validated.", logCtx);
+        callback(null);
+    }
+}
+
+function validateQNARoomInfo (req, callback) { //TODO: test
+    logCtx.fn = 'validateQNARoomInfo';
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        if (!isNaN(parseInt(req.params.projectID, 10))) {
+            if (req.query != undefined && Object.keys(req.query).length != 0) {
+                var obj = {body: req.query}; //Bypass validateRequest's req.body call
+                validateRequest(obj, qnaInfoSchema, callback);
+            } else {
+                logError("Missing request query parameters.", logCtx);
+                callback(new Error("Missing request query parameters."));
+            }
+        } else {
+            var errorMsg = "Invalid data type for path parameter.";
+            logError(errorMsg, logCtx);
+            callback(new Error(errorMsg));
+        }
+    } else {
+        var errorMsg = "Missing request path parameters.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
+function validateGetRoomStatus (req, callback) {
+    logCtx.fn = 'validateGetRoomStatus';
+    if (req.query && Object.keys(req.query).length != 0) {
+        const { error, value } = roomStatusSchema.validate(req.query);
+        if (error) { //return comma separated errors
+            logError("Schema validation error for request payload.", logCtx);
+            callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));
+        } else {
+            log("Request schema successfully validated.", logCtx);
+            callback(null);
+        }
+    } else {
+        log("Request schema successfully validated, no query parameter found.", logCtx);
+        callback(null);
+    }
+}
+
+function validateMembervalidation(req, callback){
+    logCtx.fn = 'validateMembervalidation';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, validateResearchMemberSchema, callback); //re-use schema for join room request, same parameters for now
+    } else {
         logError("Missing request body.", logCtx);
         callback(new Error("Missing request body."));
     }
@@ -195,6 +457,13 @@ function validateRequest (req, schema, callback) {
     }
 }
 
+function validateServerSideEvent(req, callback){
+    logCtx.fn = 'validateServerSideEvent';
+    log("Request schema successfully validated.", logCtx);
+    callback(null);
+}
+
+
 //optionally implement this function to add additional sql injection defense
 // function sanitizeInput(input, callback){ //callback: (error) => {}
 // }
@@ -205,5 +474,21 @@ module.exports = {
     validateGetEvents: validateGetEvents,
     validateUpdateEvent: validateUpdateEvent,
     validateDeleteEvent: validateDeleteEvent,
-    validateLogIn: validateLogIn
+    validateLogIn: validateLogIn,
+    validateCreateRoom: validateCreateRoom,
+    validateJoinRoom: validateJoinRoom,
+    validateEndRoom: validateEndRoom,
+    validateGetEventByID: validateGetEventByID,
+    validatePostAnnouncement: validatePostAnnouncement,
+    validatePostMeetHistory: validatePostMeetHistory,
+    validateGetIAPProjects: validateGetIAPProjects,
+    validateGetRoomStatus: validateGetRoomStatus,
+    validateServerSideEvent: validateServerSideEvent, 
+    validateMembervalidation: validateMembervalidation,
+    validateQNARoomInfo: validateQNARoomInfo,
+    validateJoinStage: validateJoinStage,
+    validateServerSideEvent: validateServerSideEvent,
+    validateChangePassword: validateChangePassword,
+    validateVerifyEmail: validateVerifyEmail,
+    validateDeleteAnnouncement: validateDeleteAnnouncement
 }

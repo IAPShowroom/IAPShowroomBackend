@@ -10,22 +10,19 @@ const authHandler = require('../Handlers/AuthHandlers.js');
 var register = '/register';
 var logIn = '/login';
 var logOut = '/logout';
+var userInfo = '/user-info';
+var userRole = '/user-role';
 var inPersonTracking = '/in-person';
-var verifyUser = '/verify';
-var changePassword = '/change-pass';
+var verifyUser = '/verify/:userID/:euuid';
+var forgotPassword = '/forgot-pass';
 
 authRouter.post(register, authHandler.registerUser);
 authRouter.post(logIn, authHandler.logIn);
 authRouter.post(logOut, authHandler.logOut);
-// authRouter.post(inPersonTracking, authHandler.trackInPerson);
-// authRouter.post(verifyUser, authHandler.verifyUserFromEmail);
+authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); 
+// authRouter.get(userRole, authHandler.authenticate, authHandler.getRoleAndName); 
+// authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
+authRouter.get(verifyUser, authHandler.verifyUserFromEmail); 
+authRouter.post(forgotPassword, authHandler.forgotPassword); 
 
 module.exports = authRouter;
-
-/**
- * Developer Notes:
- * 
- * - Not sure if we should add an endpoint to change password
- * - add endpoint for isVerified?
- * - maybe implement something para que cuando se vaya a cerrar express clearee los sessions? or maybe on start up?
- */

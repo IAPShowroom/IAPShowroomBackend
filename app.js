@@ -16,6 +16,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
 const redis  = require('redis');
+const showroomHandlers = require('./Handlers/ShowroomHandlers.js');
 const redisStore = require('connect-redis')(session);
 
 let logCtx = {
@@ -44,14 +45,14 @@ app.use(session({ //TODO: review session config settings
   store: store,
   saveUninitialized: false,
   resave: false,
-  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false} //TODO: make sure cookies are being set in prod
+  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false, httpOnly: config.prod ? true : false} //TODO: make sure cookies are being set in prod
 }));
 app.use(auth.checkSession);
 
 //Bind the main module routes to their respective routers
-app.use(config.auth_prefix, authRouter);
+app.use(config.auth_prefix, authRouter); //add req.sessions here??
 app.use(config.showroom_prefix, showroomRouter);
-app.use(config.bbb_prefix, streamingRouter);
+app.use(config.stream_prefix, streamingRouter);
 
 //health check for testing
 app.get('/test', (req, res) => {
@@ -71,8 +72,14 @@ var server = app.listen(port, () => {
 });
 
 //Properly close the server 
-process.on('SIGINT', () => {
+process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
+process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
+process.on('SIGTERM', () => { handleKillServer() }); 
+
+function handleKillServer() {
+  logCtx.fn = 'handleKillServer';
   log("Gracefully shutting server down.", logCtx);
+  showroomHandlers.closeSSEConnections(); //TODO: maybe update to make it async?
   closeDbConnections(() => {
     logCtx.fn = '';
     store.clear(() => {  //Clear all sessions
@@ -83,7 +90,7 @@ process.on('SIGINT', () => {
       });
     });
   });
-});
+}
 
 function closeDbConnections(cb) {
   logCtx.fn = 'closeDbConnections';
@@ -92,7 +99,7 @@ function closeDbConnections(cb) {
     log("Safely closed IAP DB connection pool.", logCtx);
     showroomDB.endPool();})
   .then(result => {
-    log("Safely closed IAP DB connection pool.", logCtx);
+    log("Safely closed Showroom DB connection pool.", logCtx);
     cb();}) //call the callback to exit server
   .catch(reason => logError(reason, logCtx));
 }
