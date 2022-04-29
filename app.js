@@ -16,9 +16,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
 const redis  = require('redis');
-const showroomHandlers = require('./Handlers/ShowroomHandlers.js');
 const redisStore = require('connect-redis')(session);
-const WebSocket = require('ws');
+const WSS = require('./WebSocketServer.js');
 
 let logCtx = {
   fileName: 'app',
@@ -72,64 +71,9 @@ app.all('*', function(req, res){
   errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
 })
 
-const wss = new WebSocket.Server({ clientTracking: true, noServer: true });
-
 var server = app.listen(port, () => {
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
-
-server.on('upgrade', function (request, socket, head) {
-  logCtx.fn = 'UpgradeHandler';
-  log('Handling Upgrade...', logCtx);
-  // sessionParser(request, {}, () => {
-  //   });
-  // console.log(request);
-    // if (!request.session.data.userID) {
-    //   socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-    //   socket.destroy();
-    //   return;
-    // }
-
-    // console.log('Session is parsed!');
-
-    wss.handleUpgrade(request, socket, head, function (ws) {
-      wss.emit('connection', ws, request);
-    });
-});
-
-wss.on('connection', function (ws, request) {
-  // const userId = request.session.data.userID;
-
-  // userIDtoWSMap.set(userId, ws);
-
-  ws.on('message', function (message) {
-    //
-    // Here we can now use session parameters.
-    //
-    console.log(`Received message ${message}`);// from user ${userId}`);
-
-
-    //test code to see if updates correctly
-    if(message === config.ws_annoucement)
-      wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_annoucement })));
-    
-    else if(message === config.ws_progressbar)
-      wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
-    
-    else if(message === config.ws_upcomingevents)
-      wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
-    
-    else console.log("message was sent but event was not recognized");
-    
-    console.log("updated!")
-
-  });
-
-  ws.on('close', function () {
-    // userIDtoWSMap.delete(userId);
-  });
-});
-
 //Properly close the server 
 process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
 process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
@@ -138,8 +82,7 @@ process.on('SIGTERM', () => { handleKillServer() });
 function handleKillServer() {
   logCtx.fn = 'handleKillServer';
   log("Gracefully shutting server down.", logCtx);
-  showroomHandlers.closeSSEConnections(); //TODO: maybe update to make it async? remove maybe
-  wss.clients.forEach((socket) => {
+  WSS.wss.clients.forEach((socket) => {
     socket.close();
   
     process.nextTick(() => {
@@ -174,5 +117,3 @@ function closeDbConnections(cb) {
     cb();}) //call the callback to exit server
   .catch(reason => logError(reason, logCtx));
 }
-
-module.exports = {wss: wss}

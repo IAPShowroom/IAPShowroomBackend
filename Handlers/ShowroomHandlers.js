@@ -10,7 +10,7 @@ const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
 const config = require('../Config/config.js');
-const app = require('../app.js')
+const WSS = require('../WebSocketServer.js');
 
 const MAX_ASYNC = 1;
 
@@ -601,7 +601,7 @@ function postAnnouncements (req, res, next) { //TODO: test
                     // callback(null);
 
                     //Send trigger to frontend so it can fetch announcements again
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                 }
             });
         }
@@ -739,8 +739,8 @@ function postScheduleEvents (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
                     callback(null, result);
                 }
             });
@@ -782,8 +782,8 @@ function updateScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -824,8 +824,8 @@ function deleteScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_progressbar })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -867,7 +867,7 @@ function deleteAnnouncementByID (req, res, next) {
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
                     //Send trigger to frontend so it can fetch announcements again
-                    app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                     callback(null, result);
                 }
             });
