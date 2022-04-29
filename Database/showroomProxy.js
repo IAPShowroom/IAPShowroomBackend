@@ -156,10 +156,10 @@ function registerAdvisor (userID, body, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function changePassword (userID, hashedPW, callback) {
+function changePassword (userEmail, hashedPW, callback) {
     logCtx.fn = 'changePassword';
-    var query = "update users set password=$1 where userid = $2";
-    var values = [hashedPW, userID];
+    var query = "update users set password=$1 where email = $2";
+    var values = [hashedPW, userEmail];
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -252,6 +252,27 @@ function fetchEUUID (userID, callback) {
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function fetchShowroomSession (callback) {
+    logCtx.fn = 'fetchShowroomSession';
+    var query = 'select iapsessionid from projects where "isLatest" = true';
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length == 0 ) {
+                var errorMsg = "No project records found."; 
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            } else {
+                callback(null, res.rows[0].iapsessionid); //Success
+            }
+        }
+    };
+    dbUtils.makeQuery(pool, query, callback, queryCb);
 }
 
 function comparePasswords (email, plaintextPassword, callback) {
@@ -402,7 +423,7 @@ function fetchAllAnnouncements (callback) {
     dbUtils.makeQuery(pool, query, callback, queryCb);
 }
 
-function validateEmail (email, callback) { //TODO: test
+function validateEmail (email, callback) {
     //Verify that email is not already being used
     logCtx.fn = 'validateEmail';
     var query = "select userid from users where email = $1";
@@ -458,7 +479,7 @@ function createEvents (eventList, callback) {
 
 function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
-    var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
+    var getAll = "select * from iap_events where isdeleted = false and e_date = $1 order by starttime asc";
     var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
     var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false order by starttime asc";
     var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
@@ -487,7 +508,8 @@ function getEvents(byDate, upcoming, time, date, callback) {
     } else if (byDate) {
         dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
     } else {
-        dbUtils.makeQuery(pool, query, callback, queryCb);
+        var currentDate = new Date().toISOString().slice(0,10);
+        dbUtils.makeQueryWithParams(pool, query, [currentDate], callback, queryCb);
     }
 }
 
@@ -590,7 +612,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1"; 
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -601,10 +623,20 @@ function getUserInfo (userID, callback) {
                 callback(null, null); //No users found, send null result to provoke 404 error
             } else {
                 var result = {};
+                //Populate result object
                 Object.keys(res.rows[0]).forEach( key => {
                     //Only fill result obj with necessary properties
-                    if (res.rows[0][key] != null) result[`${key}`] = res.rows[0][key];
+                    if (res.rows[0][key] != null && key != 'projectid') result[`${key}`] = res.rows[0][key];
                 });
+                //Add project ID information
+                if (res.rows.length > 1) { //More than one row means there is more than one project
+                    result.project_ids = [];
+                    res.rows.forEach((row) => {
+                        result.project_ids.push(row.projectid);
+                    });
+                } else {
+                    result.project_ids = res.rows[0].projectid == null ? null : [res.rows[0].projectid];
+                }
                 callback(null, result);
             }
         }
@@ -688,6 +720,28 @@ function deleteAnnouncement (announcementID, callback) {
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [announcementID], callback, queryCb);
+}
+
+function deleteAllShowroomProjects (showroomSessionID, callback) {
+    //Doesn't actually delete the projects, rather it sets the isLatest column as false
+    logCtx.fn = 'deleteAllShowroomProjects';
+    var query = 'update projects set "isLatest"=false where iapsessionid = $1'; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount > 0) {
+                callback(null);
+            } else {
+                var errorMsg = "Could not delete projects.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg));
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [showroomSessionID], callback, queryCb);
 }
 
 function postAnnouncements (adminID, message, date, callback) {
@@ -828,8 +882,8 @@ function getName (userID, callback) {
 
 function postToShowroomProjects (iapProjects, callback) {
     logCtx.fn = 'postToShowroomProjects';
-    var query = "insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract) values ($1, $2, $3, $4)";
-    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract];
+    var query = 'insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract, "isLatest") values ($1, $2, $3, $4, $5)';
+    var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract, true];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -876,7 +930,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
 
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    dbUtils.makeQueryWithParams(pool, "select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1", [sessionID], callback, (error, res) => {
+    dbUtils.makeQueryWithParams(pool, 'select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1 and "isLatest" = true', [sessionID], callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
@@ -949,5 +1003,7 @@ module.exports = {
     fetchAllUsers: fetchAllUsers,
     updateEUUID: updateEUUID,
     fetchAllAnnouncements: fetchAllAnnouncements,
-    deleteAnnouncement: deleteAnnouncement
+    deleteAnnouncement: deleteAnnouncement,
+    fetchShowroomSession: fetchShowroomSession,
+    deleteAllShowroomProjects: deleteAllShowroomProjects
 }

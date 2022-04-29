@@ -52,7 +52,7 @@ const eventSchema = Joi.object({
     starttime: Joi.string().required(),
     duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
-    projectid: Joi.number().required().prefs({ convert: false }),
+    projectid: Joi.any(),
     e_date: Joi.date().required()
 });
 
@@ -71,7 +71,8 @@ const joinRoomSchema = Joi.object({
 });
 
 const forgotPasswordSchema = Joi.object({
-    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$'))
+    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
+    email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}})
 });
 
 const verifyDeleteAnnouncementSchema = Joi.object({
@@ -92,8 +93,9 @@ const qnaInfoSchema = Joi.object({
     bbb: Joi.boolean()
 });
 
-const sessionIDSchema = Joi.object({
-    session_id: Joi.number()
+const getIAPProjectsSchema = Joi.object({
+    session_id: Joi.number(),
+    update: Joi.boolean()
 });
 
 const roomStatusSchema = Joi.object({
@@ -309,6 +311,20 @@ function validatePostMeetHistory (req, callback) {
 
 function validateChangePassword (req, callback) {
     logCtx.fn = 'validateChangePassword';
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        if (req.query.sendemail) {
+            try {
+                var sendEmailJSON = JSON.parse(req.query.sendemail);
+                if (typeof sendEmailJSON != "boolean") { 
+                    logError("Invalid query parameter.", logCtx);
+                    return callback(new Error("Invalid query parameter."));
+                }
+            } catch (exception) {
+                logError("Invalid query parameters.", logCtx);
+                return callback(new Error("Invalid query parameters."));
+            }
+        }
+    } 
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, forgotPasswordSchema, callback);
     } else {
@@ -349,12 +365,12 @@ function validateVerifyEmail (req, callback) {
                     }
                 }
             } catch(exception) {
-                logError("Invalid path parameters.", logCtx);
-                callback(new Error("Invalid path parameters."));
+                logError("Invalid query parameters.", logCtx);
+                callback(new Error("Invalid query parameters."));
             }
         } else {
-            logError("Invalid path parameters.", logCtx);
-            callback(new Error("Invalid path parameters."));
+            logError("Invalid query parameters.", logCtx);
+            callback(new Error("Invalid query parameters."));
         }
     } else {
         //Check path paramters
@@ -369,7 +385,7 @@ function validateVerifyEmail (req, callback) {
 
 function validateGetIAPProjects (req, callback) {
     logCtx.fn = 'validateGetIAPProjects';
-    const { error, value } = sessionIDSchema.validate(req.query);
+    const { error, value } = getIAPProjectsSchema.validate(req.query);
     if (error) { //return comma separated errors
         logError("Schema validation error for request payload.", logCtx);
         callback(new Error("Request payload validation error: " + error.details.map(x => x.message).join(', ')));

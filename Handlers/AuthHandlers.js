@@ -5,7 +5,7 @@
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse, sendHTMLResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const async = require('async');
 const config = require('../Config/config.js');
@@ -15,28 +15,30 @@ const nodemailer = require('nodemailer');
 
 //TODO: maybe add the transporter.verify() function to test the connection and be ready to send emails
 
+//TODO: using for testing, comment when in production
 //Showroom Email configuration
-// let transporter = nodemailer.createTransport({
-//     service: 'gmail',
-//     host: 'smtp.gmail.com',
-//     auth: {
-//         user: config.showroomEmail.email,
-//         pass: config.showroomEmail.password
-//     }
-// });
-
-//IAP Email configuation
 let transporter = nodemailer.createTransport({
-    host: 'smtps.ece.uprm.edu',
-    port: 465,
+    service: 'gmail',
+    host: 'smtp.gmail.com',
     auth: {
-        user: config.iapEmail.email,
-        pass: config.iapEmail.password
-    },
-    tls: {
-        rejectUnauthorized: false
+        user: config.showroomEmail.email,
+        pass: config.showroomEmail.password
     }
 });
+
+//TODO: uncomment when using production
+//IAP Email configuation
+// let transporter = nodemailer.createTransport({
+//     host: 'smtps.ece.uprm.edu',
+//     port: 465,
+//     auth: {
+//         user: config.iapEmail.email,
+//         pass: config.iapEmail.password
+//     },
+//     tls: {
+//         rejectUnauthorized: false
+//     }
+// });
 
 let logCtx = {
     fileName: 'AuthHandlers',
@@ -321,7 +323,7 @@ function logOut (req, res, next) {
 
 function forgotPassword (req, res, next) {
     logCtx.fn = 'forgotPassword';
-    var errorStatus, errorMsg;
+    var errorStatus, errorMsg, sendLink, userEmail;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -335,41 +337,86 @@ function forgotPassword (req, res, next) {
             });
         },
         function (callback) {
-            //Get hash from database and compare
-            var newPassword = req.body.new_password;
-            var saltRounds = 10;
-            bcrypt.hash(newPassword, saltRounds, (error, hash) => {
-                if (error) {
-                    logError(error, logCtx);
-                    callback(error, null);
-                } else {
-                    callback(null, hash);
-                }
-            });
+            sendLink = req.query.sendemail;
+            userEmail = req.body.email;
+            if (sendLink != undefined && sendLink == "true") {
+                callback(null); //Skip
+            } else {
+                //Verify if email exists
+                showroomDB.validateEmail(userEmail, (isValid) => {
+                    if (isValid) {
+                        //Email exists in users table, proceed
+                        callback(null);
+                    } else {
+                        errorStatus = 400;
+                        errorMsg = "No user registered with the given email.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    }
+                });
+            }
+        },
+        function (callback) {
+            if (sendLink != undefined && sendLink == "true") {
+                callback(null, null); //Skip
+            } else {
+                //Get hash from database and compare
+                var newPassword = req.body.new_password;
+                var saltRounds = 10;
+                bcrypt.hash(newPassword, saltRounds, (error, hash) => {
+                    if (error) {
+                        logError(error, logCtx);
+                        callback(error, null);
+                    } else {
+                        callback(null, hash);
+                    }
+                });
+            }
         },
         function (hashedPW, callback) {
-            var userID = req.session.data.userID;
-            //Update users table with new password
-            showroomDB.changePassword(userID, hashedPW, (error) => {
-                if (error) {
-                    errorStatus = 500;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                    
-                }
-                callback(error); //Null if no error
-            });
+            if (sendLink != undefined && sendLink == "true") {
+                callback(null); //Skip
+            } else {
+                //Update users table with new password
+                showroomDB.changePassword(userEmail, hashedPW, (error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error); //Null if no error
+                });
+            }
+        },
+        function (callback) {
+            if (sendLink != undefined && sendLink == "true") {
+                //Send verification email 
+                var showroomURL = "https://" + config.SHOWROOM_HOST + "/changePassword"; 
+                var subject = "Reset your password"
+                var message = "Please click the following link to reset your password. " + showroomURL; 
+                sendEmail(userEmail, subject, message, (error, info) => {
+                    if (error) {
+                        logError(error, logCtx);
+                    } else {
+                        log("Successfully sent reset password email for user " + userEmail, logCtx);
+                    }
+                    callback(null);
+                });
+            } else {
+                callback(null); //Skip
+            }
         }
     ], (error) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 201, "Password successfully changed.");
+            var successMsg = sendLink == "true" ? "Email sent, please check your inbox." : "Password successfully changed.";
+            successResponse(res, 201, successMsg);
         }
     });
 }
 
-function verifyUserFromEmail (req, res, next) { //TODO: test
+function verifyUserFromEmail (req, res, next) {
     logCtx.fn = 'verifyUserFromEmail';
     var errorStatus, errorMsg, userID, resend;
     async.waterfall([
@@ -418,6 +465,7 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
                         errorStatus = 500;
                         errorMsg = error.toString();
                         logError(error, logCtx);
+                        callback(error);
                     } else {
                         //Check that euuid matches and it's not expired yet
                         if (result.euuid == emailUUID && new Date() < new Date(result.expiration)) {
@@ -452,12 +500,23 @@ function verifyUserFromEmail (req, res, next) { //TODO: test
         }
     ], (error) => {
         if (error) {
-            //Catch errors that might occur within resendVerify()
-            if (errorStatus == undefined) errorStatus = 500;
-            if (errorMsg == undefined) errorMsg = error.toString();
-            errorResponse(res, errorStatus, errorMsg);
+            if (resend == undefined || resend == "false") {
+                //Send HTML response
+                sendHTMLResponse(res, 'ErrorEmailVerify.html');
+            } else {
+                console.log("TESTING: llegue a error response cuando era html"); //testing
+                //Catch errors that might occur within resendVerify()
+                if (errorStatus == undefined) errorStatus = 500;
+                if (errorMsg == undefined) errorMsg = error.toString();
+                errorResponse(res, errorStatus, errorMsg);
+            }
         } else {
-            successResponse(res, 201, "Successful email operation.");
+            if (resend == undefined || resend == "false") {
+                //Send HTML response
+                sendHTMLResponse(res, 'SuccessEmailVerify.html');
+            } else {
+                successResponse(res, 201, "Successful email operation.");                
+            }
         }
     });
 }

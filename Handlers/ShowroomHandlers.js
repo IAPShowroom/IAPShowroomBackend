@@ -714,6 +714,8 @@ function getScheduleEventByID (req, res, nect) {
 function postScheduleEvents (req, res, next) {
     logCtx.fn = 'postScheduleEvents';
     var errorStatus, errorMsg;
+    //req.body['adminid'] = req.session.data.admin;
+    console.log(req.body);
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -880,9 +882,9 @@ function deleteAnnouncementByID (req, res, next) {
     });
 }
 
-function getProjects (req, res, next) {
+function getProjects (req, res, next) { //TODO: test 'update' query param
     logCtx.fn = "getProjects";
-    var sessionID, errorStatus, errorMsg;
+    var sessionID, updateProjects, errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -897,28 +899,45 @@ function getProjects (req, res, next) {
         },
         function (callback) {
             sessionID = req.query.session_id;
+            updateProjects = req.query.update;
             if (sessionID == undefined) {
-                var latest = true; //If session ID was missing in request, retrieve latest one from IAP DB
-                iapDB.getSessions(latest, (error, result) => {
+                //Fetch session being used in Showroom's projects table
+                showroomDB.fetchShowroomSession((error, showroomSession) => {
                     if (error) {
                         logError(error, logCtx);
                         errorMsg = error.toString();
                         errorStatus = 500;
-                        callback(error);
                     } else {
-                        log("Response data: " + JSON.stringify(result), logCtx);
-                        sessionID = result[0].session_id;
-                        callback(null);
+                        log("Response data: " + JSON.stringify(showroomSession), logCtx);
+                        sessionID = showroomSession;
                     }
+                    callback(error); //Null if no error
                 });
             } else {
                 callback(null); //Session ID was provided, skip
             }
         },
         function (callback) {
+            if (updateProjects != undefined && updateProjects == "true") {
+                //Fetch the current session used in Showroom's projects
+                //Update table with projects from given session if they don't match
+                checkSessionAndUpdate(sessionID, (error, latestSession) => {
+                    if (error) {
+                        logError(error, logCtx);
+                        errorMsg = error.toString();
+                        errorStatus = 500;
+                    }
+                    callback(error, latestSession); //Null if no error
+                });
+            } else {
+                callback(null, null); //Skip
+            }
+        },
+        function (latestSession, callback) {
             logCtx.fn = "getProjects";
+            var finalSessionID = updateProjects != undefined && updateProjects == "true" ? latestSession : sessionID;
             //Fetch projects from IAP
-            showroomDB.fetchProjects(sessionID, (error, iapProjects) => { //result is array of objs with project info
+            showroomDB.fetchProjects(finalSessionID, (error, iapProjects) => { //result is array of objs with project info
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -944,6 +963,70 @@ function getProjects (req, res, next) {
         } else {
             successResponse(res, 200, "Successfully retrieved projects.", result && result.length > 0 ? result : null);
         }
+    });
+}
+
+function checkSessionAndUpdate (showroomSession, mainCallback) {
+    logCtx.fn = 'checkSessionAndUpdate';
+    var match = false;
+    var iapSession;
+    async.waterfall([
+        function (callback) {
+            var latest = true; //Retrieve latest session from IAP DB
+            iapDB.getSessions(latest, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    iapSession = result[0].session_id;
+                    if (iapSession == null) {
+                        errorMsg = "No sessions found.";
+                        logError(errorMsg, logCtx);
+                    } else if (showroomSession == iapSession) {
+                        log("Sessions matched: " + showroomSession, logCtx);
+                        match = true;
+                    } else {
+                        log("Sessions did not match, fetching new projects.", logCtx);
+                    }
+                    callback(null, showroomSession);
+                }
+            });
+        },
+        function (showroomSession, callback) {
+            if (match == false) {
+                //Set isLatest to false for the projects of the session that does not match
+                showroomDB.deleteAllShowroomProjects(showroomSession, (error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error);
+                }); 
+            } else {
+                callback(null); //Skip if sessions matched
+            }
+        },
+        function (callback) {
+            if (match == false) {
+                //Fetch projects from IAP database with the given session ID
+                //Post the results to Showroom projects table
+                iapDB.fetchProjects(iapSession, (error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error); //Null if no error
+                }); 
+            } else {
+                callback(null); //Skip if sessions matched
+            }
+        }
+    ], (error) => {
+        mainCallback(error, iapSession); //Null if no error
     });
 }
 
@@ -1123,5 +1206,6 @@ module.exports = {
     postLiveAttendance: postLiveAttendance,
     getAllUsers: getAllUsers,
     getAnnouncements: getAnnouncements,
-    deleteAnnouncementByID: deleteAnnouncementByID
+    deleteAnnouncementByID: deleteAnnouncementByID,
+    checkSessionAndUpdate, checkSessionAndUpdate
 }

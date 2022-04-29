@@ -19,10 +19,10 @@ var forgotPassword = '/forgot-pass';
 authRouter.post(register, authHandler.registerUser);
 authRouter.post(logIn, authHandler.logIn);
 authRouter.post(logOut, authHandler.logOut);
-authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); //TODO: implement and test
+authRouter.get(userInfo, authHandler.authenticate, authHandler.getUserInfo); 
 // authRouter.get(userRole, authHandler.authenticate, authHandler.getRoleAndName); 
 // authRouter.post(inPersonTracking, authHandler.trackInPerson); //TODO: implement and test
-authRouter.post(verifyUser, authHandler.verifyUserFromEmail); //TODO: implement and test
-authRouter.post(forgotPassword, authHandler.authenticate, authHandler.forgotPassword); //TODO: implement and test
+authRouter.get(verifyUser, authHandler.verifyUserFromEmail); 
+authRouter.post(forgotPassword, authHandler.forgotPassword); 
 
 module.exports = authRouter;
