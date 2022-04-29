@@ -24,8 +24,6 @@ let logCtx = {
   fn: ''
 }
 
-const wss = new WebSocket.Server({ clientTracking: true, noServer: true });
-
 const app = express();
 const port = config.PORT;
 
@@ -34,8 +32,6 @@ const redisClient = redis.createClient({ legacyMode: true });
 redisClient.connect().catch(console.error);
 redisClient.on("error", console.error);
 const store = new redisStore({ host: '127.0.0.1', port: 6379, client: redisClient, ttl: 260 });
-
-const userIDtoWSMap = new Map();
 
 //Log incoming requests
 app.use(logRequest);
