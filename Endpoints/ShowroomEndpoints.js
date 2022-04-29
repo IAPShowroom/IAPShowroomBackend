@@ -46,7 +46,7 @@ showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getA
 showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
 showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers); //TODO: update
 
-showroomRouter.get(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: update
+// showroomRouter.get(sseConnect, auth.authenticate, showroomHandler.sseConnect); //TODO: update
 
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus); //TODO: update 
@@ -58,8 +58,8 @@ showroomRouter.put(scheduleEventsID, auth.authorizeAdmin, showroomHandler.update
 showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.deleteScheduleEvent);
 
 // Server Side Events
-showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideUpcomingEvents);
-showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideProgressBar);
+// showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideUpcomingEvents);
+// showroomRouter.get(serverSideSent, auth.authenticate, showroomHandler.getServerSideProgressBar);
 
 //IAP
 showroomRouter.get(getIAPProjects, showroomHandler.getProjects); //TODO - review

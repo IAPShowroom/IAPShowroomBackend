@@ -481,7 +481,7 @@ function getEvents(byDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false and e_date = $1 order by starttime asc";
     var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
-    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false order by starttime asc";
+    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
     var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
     var queryCb = (error, res) => { 
         if (error) {

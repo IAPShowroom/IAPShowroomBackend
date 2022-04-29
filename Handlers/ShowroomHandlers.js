@@ -1,36 +1,22 @@
 /**
  * File to organize handler functions for the Showroom endpoints.
  */
-
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
-const { successResponse, errorResponse, serverSideResponse } = require('../Utility/DbUtils.js');
+const { successResponse, errorResponse } = require('../Utility/DbUtils.js');
 const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
 const config = require('../Config/config.js');
+const WSS = require('../WebSocketServer.js');
 
 const MAX_ASYNC = 1;
-
-let sse_clients = [];
-
-const sse_header = {
-    "Connection": "keep-alive",
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-};
 
 let logCtx = {
     fileName: 'ShowroomHandlers',
     fn: ''
 }
-
-let SSE = {}; //Object to expose sendEvent
-let sseRequests = []; //Store the response object for the SSE connection (maybe change this for an array for multiple clients?)
-//TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
-var announcementHistory = []; //Keep track of which announcements have been sent
-var currAnnouncementID = 1;
 
 function getStats (req, res, next) {
     logCtx.fn = 'getStats';
@@ -515,65 +501,6 @@ function getIAPSessions (req, res, next) {
     });
 }
 
-function sseConnect (req, res, next) {
-    //This endpoint is used to establish a connection for Server Sent Events
-    logCtx.fn = 'sseConnect';
-
-    //Add response object to the array of connections
-    sseRequests.push(res); 
-
-    res.writeHead(200, {
-        "Cache-Control": "no-cache",
-        "Content-type": "text/event-stream",
-        "Connection": "keep-alive"
-    });
-
-    //Testing
-    // logTest("Sending test message", logCtx);
-    // res.write(`data: fetch announcements\n\n`); //Initial testing, let's try to get one event going
-
-    //TODO: test with the connection staying on longer than 2 minutes, if it times out then uncomment this
-    //Disable timeout so the connection can stay alive for as long as we want
-    // res.setTimeout(() => {
-    //     log("SSE connection has timed out.", logCtx);
-    // }, 0);
-
-    //TODO: maybe it makes sense to use wiliel's serverSideResponse utility function and pass the res object to it
-    //Define function to send events
-    SSE.sendEvent = (data) => {
-
-
-        log("Sending event with data: ", logCtx);
-        console.log(data);
-        sseRequests.forEach((res) => {
-            res.write(`data: ${data}\n\n`);
-        });
-    };
-
-    //End response when due
-    res.on('close', () => {
-        if (!res.finished) {
-            log("Ending the SSE request.", logCtx);
-            res.end();
-        }
-    });
-}
-
-//TODO: maybe update to use async.forEachLimit to carefully close all before continuing and then call some cb?
-function closeSSEConnections () {
-    logCtx.fn = 'closeSSEConnections';
-    if (sseRequests.length > 0) {
-        var total = sseRequests.length;
-        log("SSE connections to close: " + total, logCtx);
-        sseRequests.forEach((res) => {
-            if (!res.finished) {
-                log("Ending the SSE request: " + total--, logCtx);
-                res.end();
-            }
-        });
-    }
-}
-
 function postAnnouncements (req, res, next) { //TODO: test
     logCtx.fn = 'postAnnouncements';
     var errorStatus, errorMsg;
@@ -602,10 +529,8 @@ function postAnnouncements (req, res, next) { //TODO: test
                     callback(error);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    // var announcement = result[0];
-                    // SSE.sendEvent(announcement); 
-                    SSE.sendEvent("Fetch announcements.");
-                    callback(null);
+                    //Send trigger to frontend so it can fetch announcements again
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                 }
             });
         }
@@ -615,6 +540,7 @@ function postAnnouncements (req, res, next) { //TODO: test
             errorResponse(res, errorStatus, errorMsg);
         } else {
             successResponse(res, 200, "Successfully posted announcement.");
+            
         }
     });
 }
@@ -742,6 +668,8 @@ function postScheduleEvents (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
                     callback(null, result);
                 }
             });
@@ -783,6 +711,8 @@ function updateScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -823,6 +753,8 @@ function deleteScheduleEvent (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
                     callback(null, result);
                 }
             });
@@ -863,6 +795,8 @@ function deleteAnnouncementByID (req, res, next) {
                     callback(error, null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
+                    //Send trigger to frontend so it can fetch announcements again
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
                     callback(null, result);
                 }
             });
@@ -1097,120 +1031,6 @@ function getAnnouncements (req, res, next) {
     });
 }
 
-function getServerSideUpcomingEvents(req, res, next){
-    logCtx.fn = "getServerSideUpcomingEvents";
-    console.log('Client connected');
-
-    const upcoming = true;
-    var errorStatus, errorMsg;
-
-    res.writeHead(200, sse_header);
-
-    async.waterfall([
-        
-    //  Currently this is only meant to serve the get Current and Upcoming events component in the frontend
-    
-    function (callback) {
-        //Validate request payload
-        validator.validateServerSideEvent(req, (error) => {
-            if (error) {
-                logError(error, logCtx);
-                errorStatus = 400;
-                errorMsg = error.message;
-            }
-            callback(error);
-        });
-    },
-    function (callback) {
-        //Take DB action
-
-        const date_obj = new Date();
-        const day = date_obj.toLocaleDateString('en-US');
-        const time = date_obj.toLocaleString('en-US');
-
-        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
-            if (error) {
-                errorStatus = 500;
-                errorMsg = error.toString();
-                logError(error, logCtx);
-                callback(error, null);
-            } else if (result == undefined || result == null) {
-                errorStatus = 404;
-                errorMsg = "No events found.";
-                logError(error, logCtx);
-                callback(new Error(errorMsg), null);
-            } else {
-                log("Response data: " + JSON.stringify(result), logCtx);
-                callback(null, result);
-            }
-        });
-    }
-    ], (error, result) => {
-        //Send responses
-        serverSideResponse("upcomingevents",res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
-    }, 
-    );
-                
-                
-    
-
-}
-
-function getServerSideProgressBar(req, res, next){
-    logCtx.fn = "getServerSideProgressBar";
-    console.log('Client connected');
-
-    const upcoming = true;
-    var errorStatus, errorMsg;
-
-    res.writeHead(200, sse_header);
-
-    async.waterfall([
-        
-    //  this function is meant to serve the updates from the events to the frontend
-    
-    function (callback) {
-        //Validate request payload
-        validator.validateServerSideEvent(req, (error) => {
-            if (error) {
-                logError(error, logCtx);
-                errorStatus = 400;
-                errorMsg = error.message;
-            }
-            callback(error);
-        });
-    },
-    function (callback) {
-        //Take DB action
-
-        const date_obj = new Date();
-        const day = date_obj.toLocaleDateString('en-US');
-        const time = date_obj.toLocaleString('en-US');
-
-        showroomDB.getEvents(false, upcoming, time, day, (error, result) => {
-            if (error) {
-                errorStatus = 500;
-                errorMsg = error.toString();
-                logError(error, logCtx);
-                callback(error, null);
-            } else if (result == undefined || result == null) {
-                errorStatus = 404;
-                errorMsg = "No events found.";
-                logError(error, logCtx);
-                callback(new Error(errorMsg), null);
-            } else {
-                log("Response data: " + JSON.stringify(result), logCtx);
-                callback(null, result);
-            }
-        });
-    }
-    ], (error, result) => {
-        //Send responses
-        serverSideResponse("progress", res, 200, "Successfully sent server side event.", result && result.length > 0 ? result : null);
-    }, 
-    );
-}
-
 function getAllMembersFromAllProjects (req, res, next) {
     logCtx.fn = "getAllMembersFromAllProjects";
     showroomDB.getAllMembersFromAllProjects( (error, result) => {
@@ -1307,11 +1127,7 @@ module.exports = {
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
-    sseConnect: sseConnect,
-    closeSSEConnections: closeSSEConnections,
     filterStats: filterStats,
-    getServerSideUpcomingEvents: getServerSideUpcomingEvents,
-    getServerSideProgressBar: getServerSideProgressBar,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
     validateResearchMember: validateResearchMember,
     postLiveAttendance: postLiveAttendance,
