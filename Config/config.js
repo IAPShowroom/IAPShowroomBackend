@@ -8,7 +8,6 @@ const PORT = env.PORT || 8080;
 const ENVIRONMENT = env.ENVIRONMENT || 'dev'; //set NODE_ENV to 'production' with the OS's init system for better performance 
 const prod = ENVIRONMENT == 'prod';
 const logDebug = env.LOG_DEBUG == 'true';
-// const SESSION_MAX_AGE = 1200000 //20 minutes in ms
 const SESSION_MAX_AGE = 43200000 //12 hours in ms
 const EMAIL_VERIFY_MAX_AGE = 1; //1 day 
 

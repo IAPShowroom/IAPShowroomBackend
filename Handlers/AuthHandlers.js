@@ -101,7 +101,7 @@ function registerUser (req, res, next) {
                     logError(error, logCtx);
                     callback(error, null);
                 } else {
-                    req.session.data = result; //Store result object with user ID in session.key
+                    req.session.data = result; //Store result object with user ID in session object
                     log("Response data: " + JSON.stringify(result), logCtx);
                     callback(null, result);
                 }
@@ -572,7 +572,6 @@ function authenticate (req, res, next) {
 function authorizeAdmin (req, res, next) {
     logCtx.fn = 'authorizeAdmin';
     authenticate(req, res, () => {
-        // if (req.session.data["admin"] == true) { //Check if user has admin role //changing boolean for id
         if (req.session.data["admin"] != null) { //Check if user has admin role
             next(); //Success
         } else {
