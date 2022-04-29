@@ -1,8 +1,6 @@
 /**
  * File to organize handler functions for the Showroom endpoints.
  */
-// import { wss } from '../app.js';
-// import { ws_annoucement, ws_progressbar, ws_upcomingevents } from '../Config/config.js';
 const iapDB = require('../Database/iapProxy.js');
 const showroomDB = require('../Database/showroomProxy.js');
 const { logError, log } = require('../Utility/Logger.js');
@@ -19,12 +17,6 @@ let logCtx = {
     fileName: 'ShowroomHandlers',
     fn: ''
 }
-
-let SSE = {}; //Object to expose sendEvent
-let sseRequests = []; //Store the response object for the SSE connection (maybe change this for an array for multiple clients?)
-//TODO: since this is in-memory, maybe we might want to make a fetch on the announcements table and load it
-var announcementHistory = []; //Keep track of which announcements have been sent
-var currAnnouncementID = 1;
 
 function getStats (req, res, next) {
     logCtx.fn = 'getStats';
@@ -509,65 +501,6 @@ function getIAPSessions (req, res, next) {
     });
 }
 
-function sseConnect (req, res, next) {
-    //This endpoint is used to establish a connection for Server Sent Events
-    logCtx.fn = 'sseConnect';
-
-    //Add response object to the array of connections
-    sseRequests.push(res); 
-
-    res.writeHead(200, {
-        "Cache-Control": "no-cache",
-        "Content-type": "text/event-stream",
-        "Connection": "keep-alive"
-    });
-
-    //Testing
-    // logTest("Sending test message", logCtx);
-    // res.write(`data: fetch announcements\n\n`); //Initial testing, let's try to get one event going
-
-    //TODO: test with the connection staying on longer than 2 minutes, if it times out then uncomment this
-    //Disable timeout so the connection can stay alive for as long as we want
-    // res.setTimeout(() => {
-    //     log("SSE connection has timed out.", logCtx);
-    // }, 0);
-
-    //TODO: maybe it makes sense to use wiliel's serverSideResponse utility function and pass the res object to it
-    //Define function to send events
-    SSE.sendEvent = (data) => {
-
-
-        log("Sending event with data: ", logCtx);
-        console.log(data);
-        sseRequests.forEach((res) => {
-            res.write(`data: ${data}\n\n`);
-        });
-    };
-
-    //End response when due
-    res.on('close', () => {
-        if (!res.finished) {
-            log("Ending the SSE request.", logCtx);
-            res.end();
-        }
-    });
-}
-
-//TODO: maybe update to use async.forEachLimit to carefully close all before continuing and then call some cb?
-function closeSSEConnections () {
-    logCtx.fn = 'closeSSEConnections';
-    if (sseRequests.length > 0) {
-        var total = sseRequests.length;
-        log("SSE connections to close: " + total, logCtx);
-        sseRequests.forEach((res) => {
-            if (!res.finished) {
-                log("Ending the SSE request: " + total--, logCtx);
-                res.end();
-            }
-        });
-    }
-}
-
 function postAnnouncements (req, res, next) { //TODO: test
     logCtx.fn = 'postAnnouncements';
     var errorStatus, errorMsg;
@@ -596,10 +529,6 @@ function postAnnouncements (req, res, next) { //TODO: test
                     callback(error);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    // var announcement = result[0];
-                    // SSE.sendEvent(announcement); 
-                    // SSE.sendEvent("Fetch announcements.");
-                    // callback(null);
                     app.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: ws_annoucement })));
                 }
             });
@@ -1112,8 +1041,6 @@ module.exports = {
     deleteScheduleEvent: deleteScheduleEvent,
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
-    sseConnect: sseConnect,
-    closeSSEConnections: closeSSEConnections,
     filterStats: filterStats,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
     validateResearchMember: validateResearchMember,

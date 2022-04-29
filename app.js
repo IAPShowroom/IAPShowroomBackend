@@ -25,6 +25,8 @@ let logCtx = {
   fn: ''
 }
 
+const wss = new WebSocket.Server({ clientTracking: true, noServer: true });
+
 const app = express();
 const port = config.PORT;
 
@@ -72,7 +74,7 @@ app.all('*', function(req, res){
   errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
 })
 
-const wss = new WebSocket.Server({ clientTracking: true, noServer: true });
+
 
 var server = app.listen(port, () => {
   log('IAP Showroom API listening on port ' + port, logCtx);
@@ -109,17 +111,18 @@ wss.on('connection', function (ws, request) {
 
 
     //test code to see if updates correctly
-    if(message === config.ws_annoucement)
-      wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_annoucement })));
+    // if(message === config.ws_annoucement)
+    //   wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_annoucement })));
     
-    else if(message === config.ws_progressbar)
-      wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
+    // else if(message === config.ws_progressbar)
+    //   wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
     
-    else if(message === config.ws_upcomingevents)
-      wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
+    // else if(message === config.ws_upcomingevents)
+    //   wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
+    // else console.log("message was sent but event was not recognized");
     
-    else console.log("message was sent but event was not recognized");
-    
+    wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_validatemember })));
+
     console.log("updated!")
 
   });
@@ -174,4 +177,4 @@ function closeDbConnections(cb) {
   .catch(reason => logError(reason, logCtx));
 }
 
-module.export = {wss: wss}
+module.exports = {wss: wss}
