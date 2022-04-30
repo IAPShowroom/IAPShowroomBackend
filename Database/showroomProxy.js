@@ -406,7 +406,7 @@ function fetchAllUsers (callback) {
 
 function fetchAllAnnouncements (callback) {
     logCtx.fn = 'fetchAllAnnouncements';
-    var query = "select * from announcements order by announcementid asc";
+    var query = "select * from announcements order by announcementid desc";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
