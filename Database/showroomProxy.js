@@ -508,7 +508,9 @@ function getEvents(byDate, upcoming, time, date, callback) {
     } else if (byDate) {
         dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
     } else {
-        var currentDate = new Date().toISOString().slice(0,10);
+        var today = new Date();
+        today.setTime(today.getTime() - 14400000);
+        var currentDate = today.toISOString().slice(0,10);
         dbUtils.makeQueryWithParams(pool, query, [currentDate], callback, queryCb);
     }
 }
