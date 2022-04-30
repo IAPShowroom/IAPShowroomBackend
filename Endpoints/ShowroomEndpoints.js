@@ -16,7 +16,7 @@ let logCtx = {
 //Routes
 var getStats = '/stats';
 var getRoomStatus = '/rooms/status';
-var getQnARoomInfo = '/qna/info/:projectID';
+var getQnARoomInfo = '/qna/info';
 var announcements = '/announcement'; //used for GET, POST
 var announcementsByID = '/announcement/:announcementID'; //used for DELETE
 var researchers_advisors = '/researchers-advisors';
