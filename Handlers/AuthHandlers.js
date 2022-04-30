@@ -23,7 +23,10 @@ let transporter = nodemailer.createTransport({
     auth: {
         user: config.showroomEmail.email,
         pass: config.showroomEmail.password
-    }
+    },
+    tls: {
+                rejectUnauthorized: false
+            }
 });
 
 //TODO: uncomment when using production
