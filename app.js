@@ -16,8 +16,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
 const redis  = require('redis');
-const showroomHandlers = require('./Handlers/ShowroomHandlers.js');
 const redisStore = require('connect-redis')(session);
+const WSS = require('./WebSocketServer.js');
 
 let logCtx = {
   fileName: 'app',
@@ -36,17 +36,19 @@ const store = new redisStore({ host: '127.0.0.1', port: 6379, client: redisClien
 //Log incoming requests
 app.use(logRequest);
 
-//Middleware
-app.use(bodyParser.urlencoded({ extended: false}));
-app.use(bodyParser.json());
-app.use(cors(config.corsOptions));
-app.use(session({ //TODO: review session config settings
+const sessionParser = session({ //TODO: review session config settings
   secret: config.session_secret,
   store: store,
   saveUninitialized: false,
   resave: false,
   cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false, httpOnly: config.prod ? true : false} //TODO: make sure cookies are being set in prod
-}));
+});
+
+//Middleware
+app.use(bodyParser.urlencoded({ extended: false}));
+app.use(bodyParser.json());
+app.use(cors(config.corsOptions));
+app.use(sessionParser);
 app.use(auth.checkSession);
 
 //Bind the main module routes to their respective routers
@@ -70,7 +72,6 @@ app.all('*', function(req, res){
 var server = app.listen(port, () => {
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
-
 //Properly close the server 
 process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
 process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
@@ -79,7 +80,18 @@ process.on('SIGTERM', () => { handleKillServer() });
 function handleKillServer() {
   logCtx.fn = 'handleKillServer';
   log("Gracefully shutting server down.", logCtx);
-  showroomHandlers.closeSSEConnections(); //TODO: maybe update to make it async?
+  WSS.wss.clients.forEach((socket) => {
+    socket.close();
+  
+    process.nextTick(() => {
+      if ([socket.OPEN, socket.CLOSING].includes(socket.readyState)) {
+        // Socket still hangs, hard close
+        socket.terminate();
+      }
+    });
+  });
+  log("Removed all WebSocket Clients", logCtx);
+
   closeDbConnections(() => {
     logCtx.fn = '';
     store.clear(() => {  //Clear all sessions

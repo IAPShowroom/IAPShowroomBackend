@@ -25,8 +25,8 @@ let transporter = nodemailer.createTransport({
         pass: config.showroomEmail.password
     },
     tls: {
-                rejectUnauthorized: false
-            }
+        rejectUnauthorized: false
+    }
 });
 
 //TODO: uncomment when using production
@@ -38,9 +38,9 @@ let transporter = nodemailer.createTransport({
 //         user: config.iapEmail.email,
 //         pass: config.iapEmail.password
 //     },
-//     tls: {
-//         rejectUnauthorized: false
-//     }
+    // tls: {
+    //     rejectUnauthorized: false
+    // }
 // });
 
 let logCtx = {

@@ -59,6 +59,11 @@ const stream_prefix = '/api/meet';
 const auth_prefix = '/api/auth';
 const bbb_prefix = '/bigbluebutton/api';
 
+//Web Socket Server event variables
+const ws_announcement = "announcement";
+const ws_progressbar = "progressbar";
+const ws_upcomingevents = "upcomingevents";
+
 //https://iapstream.ece.uprm.edu/bigbluebutton/api
 var bbbUrlPrefix = "https://" + BBB_HOST + bbb_prefix;
 
@@ -103,6 +108,9 @@ module.exports = {
     BBB_SECRET: BBB_SECRET,
     MOD_PASSWORD: MOD_PASSWORD,
     ATTENDEE_PASSWORD: ATTENDEE_PASSWORD,
+    ws_announcement: ws_announcement,
+    ws_progressbar: ws_progressbar,
+    ws_upcomingevents: ws_upcomingevents,
     prod: prod,
     logDebug: logDebug,
     corsOptions: corsOptions,
