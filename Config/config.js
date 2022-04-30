@@ -74,6 +74,14 @@ const corsOptions = {
     credentials: true
 }
 
+//Redis congiguration options
+const redisConfig = {
+    auth: env.REDIS_PASSWORD || 'testpassword',
+    host: '127.0.0.1',
+    port: 6379,
+    ttl: 260
+}
+
 //Database variables
 const showroomDBConfig = {
     host: env.SHOWROOM_DB_HOST || 'test_db_host',
@@ -121,5 +129,6 @@ module.exports = {
     departments: departments,
     userGenders: userGenders,
     showroomEmail: showroomEmail,
-    iapEmail: iapEmail
+    iapEmail: iapEmail,
+    redisConfig: redisConfig 
 };
