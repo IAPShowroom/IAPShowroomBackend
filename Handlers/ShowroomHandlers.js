@@ -9,7 +9,8 @@ const validator = require('../Utility/SchemaValidator.js');
 const meetingHandler = require('../Handlers/VideoStreamingHandlers.js');
 const async = require('async');
 const config = require('../Config/config.js');
-const WSS = require('../WebSocketServer.js');
+// const WSS = require('../WebSocketServer.js');
+var WSS;
 
 const MAX_ASYNC = 1;
 
@@ -502,6 +503,12 @@ function getIAPSessions (req, res, next) {
 }
 
 function postAnnouncements (req, res, next) { //TODO: test
+    console.log("WSS before require"); //testing
+    console.log(WSS); //testing
+    if(WSS == undefined) WSS = require("../app");
+    console.log("WSS after require"); //testing
+    console.log(WSS); //testing
+
     logCtx.fn = 'postAnnouncements';
     var errorStatus, errorMsg;
     async.waterfall([
@@ -530,7 +537,25 @@ function postAnnouncements (req, res, next) { //TODO: test
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
                     //Send trigger to frontend so it can fetch announcements again
-                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_announcement })));
+                    
+                    log("before sending Announcement to all clients", logCtx);
+                    console.log("WSS.wss"); //testing
+                    console.log(WSS.wss); //testing
+                    console.log("WSS.wssclients"); //testing
+                    console.log(WSS.wss.clients); //testing
+                    WSS.wss.clients.forEach(ws => {
+                        ws.send({type: config.ws_announcement}, (error) => {
+                        if (error) {
+                          logError(error, logCtx);
+                        } else {
+                          log("Success for WebSocket", logCtx);
+                          console.log(ws);
+                        }
+                      })
+                      log("AAAHHH", logCtx);
+                    });
+
+                    log("sent Announcement to all clients", logCtx);
                 }
             });
         }

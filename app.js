@@ -17,7 +17,8 @@ const cors = require('cors');
 const session = require('express-session');
 const redis  = require('redis');
 const redisStore = require('connect-redis')(session);
-const WSS = require('./WebSocketServer.js');
+const WebSocket = require('ws');
+// const WSS = require('./WebSocketServer.js');
 
 let logCtx = {
   fileName: 'app',
@@ -74,6 +75,29 @@ var server = app.listen(port, () => {
   log('Started server on ' + timestamp, logCtx);
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
+
+const wss = new WebSocket.Server({ clientTracking: true, noServer: true });
+
+server.on('upgrade', function (request, socket, head) {
+  console.log('Parsing session from request...');
+    wss.handleUpgrade(request, socket, head, function (ws) {
+      wss.emit('connection', ws, request);
+    });
+});
+
+wss.on('connection', function (ws, request) {
+
+  ws.on('message', function (message) {
+    console.log(`Received message ${message}`);
+    console.log("updated!");
+
+  });
+
+  ws.on('close', function () {
+    
+  });
+});
+
 //Properly close the server 
 process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
 process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
@@ -82,16 +106,25 @@ process.on('SIGTERM', () => { handleKillServer() });
 function handleKillServer() {
   logCtx.fn = 'handleKillServer';
   log("Gracefully shutting server down.", logCtx);
-  WSS.wss.clients.forEach((socket) => {
-    socket.close();
   
-    process.nextTick(() => {
-      if ([socket.OPEN, socket.CLOSING].includes(socket.readyState)) {
-        // Socket still hangs, hard close
+  wss.close(() => {
+    log("Closed WebSocket Server", logCtx);
+  });
+  
+
+  wss.clients.forEach((socket) => {
+    socket.close();
+  });
+  
+  // setTimeout(() => {
+    // Second sweep, hard close for everyone who's left
+    wss.clients.forEach((socket) => {
+      if ([socket.OPEN, socket.CLOSING, socket.CONNECTING].includes(socket.readyState)) {
         socket.terminate();
       }
     });
-  });
+  // }, 500);
+
   log("Removed all WebSocket Clients", logCtx);
 
   closeDbConnections(() => {
@@ -117,3 +150,5 @@ function closeDbConnections(cb) {
     cb();}) //call the callback to exit server
   .catch(reason => logError(reason, logCtx));
 }
+
+module.exports = {wss: wss}
