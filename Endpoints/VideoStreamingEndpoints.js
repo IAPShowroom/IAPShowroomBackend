@@ -16,7 +16,7 @@
  
 //  streamingRouter.post(createRoom, auth.authorizeAdmin, streamingHandler.createRoom);
  streamingRouter.post(joinRoom, auth.authenticate, streamingHandler.joinRoom);
- streamingRouter.post(joinStage, auth.authenticate, streamingHandler.joinStage);
+ streamingRouter.get(joinStage, auth.authenticate, streamingHandler.joinStage);
  streamingRouter.post(endRoom, auth.authorizeAdmin, streamingHandler.endRoom);
 //  streamingRouter.post(history, auth.authenticate, streamingHandler.postMeetHistory); //Got absolved into join room logic
  
