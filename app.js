@@ -70,6 +70,8 @@ app.all('*', function(req, res){
 })
 
 var server = app.listen(port, () => {
+  var timestamp = new Date().toLocaleString('en-US');
+  log('Started server on ' + timestamp, logCtx);
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
 //Properly close the server 
