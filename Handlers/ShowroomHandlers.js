@@ -644,7 +644,6 @@ function postScheduleEvents (req, res, next) {
     logCtx.fn = 'postScheduleEvents';
     var errorStatus, errorMsg;
     //req.body['adminid'] = req.session.data.admin;
-    console.log(req.body);
     async.waterfall([
         function (callback) {
             //Validate request payload

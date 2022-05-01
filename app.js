@@ -82,18 +82,9 @@ process.on('SIGTERM', () => { handleKillServer() });
 function handleKillServer() {
   logCtx.fn = 'handleKillServer';
   log("Gracefully shutting server down.", logCtx);
-  WSS.wss.clients.forEach((socket) => {
-    socket.close();
-  
-    process.nextTick(() => {
-      if ([socket.OPEN, socket.CLOSING].includes(socket.readyState)) {
-        // Socket still hangs, hard close
-        socket.terminate();
-      }
-    });
-  });
-  log("Removed all WebSocket Clients", logCtx);
-
+  WSS.wss.clients.forEach((socket) => socket.send(JSON.stringify({type: config.ws_die})));
+  WSS.wss.close();
+  log("closed Incoming WebSocket Connections", logCtx);
   closeDbConnections(() => {
     logCtx.fn = '';
     store.clear(() => {  //Clear all sessions

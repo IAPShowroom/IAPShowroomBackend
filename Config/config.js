@@ -63,6 +63,7 @@ const bbb_prefix = '/bigbluebutton/api';
 const ws_announcement = "announcement";
 const ws_progressbar = "progressbar";
 const ws_upcomingevents = "upcomingevents";
+const ws_die = "die";
 
 //https://iapstream.ece.uprm.edu/bigbluebutton/api
 var bbbUrlPrefix = "https://" + BBB_HOST + bbb_prefix;
@@ -111,6 +112,7 @@ module.exports = {
     ws_announcement: ws_announcement,
     ws_progressbar: ws_progressbar,
     ws_upcomingevents: ws_upcomingevents,
+    ws_die: ws_die,
     prod: prod,
     logDebug: logDebug,
     corsOptions: corsOptions,
