@@ -67,11 +67,13 @@ function getStats (req, res, next) {
             });
         },
         function (liveResults, inPersonResults, callback) {
+            var uniqueUserIDs = new Set();
             //Filter live conference records to derive statistics
             liveResults.forEach((obj) => {
-                //Only count them if they have a record in meet history (there exists a join time)
-                if (obj.jointime != null) {
+                //Only count unique userID entries
+                if (!uniqueUserIDs.has(obj.userid)) {
                     filterStats(finalResult, obj);
+                    uniqueUserIDs.add(obj.userid);
                 }
             });
             //Filter in person records to derive statistics

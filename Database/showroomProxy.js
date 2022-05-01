@@ -577,7 +577,7 @@ function verifyEmail (userID, callback) {
 
 function getLiveStats (callback) {
     logCtx.fn = 'getLiveStats';
-    var query = "select m.jointime,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by user_role, department, gender, grad_date, jointime;"; 
+    var query = "select u.userid, m.meethistoryid,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by u.userid, user_role, department, gender, grad_date, meethistoryid having meethistoryid is not null;"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
