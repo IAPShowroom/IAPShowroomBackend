@@ -57,7 +57,7 @@ app.use(config.showroom_prefix, showroomRouter);
 app.use(config.stream_prefix, streamingRouter);
 
 //health check for testing
-app.get('/test', (req, res) => {
+app.get('/api/test', (req, res) => {
   logCtx.fn = '/test';
   log("Hello, server is running.", logCtx);
   successResponse(res, 200, "Hello.");
