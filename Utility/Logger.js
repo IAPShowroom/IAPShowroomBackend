@@ -11,14 +11,9 @@ const winstonLogger = winston.createLogger({
     transports: [
         //Store logs in 'log.txt'
         new winston.transports.File({ filename: 'logs.txt' }),
+        new winston.transports.Console({ format: winston.format.simple() })
     ],
 });
-
-if (config.prod == false) { //Add console logging if in development
-    winstonLogger.add(new winston.transports.Console({
-      format: winston.format.simple(),
-    }));
-}
 
 //Using the console.log version affects performance
 function logAllDefault (logLevel, message, logCtx) {
