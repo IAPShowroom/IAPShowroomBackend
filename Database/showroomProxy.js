@@ -256,7 +256,7 @@ function fetchEUUID (userID, callback) {
 
 function fetchShowroomSession (callback) {
     logCtx.fn = 'fetchShowroomSession';
-    var query = 'select iapsessionid from projects where "isLatest" = true';
+    var query = 'select iapsessionid from projects where islatest = true';
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -730,7 +730,7 @@ function deleteAnnouncement (announcementID, callback) {
 function deleteAllShowroomProjects (showroomSessionID, callback) {
     //Doesn't actually delete the projects, rather it sets the isLatest column as false
     logCtx.fn = 'deleteAllShowroomProjects';
-    var query = 'update projects set "isLatest"=false where iapsessionid = $1'; 
+    var query = 'update projects set islatest=false where iapsessionid = $1'; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -887,7 +887,7 @@ function getName (userID, callback) {
 
 function postToShowroomProjects (iapProjects, callback) {
     logCtx.fn = 'postToShowroomProjects';
-    var query = 'insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract, "isLatest") values ($1, $2, $3, $4, $5)';
+    var query = 'insert into projects (iapprojectid, iapsessionid, iapproject_title, iapproject_abstract, islatest) values ($1, $2, $3, $4, $5)';
     var values = [iapProjects.project_id, iapProjects.session_id, iapProjects.title, iapProjects.abstract, true];
     var queryCb = (error, res) => { 
         if (error) {
@@ -935,7 +935,7 @@ function fetchUserIDsAndRoles (projectID, callback) {
 
 function fetchProjects(sessionID, callback) {
     logCtx.fn = 'fetchProjects';
-    dbUtils.makeQueryWithParams(pool, 'select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1 and "isLatest" = true', [sessionID], callback, (error, res) => {
+    dbUtils.makeQueryWithParams(pool, 'select projectid as project_id, iapproject_title as title, iapproject_abstract as abstract from projects where iapsessionid = $1 and islatest = true', [sessionID], callback, (error, res) => {
         if (error) {
             logError(error, logCtx);
             callback(error, null);
