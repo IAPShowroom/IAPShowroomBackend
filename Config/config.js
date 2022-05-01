@@ -63,6 +63,9 @@ const ws_announcement = "announcement";
 const ws_progressbar = "progressbar";
 const ws_upcomingevents = "upcomingevents";
 const ws_die = "die";
+const ws_port = 8081;
+const ssl_cert_path = env.SSL_CERT_PATH || 'testcertpath';
+const ssl_key_path = env.SSL_KEY_PATH || 'testkeypath';
 
 //https://iapstream.ece.uprm.edu/bigbluebutton/api
 var bbbUrlPrefix = "https://" + BBB_HOST + bbb_prefix;
@@ -122,5 +125,8 @@ module.exports = {
     departments: departments,
     userGenders: userGenders,
     showroomEmail: showroomEmail,
-    iapEmail: iapEmail
+    iapEmail: iapEmail,
+    ws_port: ws_port,
+    ssl_cert_path: ssl_cert_path,
+    ssl_key_path: ssl_key_path
 };
