@@ -227,15 +227,24 @@ function validateGetEvents (req, callback) {
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg));
             }
+        } else if (req.query.all != undefined) {
+            try {
+                Joi.assert(req.query.all, Joi.boolean());
+                log("Request schema successfully validated.", logCtx);
+                callback(null);
+            } catch {
+                var errorMsg = "Invalid data types for query parameters";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg));
+            }
         } else {
-            //if 'upcoming' query parameter is missing or false, no need to check for date
+            //No need to check further if either of the query parameters are missing
             log("Request schema successfully validated.", logCtx);
             callback(null);
         }
     } else {
-        var errorMsg = "Missing query parameters.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        log("Request schema successfully validated.", logCtx);
+        callback(null);
     }
 }
 

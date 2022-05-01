@@ -3,9 +3,34 @@
  */
 
 const config = require('../Config/config.js');
+const winston = require('winston');
+
+const winstonLogger = winston.createLogger({
+    level: 'info',
+    format: winston.format.json(),
+    transports: [
+        //Store logs in 'log.txt'
+        new winston.transports.File({ filename: 'logs.txt' }),
+    ],
+});
+
+if (config.prod == false) { //Add console logging if in development
+    winstonLogger.add(new winston.transports.Console({
+      format: winston.format.simple(),
+    }));
+}
+
+//Using the console.log version affects performance
+function logAllDefault (logLevel, message, logCtx) {
+    console.log(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
+}
 
 function logAll (logLevel, message, logCtx) {
-    console.log(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
+    winstonLogger.info(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
+}
+
+function logAllError (logLevel, message, logCtx) {
+    winstonLogger.error(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
 }
 
 function log (message, logCtx) {
@@ -17,7 +42,7 @@ function logDebug (message, logCtx) {
 }
 
 function logError (message, logCtx) {
-    logAll('ERROR:', message, logCtx);
+    logAllError('ERROR:', message, logCtx);
 }
 
 function logTest (message, logCtx) {
