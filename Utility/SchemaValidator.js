@@ -227,15 +227,24 @@ function validateGetEvents (req, callback) {
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg));
             }
+        } else if (req.query.all != undefined) {
+            try {
+                Joi.assert(req.query.all, Joi.boolean());
+                log("Request schema successfully validated.", logCtx);
+                callback(null);
+            } catch {
+                var errorMsg = "Invalid data types for query parameters";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg));
+            }
         } else {
-            //if 'upcoming' query parameter is missing or false, no need to check for date
+            //No need to check further if either of the query parameters are missing
             log("Request schema successfully validated.", logCtx);
             callback(null);
         }
     } else {
-        var errorMsg = "Missing query parameters.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        log("Request schema successfully validated.", logCtx);
+        callback(null);
     }
 }
 
@@ -397,24 +406,12 @@ function validateGetIAPProjects (req, callback) {
 
 function validateQNARoomInfo (req, callback) { //TODO: test
     logCtx.fn = 'validateQNARoomInfo';
-    if (req.params != undefined && Object.keys(req.params).length != 0) {
-        if (!isNaN(parseInt(req.params.projectID, 10))) {
-            if (req.query != undefined && Object.keys(req.query).length != 0) {
-                var obj = {body: req.query}; //Bypass validateRequest's req.body call
-                validateRequest(obj, qnaInfoSchema, callback);
-            } else {
-                logError("Missing request query parameters.", logCtx);
-                callback(new Error("Missing request query parameters."));
-            }
-        } else {
-            var errorMsg = "Invalid data type for path parameter.";
-            logError(errorMsg, logCtx);
-            callback(new Error(errorMsg));
-        }
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        var obj = {body: req.query}; //Bypass validateRequest's req.body call
+        validateRequest(obj, qnaInfoSchema, callback);
     } else {
-        var errorMsg = "Missing request path parameters.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        logError("Missing request query parameters.", logCtx);
+        callback(new Error("Missing request query parameters."));
     }
 }
 

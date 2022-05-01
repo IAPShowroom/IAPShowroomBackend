@@ -352,7 +352,7 @@ function testGetEvents() {
     // var upcoming = true;
     var time = '7:30 AM';
     var date = '04-25-22';
-    showroomDB.getEvents(true, upcoming, time, date, (error, result) => {
+    showroomDB.getEvents(false, true, upcoming, time, date, (error, result) => {
         if (error) logError(error, logCtx);
         if (result) {
             logTest("result: ", logCtx);

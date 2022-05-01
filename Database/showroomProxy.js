@@ -406,7 +406,7 @@ function fetchAllUsers (callback) {
 
 function fetchAllAnnouncements (callback) {
     logCtx.fn = 'fetchAllAnnouncements';
-    var query = "select * from announcements order by announcementid asc";
+    var query = "select * from announcements order by announcementid desc";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -477,12 +477,13 @@ function createEvents (eventList, callback) {
     });
 }
 
-function getEvents(byDate, upcoming, time, date, callback) {
+function getEvents(all, allByDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
-    var getAllByDate = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
-    var getUpcoming = "select * from iap_events where starttime > $1 and e_date = $2 and isdeleted = false order by starttime asc";
-    var query = upcoming ? getUpcoming : byDate ? getAllByDate : getAll;
+    var getAllByDate = "select * from iap_events where isdeleted = false and e_date = $1 order by starttime asc";
+    var getAllByDateProjects = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
+    var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
+    var query = upcoming ? getUpcoming : allByDate ? getAllByDateProjects : all ? getAll : getAllByDate;
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -505,10 +506,15 @@ function getEvents(byDate, upcoming, time, date, callback) {
     };
     if (upcoming) {
         dbUtils.makeQueryWithParams(pool, query, [time, date], callback, queryCb);
-    } else if (byDate) {
+    } else if (allByDate) {
         dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
-    } else {
+    } else if (all) {
         dbUtils.makeQuery(pool, query, callback, queryCb);
+    } else {
+        var today = new Date();
+        today.setTime(today.getTime() - 14400000);
+        var currentDate = today.toISOString().slice(0,10);
+        dbUtils.makeQueryWithParams(pool, query, [currentDate], callback, queryCb);
     }
 }
 
