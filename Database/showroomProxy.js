@@ -264,9 +264,9 @@ function fetchShowroomSession (callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length == 0 ) {
-                var errorMsg = "No project records found."; 
+                var errorMsg = "No project records found, sending null to trigger update."; 
                 logError(errorMsg, logCtx);
-                callback(new Error(errorMsg), null);
+                callback(null, null); //Send null to indicate no projects in table
             } else {
                 callback(null, res.rows[0].iapsessionid); //Success
             }
@@ -738,12 +738,9 @@ function deleteAllShowroomProjects (showroomSessionID, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rowCount > 0) {
-                callback(null);
-            } else {
-                var errorMsg = "Could not delete projects.";
-                logError(errorMsg, logCtx);
-                callback(new Error(errorMsg));
+                log("No rows were affected.", logCtx);
             }
+            callback(null);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [showroomSessionID], callback, queryCb);

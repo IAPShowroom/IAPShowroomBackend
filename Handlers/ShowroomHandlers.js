@@ -811,7 +811,7 @@ function deleteAnnouncementByID (req, res, next) {
     });
 }
 
-function getProjects (req, res, next) { //TODO: test 'update' query param
+function getProjects (req, res, next) {
     logCtx.fn = "getProjects";
     var sessionID, updateProjects, errorStatus, errorMsg;
     async.waterfall([
@@ -836,11 +836,16 @@ function getProjects (req, res, next) { //TODO: test 'update' query param
                         logError(error, logCtx);
                         errorMsg = error.toString();
                         errorStatus = 500;
+                        callback(error);
                     } else {
-                        log("Response data: " + JSON.stringify(showroomSession), logCtx);
-                        sessionID = showroomSession;
+                        if (showroomSession == null) { //No projects were found
+                            sessionID = 1; //Set as incorrect session on purpose to trigger update
+                        } else {
+                            log("Response data: " + JSON.stringify(showroomSession), logCtx);
+                            sessionID = showroomSession;
+                        }
+                        callback(null);
                     }
-                    callback(error); //Null if no error
                 });
             } else {
                 callback(null); //Session ID was provided, skip
