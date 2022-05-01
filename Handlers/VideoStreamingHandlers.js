@@ -164,7 +164,7 @@ function joinStage (req, res, next) {
         },
         function (payload, callback) {
             //Record join history
-            showroomDB.postMeetHistory(userID, 999, (error, result) => { //Using 999 as the meet id for stage, since it has to be integer
+            showroomDB.postMeetHistory(userID, null, (error, result) => { //Using null as the meet id for stage
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
