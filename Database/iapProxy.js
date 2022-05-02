@@ -64,6 +64,21 @@ function getSessions(latest, callback) {
     });
 }
 
+function getSponsors(callback) {
+    logCtx.fn = 'getSponsors';
+    var query = "select * from sponsors";
+    dbUtils.makeQuery(pool, query, callback, (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows; //returns array of json objects with sponsor info
+            callback(null, result);
+        }
+    });
+}
+
 function validateEmail (email, callback) { 
     //Verify that email is registered in IAP 
     logCtx.fn = 'validateEmail';
@@ -103,5 +118,6 @@ module.exports = {
     fetchProjects: fetchProjects,
     endPool: endPool,
     validateEmail: validateEmail,
-    getSessions: getSessions
+    getSessions: getSessions,
+    getSponsors: getSponsors
 }

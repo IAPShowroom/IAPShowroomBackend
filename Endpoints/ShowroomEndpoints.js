@@ -32,6 +32,7 @@ var serverSideSent = '/sse';
 //Schedule Routes
 var getIAPSessions = '/sessions';
 var getIAPProjects = '/schedule/projects';
+var getIAPSponsors = '/sponsors';
 var scheduleEvents = '/schedule/events'; //used for GET, POST
 var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
 
@@ -62,6 +63,7 @@ showroomRouter.delete(scheduleEventsID, auth.authorizeAdmin, showroomHandler.del
 
 //IAP
 showroomRouter.get(getIAPProjects, showroomHandler.getProjects);
+showroomRouter.get(getIAPSponsors, showroomHandler.getSponsors);
 showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSessions);
 
 // Live Attendance
