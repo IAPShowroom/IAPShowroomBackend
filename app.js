@@ -88,6 +88,11 @@ var server = https.createServer(options, app).listen(port, () => {
 process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
 process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
 process.on('SIGTERM', () => { handleKillServer() }); 
+process.on('uncaughtException', function (error) {
+  logError(error.message, logCtx);
+  logError(err.stack, logCtx);
+  process.exit(1);
+});
 
 function handleKillServer() {
   logCtx.fn = 'handleKillServer';
