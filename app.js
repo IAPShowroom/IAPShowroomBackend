@@ -13,6 +13,8 @@ const showroomDB = require('./Database/showroomProxy.js');
 const { successResponse, errorResponse } = require('./Utility/DbUtils.js');
 const express = require('express');
 const bodyParser = require('body-parser');
+const helmet = require('helmet');
+const compression = require('compression');
 const cors = require('cors');
 const session = require('express-session');
 const redis  = require('redis');
@@ -38,6 +40,7 @@ app.use(logRequest);
 
 const sessionParser = session({ //TODO: review session config settings
   secret: config.session_secret,
+  name: 'sesid',
   store: store,
   saveUninitialized: false,
   resave: false,
@@ -47,6 +50,8 @@ const sessionParser = session({ //TODO: review session config settings
 //Middleware
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
+app.use(helmet()); //Adds headers to prevent security vulnerabilities
+app.use(compression()); //Increase performance by compressing responses
 app.use(cors(config.corsOptions));
 app.use(sessionParser);
 app.use(auth.checkSession);
