@@ -13,12 +13,37 @@ const httpServer = HttpsServer({
 });
 
 const wss = new WebSocket.Server({ clientTracking: true, server: httpServer });
+const { log } = require('./Utility/Logger.js');
+
+let logCtx = {
+    fileName: 'WebSocketServer',
+    fn: ''
+}
+
+var isStagelive = false;
 
 wss.on('connection', function (ws, request) {
     // const userId = request.session.data.userID;
 
     ws.on('message', function (message) {
-        //We might need this
+        logCtx.fn = 'MessageHandler';
+        console.log(`Received message ${message}`);
+
+        try {
+            var msgJson = JSON.parse(message);
+            log("Received message type: " + msgJson.type ? msgJson.type : 'undefined', logCtx);
+
+            if (msgJson.type === config.ws_stageUpdate) {
+                isStagelive = msgJson.value;
+                wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_getStageLive })));
+            } else if(msgJson.type === config.ws_getStageLive) {
+                ws.send(JSON.stringify({ type: config.ws_getStageLive, value: isStagelive }));
+            } else {
+                log("Message was received but event type was not recognized", logCtx);
+            }            
+        } catch (e) {
+            logError("Something wrong happened: " + e, logCtx);
+        }
     });
 
     ws.on('close', function () {
