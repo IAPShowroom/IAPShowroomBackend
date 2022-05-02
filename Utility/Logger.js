@@ -24,14 +24,14 @@ function logAll (logLevel, message, logCtx) {
     var today = new Date();
     today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
     var timestamp = today.toISOString();
-    winstonLogger.info(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message + ' timestamp: ' + timestamp);
+    winstonLogger.info('time: ' + timestamp + ' ' + logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
 }
 
 function logAllError (logLevel, message, logCtx) {
     var today = new Date();
     today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
     var timestamp = today.toISOString();
-    winstonLogger.error(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message + ' timestamp: ' + timestamp);
+    winstonLogger.error('time: ' + timestamp + ' ' + logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
 }
 
 function log (message, logCtx) {
