@@ -503,6 +503,19 @@ function getIAPSessions (req, res, next) {
     });
 }
 
+function getSponsors (req, res, next) {
+    logCtx.fn = "getSponsors";
+    iapDB.getSponsors((error, result) => {
+        if (error) {
+            logError(error, logCtx);
+            errorResponse(res, 500, error.toString());
+        } else {
+            log("Response data: " + JSON.stringify(result), logCtx);
+            successResponse(res, 200, "Successfully retrieved sponsors", result);
+        }
+    });
+}
+
 function postAnnouncements (req, res, next) { //TODO: test
     logCtx.fn = 'postAnnouncements';
     var errorStatus, errorMsg;
@@ -1136,5 +1149,6 @@ module.exports = {
     getAllUsers: getAllUsers,
     getAnnouncements: getAnnouncements,
     deleteAnnouncementByID: deleteAnnouncementByID,
-    checkSessionAndUpdate, checkSessionAndUpdate
+    checkSessionAndUpdate, checkSessionAndUpdate,
+    getSponsors: getSponsors
 }
