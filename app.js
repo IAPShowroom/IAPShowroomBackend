@@ -75,10 +75,6 @@ app.all('*', function(req, res){
 })
 
 var server = app.listen(port, () => {
-  var today = new Date();
-  today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
-  var timestamp = today.toLocaleString('en-US');
-  log('Started server on ' + timestamp, logCtx);
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
 //Properly close the server 

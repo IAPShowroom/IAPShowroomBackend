@@ -21,11 +21,17 @@ function logAllDefault (logLevel, message, logCtx) {
 }
 
 function logAll (logLevel, message, logCtx) {
-    winstonLogger.info(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
+    var today = new Date();
+    today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+    var timestamp = today.toISOString();
+    winstonLogger.info(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message + ' timestamp: ' + timestamp);
 }
 
 function logAllError (logLevel, message, logCtx) {
-    winstonLogger.error(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message);
+    var today = new Date();
+    today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+    var timestamp = today.toISOString();
+    winstonLogger.error(logLevel + logCtx.fileName + ':' + (logCtx.fn != '' ? logCtx.fn + ': ' : ' ' ) + message + ' timestamp: ' + timestamp);
 }
 
 function log (message, logCtx) {
