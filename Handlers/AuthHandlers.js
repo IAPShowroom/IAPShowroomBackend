@@ -17,31 +17,31 @@ const nodemailer = require('nodemailer');
 
 //TODO: using for testing, comment when in production
 //Showroom Email configuration
+// let transporter = nodemailer.createTransport({
+//     service: 'gmail',
+//     host: 'smtp.gmail.com',
+//     auth: {
+//         user: config.showroomEmail.email,
+//         pass: config.showroomEmail.password
+//     },
+//     tls: {
+//         rejectUnauthorized: false
+//     }
+// });
+
+//TODO: uncomment when using production
+//IAP Email configuation
 let transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
+    host: 'smtps.ece.uprm.edu',
+    port: 465,
     auth: {
-        user: config.showroomEmail.email,
-        pass: config.showroomEmail.password
+        user: config.iapEmail.email,
+        pass: config.iapEmail.password
     },
     tls: {
         rejectUnauthorized: false
     }
 });
-
-//TODO: uncomment when using production
-//IAP Email configuation
-// let transporter = nodemailer.createTransport({
-//     host: 'smtps.ece.uprm.edu',
-//     port: 465,
-//     auth: {
-//         user: config.iapEmail.email,
-//         pass: config.iapEmail.password
-//     },
-    // tls: {
-    //     rejectUnauthorized: false
-    // }
-// });
 
 let logCtx = {
     fileName: 'AuthHandlers',
