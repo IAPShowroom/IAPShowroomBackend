@@ -62,7 +62,7 @@ app.use(config.showroom_prefix, showroomRouter);
 app.use(config.stream_prefix, streamingRouter);
 
 //health check for testing
-app.get('/test', (req, res) => {
+app.get('/api/test', (req, res) => {
   logCtx.fn = '/test';
   log("Hello, server is running.", logCtx);
   successResponse(res, 200, "Hello.");
@@ -75,8 +75,6 @@ app.all('*', function(req, res){
 })
 
 var server = app.listen(port, () => {
-  var timestamp = new Date().toLocaleString('en-US');
-  log('Started server on ' + timestamp, logCtx);
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
 //Properly close the server 
