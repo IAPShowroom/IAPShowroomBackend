@@ -852,7 +852,7 @@ function getStudentProject (userID, projectID, callback) { //TODO: test
 
 function postMeetHistory (userID, meetingID, callback) {
     logCtx.fn = 'postMeetHistory';
-    var query = "insert into meethistory (meetid, userid, jointime) values ($1, $2, $3)";
+    var query = "insert into meethistory (projectid, userid, jointime) values ($1, $2, $3)";
     var values = [meetingID, userID, new Date(Date.now()).toISOString()]; //TODO: current time seems to be in different time zone? it's 4 hours ahead
     var queryCb = (error, res) => { 
         if (error) {
@@ -916,7 +916,7 @@ function postToEUUID (userID, eeuuid, expires, callback) {
 
 function fetchUserIDsAndRoles (projectID, callback) {
     logCtx.fn = 'fetchUserIDsAndRoles';
-    var query = "select u.userid, u.user_role from users u left join meethistory m on u.userid = m.userid where m.meetid = $1";
+    var query = "select u.userid, u.user_role from users u left join meethistory m on u.userid = m.userid where m.projectid = $1";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
