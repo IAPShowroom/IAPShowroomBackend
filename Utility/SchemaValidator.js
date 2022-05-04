@@ -17,12 +17,11 @@ const logInSchema = Joi.object({
     password: Joi.string().required()
 });
 
-//TODO: review and make more accurate
 const userSchema = Joi.object({
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}).required(),
     password: Joi.string().required(),
-    first_name: Joi.string().alphanum().min(1).max(30).required(),
-    last_name: Joi.string().alphanum().min(1).max(30).required(),
+    first_name: Joi.string().min(1).max(30).required(),
+    last_name: Joi.string().min(1).max(30).required(),
     gender: Joi.string().alphanum().min(1).max(30).required(),
     user_role: Joi.string().min(1).max(30).required()
 });

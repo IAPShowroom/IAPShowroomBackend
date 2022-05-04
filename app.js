@@ -1,7 +1,8 @@
 /**
  * Starting point for the IAP Showroom API server. 
  */
-const https = require('https');
+// const https = require('https');
+const http = require('http');
 const config = require('./Config/config.js');
 const auth = require('./Handlers/AuthHandlers.js');
 const showroomRouter = require('./Endpoints/ShowroomEndpoints.js');
@@ -20,7 +21,7 @@ const session = require('express-session');
 const redis  = require('redis');
 const redisStore = require('connect-redis')(session);
 const WSS = require('./WebSocketServer.js');
-const fs = require('fs');
+// const fs = require('fs');
 
 let logCtx = {
   fileName: 'app',
@@ -45,7 +46,7 @@ const sessionParser = session({ //TODO: review session config settings
   store: store,
   saveUninitialized: false,
   resave: false,
-  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false, httpOnly: config.prod ? true : false} //TODO: make sure cookies are being set in prod
+  cookie: {maxAge: config.SESSION_MAX_AGE, secure: config.prod ? true : false, httpOnly: config.prod ? true : false} 
 });
 
 //Middleware
@@ -75,12 +76,16 @@ app.all('*', function(req, res){
   errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
 })
 
-const options = {
-  cert: fs.readFileSync(config.ssl_cert_path),
-  key: fs.readFileSync(config.ssl_key_path)
-}
+// const options = {
+//   cert: fs.readFileSync(config.ssl_cert_path),
+//   key: fs.readFileSync(config.ssl_key_path)
+// }
 
-var server = https.createServer(options, app).listen(port, () => {
+// var server = https.createServer(options, app).listen(port, () => {
+//   log('IAP Showroom API listening on port ' + port, logCtx);
+// });
+
+var server = http.createServer(app).listen(port, () => {
   log('IAP Showroom API listening on port ' + port, logCtx);
 });
 

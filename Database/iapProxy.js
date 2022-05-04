@@ -66,7 +66,7 @@ function getSessions(latest, callback) {
 
 function getSponsors(callback) {
     logCtx.fn = 'getSponsors';
-    var query = "select * from sponsors";
+    var query = "select s.sponsor_id, u.upload_link as company_url from sponsors s left join uploads u on s.company_logo = u.upload_id left join session_sponsors ss on s.sponsor_id = ss.sponsor_id where ss.session_id = (select year_id as session_id from iap_session where start_date = (select max(start_date) from iap_session))";
     dbUtils.makeQuery(pool, query, callback, (error, res) => {
         if (error) {
             logError(error, logCtx);

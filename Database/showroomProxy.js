@@ -306,7 +306,7 @@ function comparePasswords (email, plaintextPassword, callback) {
                         log("Successfully validated user credentials.", logCtx);
                         callback(null);
                     } else {
-                        var errorMsg = "Invalid email or password.";
+                        var errorMsg = "Invalid email or password. You may also create a new account.";
                         logError(errorMsg, logCtx);
                         callback(new Error(errorMsg));
                     }
@@ -348,7 +348,7 @@ function fetchHashAndUserID (email, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length == 0 ) {
-                var errorMsg = "Invalid email or password."; //mention password even though we're checking email only to confuse hackers
+                var errorMsg = "Invalid email or password. You may also create a new account."; //mention password even though we're checking email only to confuse hackers
                 logError(errorMsg, logCtx);
                 callback(new Error(errorMsg), null, null);
             } else {
