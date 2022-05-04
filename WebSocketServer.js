@@ -9,11 +9,11 @@ const config = require('./Config/config.js');
 
 var httpServer, wss;
 if (config.prod == true) {
-    wss = new WebSocket.Server({ clientTracking: true, server: httpServer });
     httpServer = HttpsServer({
         cert: fs.readFileSync(config.ssl_cert_path),
         key: fs.readFileSync(config.ssl_key_path)
     });
+    wss = new WebSocket.Server({ clientTracking: true, server: httpServer });
 } else wss = new WebSocket.Server({ clientTracking: true, port: config.ws_port });
 
 const { log } = require('./Utility/Logger.js');
