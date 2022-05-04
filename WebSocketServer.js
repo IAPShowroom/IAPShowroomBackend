@@ -3,14 +3,17 @@
  */
 
 const WebSocket = require('ws');
-// const HttpsServer = require('https').createServer;
-// const fs = require('fs');
+const HttpsServer = require('https').createServer;
+const fs = require('fs');
 const config = require('./Config/config.js');
 
-// const httpServer = HttpsServer({
-//     cert: fs.readFileSync(config.ssl_cert_path),
-//     key: fs.readFileSync(config.ssl_key_path)
-// });
+var httpServer;
+if (config.prod == true) {
+    httpServer = HttpsServer({
+        cert: fs.readFileSync(config.ssl_cert_path),
+        key: fs.readFileSync(config.ssl_key_path)
+    });
+}
 
 // const wss = new WebSocket.Server({ clientTracking: true, server: httpServer });
 const wss = new WebSocket.Server({ clientTracking: true, port: config.ws_port });
@@ -52,7 +55,9 @@ wss.on('connection', function (ws, request) {
     });
 });
 
-// httpServer.listen(config.ws_port);
+if (config.prod == true) {
+    httpServer.listen(config.ws_port);
+}
 
 module.exports = {
     wss: wss
