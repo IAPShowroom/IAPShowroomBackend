@@ -1,7 +1,7 @@
 /**
  * Starting point for the IAP Showroom API server. 
  */
-// const https = require('https');
+const https = require('https');
 const http = require('http');
 const config = require('./Config/config.js');
 const auth = require('./Handlers/AuthHandlers.js');
@@ -21,7 +21,7 @@ const session = require('express-session');
 const redis  = require('redis');
 const redisStore = require('connect-redis')(session);
 const WSS = require('./WebSocketServer.js');
-// const fs = require('fs');
+const fs = require('fs');
 
 let logCtx = {
   fileName: 'app',
@@ -76,18 +76,22 @@ app.all('*', function(req, res){
   errorResponse(res, 400, "Invalid URL. Sorry for the inconvenience.");
 })
 
-// const options = {
-//   cert: fs.readFileSync(config.ssl_cert_path),
-//   key: fs.readFileSync(config.ssl_key_path)
-// }
+var server, options;
 
-// var server = https.createServer(options, app).listen(port, () => {
-//   log('IAP Showroom API listening on port ' + port, logCtx);
-// });
-
-var server = http.createServer(app).listen(port, () => {
-  log('IAP Showroom API listening on port ' + port, logCtx);
-});
+if (config.prod == true) {
+  options = {
+    cert: fs.readFileSync(config.ssl_cert_path),
+    key: fs.readFileSync(config.ssl_key_path)
+  }
+  
+  server = https.createServer(options, app).listen(port, () => {
+    log('IAP Showroom API listening on port ' + port, logCtx);
+  });
+} else {
+  server = http.createServer(app).listen(port, () => {
+    log('IAP Showroom API listening on port ' + port, logCtx);
+  });
+}
 
 //Properly close the server 
 process.on('SIGINT', () => { handleKillServer() }); //Ctr+c
@@ -95,7 +99,7 @@ process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
 process.on('SIGTERM', () => { handleKillServer() }); 
 process.on('uncaughtException', function (error) {
   logError(error.message, logCtx);
-  logError(err.stack, logCtx);
+  logError(error.stack, logCtx);
   process.exit(1);
 });
 

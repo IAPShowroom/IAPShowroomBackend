@@ -916,7 +916,7 @@ function postToEUUID (userID, eeuuid, expires, callback) {
 
 function fetchUserIDsAndRoles (projectID, callback) {
     logCtx.fn = 'fetchUserIDsAndRoles';
-    var query = "select u.userid, u.user_role from users u left join meethistory m on u.userid = m.userid where m.projectid = $1";
+    var query = "select distinct (u.userid), u.user_role from users u left join meethistory m on u.userid = m.userid where m.projectid = $1";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);

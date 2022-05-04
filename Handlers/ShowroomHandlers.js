@@ -290,7 +290,7 @@ function getStatusForEvents (allEvents, mainCallback) {
                                 let attendeeUserIDs = [];
                                 //Only add user if they are participating in some way
                                 attendeeObjs.forEach((obj) => {
-                                    if (obj.isListeningOnly == true || obj.hasJoinedVoice == true || obj.hasVideo == true){
+                                    if ((obj.isListeningOnly && obj.isListeningOnly == true )|| (obj.hasJoinedVoice && obj.hasJoinedVoice == true) || (obj.hasVideo && obj.hasVideo == true)){
                                         attendeeUserIDs.push(obj.userID);
                                     }
                                 });
