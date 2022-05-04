@@ -7,16 +7,15 @@ const HttpsServer = require('https').createServer;
 const fs = require('fs');
 const config = require('./Config/config.js');
 
-var httpServer;
+var httpServer, wss;
 if (config.prod == true) {
+    wss = new WebSocket.Server({ clientTracking: true, server: httpServer });
     httpServer = HttpsServer({
         cert: fs.readFileSync(config.ssl_cert_path),
         key: fs.readFileSync(config.ssl_key_path)
     });
-}
+} else wss = new WebSocket.Server({ clientTracking: true, port: config.ws_port });
 
-// const wss = new WebSocket.Server({ clientTracking: true, server: httpServer });
-const wss = new WebSocket.Server({ clientTracking: true, port: config.ws_port });
 const { log } = require('./Utility/Logger.js');
 
 let logCtx = {
