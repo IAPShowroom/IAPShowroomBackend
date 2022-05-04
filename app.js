@@ -95,7 +95,7 @@ process.on('SIGTSP', () => { handleKillServer() }); //Ctr+z
 process.on('SIGTERM', () => { handleKillServer() }); 
 process.on('uncaughtException', function (error) {
   logError(error.message, logCtx);
-  logError(err.stack, logCtx);
+  logError(error.stack, logCtx);
   process.exit(1);
 });
 
