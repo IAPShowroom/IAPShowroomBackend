@@ -36,7 +36,7 @@ wss.on('connection', function (ws, request) {
 
             if (msgJson.type === config.ws_stageUpdate) {
                 isStagelive = msgJson.value;
-                wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_getStageLive })));
+                wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_getStageLive, value: isStagelive })));
             } else if(msgJson.type === config.ws_getStageLive) {
                 ws.send(JSON.stringify({ type: config.ws_getStageLive, value: isStagelive }));
             } else {
