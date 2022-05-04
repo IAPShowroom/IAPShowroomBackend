@@ -369,26 +369,52 @@ function getQnARoomInfo (req, res, next) {
             });
         },
         function (callback) {
-            //Fetch title, abstract, and users associated with project (Student Researchers and Advisors in the participates table)
             projectID = req.query.meeting_id;
             performBBBOps = req.query.bbb; //Indicate whether or not to only bring room info or also do BBB operations
-            showroomDB.getQnARoomInfo(projectID, (error, result) => {
+
+            //Fetch IAP's project ID based on the given project ID from Showroom's table 
+            showroomDB.getIAPPIDFromShowroomPID(projectID, (error, iapPID) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
                     logError(error, logCtx);
-                    callback(error);
+                    callback(error, null);
+                } else if (iapPID == undefined || iapPID == null) {
+                    errorStatus = 404;
+                    errorMsg = "No IAP project id found for given ID.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(iapPID), logCtx);
+                    callback(null, iapPID);
+                }
+            });
+        },
+        function (iapPID, callback) {
+            //Fetch title, abstract, and users associated with project 
+            iapDB.fetchQnARoomInfo(iapPID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
                 } else if (result == undefined || result == null) {
                     errorStatus = 404;
-                    errorMsg = "No records found.";
+                    errorMsg = "No project information records found.";
                     logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg));
+                    callback(new Error(errorMsg), null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    finalResult.project_members = result; //Add list of participating users to the final result
-                    meetingName = result[0].iapproject_title; //Save meeting name for create room call
-                    callback(null);
+                    callback(null, result);
                 }
+            });
+        },
+        function (iapDBResult, callback) {
+            //Clean IAP database data
+            cleanIAPData(iapDBResult, (cleanResult) => {
+                finalResult.project_members = cleanResult; //Add list of participating users to the final result
+                meetingName = cleanResult[0].iapproject_title; //Save meeting name for create room call
+                callback(null);
             });
         },
         function (callback) {
@@ -411,31 +437,35 @@ function getQnARoomInfo (req, res, next) {
         },
         function (callback) {
             if (performBBBOps && performBBBOps == 'true') {
-                //Check role
-                switch (bbbRole) {
-                    case "moderator":
-                        //Create room before joining if they are moderators
-                        meetingHandler.createRoom(meetingName, projectID, callback);
-                        break;
-                    case "viewer":
-                        //Check if the meeting is running, fail the call if it's not
-                        meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
-                            if (error) {
-                                logError(error, logCtx);
-                                callback(error);
-                            } else {
-                                if (!isRunning) {
-                                    errorStatus = 500;
-                                    errorMsg = "Meeting is not running.";
-                                    logError(errorMsg, logCtx);
-                                    callback(new Error(errorMsg));
-                                } else {
-                                    callback(null); //All good, meeting is running, proceed
-                                }
-                            }
-                        });
-                        break;
-                }
+                //Commented this since, for now, we want anyone to be able to join the room. 
+                // //Check role
+                // switch (bbbRole) {
+                //     case "moderator":
+                //         //Create room before joining if they are moderators
+                //         meetingHandler.createRoom(meetingName, projectID, callback);
+                //         break;
+                //     case "viewer":
+                //         //Check if the meeting is running, fail the call if it's not
+                //         meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
+                //             if (error) {
+                //                 logError(error, logCtx);
+                //                 callback(error);
+                //             } else {
+                //                 if (!isRunning) {
+                //                     errorStatus = 500;
+                //                     errorMsg = "Meeting is not running.";
+                //                     logError(errorMsg, logCtx);
+                //                     callback(new Error(errorMsg));
+                //                 } else {
+                //                     callback(null); //All good, meeting is running, proceed
+                //                 }
+                //             }
+                //         });
+                //         break;
+                // }
+
+                //Create room before joining in case it's not already created
+                meetingHandler.createRoom(meetingName, projectID, callback);
             } else {
                 callback(null);
             }
@@ -487,6 +517,34 @@ function getQnARoomInfo (req, res, next) {
             successResponse(res, 200, successMessage, finalResult);
         }
     });
+}
+
+function cleanIAPData (iapDBData, callback) {
+    var currentUser = 0;
+    for (currentUser; currentUser < iapDBData.length; currentUser++) {
+        //Update user roles
+        if (iapDBData[currentUser].user_role == "professor") iapDBData[currentUser].user_role = "Advisor"
+        if (iapDBData[currentUser].user_role == "student") iapDBData[currentUser].user_role = "Student Researcher"
+        //Update name from email if it's null
+        if (iapDBData[currentUser].first_name == null) {
+            var splitEmail = iapDBData[currentUser].email.split('@');
+            var firstAndLastName = splitEmail[0].split('.');
+            var firstName = firstAndLastName[0];
+            var lastName = firstAndLastName[1];
+            //Switch the first letter of each name to upper case
+            firstName = firstName.charAt(0).toUpperCase() + firstName.substring(1);
+            lastName = lastName.charAt(0).toUpperCase() + lastName.substring(1);
+            //Remove any numbers that might be at the end of last name
+            var digitIndex = lastName.search(/\d/);
+            if (digitIndex != -1) {
+                lastName = lastName.substring(0, digitIndex);
+            }
+            //Set parsed names
+            iapDBData[currentUser].first_name = firstName;
+            iapDBData[currentUser].last_name = lastName;
+        }
+    }
+    callback(iapDBData);
 }
 
 function getIAPSessions (req, res, next) {
