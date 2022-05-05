@@ -342,20 +342,18 @@ function forgotPassword (req, res, next) {
         function (callback) {
             sendLink = req.query.sendemail;
             userEmail = req.body.email;
-            if (sendLink != undefined && sendLink == "true") {
-                //Verify if email exists
-                showroomDB.validateEmail(userEmail, (isValid) => {
-                    if (isValid) {
-                        //Email exists in users table, proceed
-                        callback(null);
-                    } else {
-                        errorStatus = 400;
-                        errorMsg = "No user registered with the given email.";
-                        logError(errorMsg, logCtx);
-                        callback(new Error(errorMsg));
-                    }
-                });
-            }
+            //Verify if email exists
+            showroomDB.validateEmail(userEmail, (isValid) => {
+                if (isValid) {
+                    //Email exists in users table, proceed
+                    callback(null);
+                } else {
+                    errorStatus = 400;
+                    errorMsg = "No user registered with the given email.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                }
+            });
         },
         function (callback) {
             if (sendLink != undefined && sendLink == "true") {
