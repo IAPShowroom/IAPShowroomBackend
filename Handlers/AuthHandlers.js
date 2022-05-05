@@ -343,8 +343,6 @@ function forgotPassword (req, res, next) {
             sendLink = req.query.sendemail;
             userEmail = req.body.email;
             if (sendLink != undefined && sendLink == "true") {
-                callback(null); //Skip
-            } else {
                 //Verify if email exists
                 showroomDB.validateEmail(userEmail, (isValid) => {
                     if (isValid) {
