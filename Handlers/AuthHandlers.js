@@ -505,7 +505,6 @@ function verifyUserFromEmail (req, res, next) {
                 //Send HTML response
                 sendHTMLResponse(res, 'ErrorEmailVerify.html');
             } else {
-                console.log("TESTING: llegue a error response cuando era html"); //testing
                 //Catch errors that might occur within resendVerify()
                 if (errorStatus == undefined) errorStatus = 500;
                 if (errorMsg == undefined) errorMsg = error.toString();
