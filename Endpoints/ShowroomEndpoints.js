@@ -35,6 +35,7 @@ var getIAPProjects = '/schedule/projects';
 var getIAPSponsors = '/sponsors';
 var scheduleEvents = '/schedule/events'; //used for GET, POST
 var scheduleEventsID = scheduleEvents + '/:eventID'; //used for GET, PUT, DELETE
+var getIAPValidation = '/validate-iap';
 
 //Bind routes to their handlers:
 
@@ -50,6 +51,7 @@ showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers);
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus);
 showroomRouter.get(getQnARoomInfo, auth.authenticate, showroomHandler.getQnARoomInfo); 
+showroomRouter.get(getIAPValidation, showroomHandler.validateIAPUser); 
 showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); 
 showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); 
 showroomRouter.get(scheduleEventsID, auth.authorizeAdmin, showroomHandler.getScheduleEventByID);

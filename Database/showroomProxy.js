@@ -578,6 +578,26 @@ function getIAPPIDFromShowroomPID (projectID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
 }
 
+function getShowroomPIDFromIAPPID (projectID, callback) {
+    logCtx.fn = 'getShowroomPIDFromIAPPID';
+    var query = "select projectid from projects where iapprojectid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found, send null result to provoke 404 error
+            } else {
+                var result = res.rows[0].projectid;
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+}
+
 function verifyEmail (userID, callback) {
     logCtx.fn = 'verifyEmail';
     var query = "update users set verifiedemail=true where userid = $1";
@@ -1030,5 +1050,6 @@ module.exports = {
     deleteAnnouncement: deleteAnnouncement,
     fetchShowroomSession: fetchShowroomSession,
     deleteAllShowroomProjects: deleteAllShowroomProjects,
-    getIAPPIDFromShowroomPID: getIAPPIDFromShowroomPID
+    getIAPPIDFromShowroomPID: getIAPPIDFromShowroomPID,
+    getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID
 }

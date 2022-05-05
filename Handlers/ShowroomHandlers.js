@@ -75,7 +75,6 @@ function getStats (req, res, next) {
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
-                joinDate.setTime(joinDate.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
                 correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
                 if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {
@@ -524,6 +523,92 @@ function getQnARoomInfo (req, res, next) {
             var successMessage = "Successfully retrieved room information."
             if (performBBBOps && performBBBOps == 'true') successMessage = successMessage + " And produced join URL.";
             successResponse(res, 200, successMessage, finalResult);
+        }
+    });
+}
+
+function validateIAPUser (req, res, next) {
+    logCtx.fn = 'validateIAPUser';
+    var isValid = true;
+    var iDSet = new Set();
+    var errorStatus, errorMsg, givenProjectIDs;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateValidateIAPUser(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            givenProjectIDs = req.body.meeting_ids;
+            email = req.body.email;
+            //Fetch project IDs for the given email 
+            iapDB.fetchProjectsForEmail(email, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No IAP project IDs found associated with given email.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (iapProjectIDs, callback) {
+            async.forEachLimit(iapProjectIDs, 1, (iapPID, cb) => {
+                //Fetch Showroom's project ID based on the given project ID from IAP
+                showroomDB.getShowroomPIDFromIAPPID(iapPID, (error, showroomID) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                        cb(error);
+                    } else if (showroomID != undefined && showroomID != null) {
+                        log("Response data: " + JSON.stringify(showroomID), logCtx);
+                        iDSet.add(showroomID);
+                        cb(null);
+                    } else {
+                        log("No Showroom project ID found for given IAP project ID: " + iapPID, logCtx);
+                        cb(null);
+                    }
+                });
+            }, (error) => {
+                callback(error); //null if no error
+            });
+        },
+        function (callback) {
+            //Check if IDs match
+            if (iDSet.size == 0) {
+                logError("ID set is empty, given user is not associated with any IAP Projects: " + email, logCtx);
+                isValid = false;
+            } else {
+                givenProjectIDs.forEach((pid) => {
+                    if (!iDSet.has(pid)) {
+                        logError("Given user is not associated with any IAP Projects: " + email, logCtx);
+                        isValid = false;
+                    }
+                });
+            }
+            callback(null);
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            var successMessage = "Retrieved project information, user validation status: " + isValid;
+            successResponse(res, 200, successMessage, { is_valid: isValid});
         }
     });
 }
@@ -1222,5 +1307,6 @@ module.exports = {
     getAnnouncements: getAnnouncements,
     deleteAnnouncementByID: deleteAnnouncementByID,
     checkSessionAndUpdate, checkSessionAndUpdate,
-    getSponsors: getSponsors
+    getSponsors: getSponsors,
+    validateIAPUser: validateIAPUser
 }
