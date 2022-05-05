@@ -92,6 +92,11 @@ const qnaInfoSchema = Joi.object({
     bbb: Joi.boolean()
 });
 
+const validateIAPSchema = Joi.object({
+    meeting_ids: Joi.array().required(),
+    email: Joi.string().required()
+});
+
 const getIAPProjectsSchema = Joi.object({
     session_id: Joi.number(),
     update: Joi.boolean()
@@ -414,6 +419,16 @@ function validateQNARoomInfo (req, callback) { //TODO: test
     }
 }
 
+function validateValidateIAPUser (req, callback) {
+    logCtx.fn = 'validateValidateIAPUser';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, validateIAPSchema, callback);
+    } else {
+        logError("Missing request body parameters.", logCtx);
+        callback(new Error("Missing request body parameters."));
+    }
+}
+
 function validateGetRoomStatus (req, callback) {
     logCtx.fn = 'validateGetRoomStatus';
     if (req.query && Object.keys(req.query).length != 0) {
@@ -486,5 +501,6 @@ module.exports = {
     validateServerSideEvent: validateServerSideEvent,
     validateChangePassword: validateChangePassword,
     validateVerifyEmail: validateVerifyEmail,
-    validateDeleteAnnouncement: validateDeleteAnnouncement
+    validateDeleteAnnouncement: validateDeleteAnnouncement,
+    validateValidateIAPUser: validateValidateIAPUser
 }

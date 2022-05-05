@@ -37,10 +37,27 @@ let logCtx = {
 // testGenerateEUUID();
 // testFetchShowroomSession();
 // testCheckSessionAndUpdate();
-testGetIAPPIDFromShowroomPID();
+// testGetIAPPIDFromShowroomPID();
+// testFetchProjectsForEmail();
+testGetShowroomPIDFromIAPPID();
 
 
 //test functions:
+
+function testFetchProjectsForEmail() {
+    logCtx.fn = 'testFetchProjectsForEmail';
+    logTest("Test started", logCtx);
+    var email = 'gerson.beauchamp@upr.edu';
+    iapDB.fetchProjectsForEmail(email, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        iapDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testGenerateEUUID() {
     logCtx.fn = 'testGenerateEUUID';
@@ -56,6 +73,22 @@ function testGenerateEUUID() {
         logTest("Test ended", logCtx);
     });
 }
+
+function testGetShowroomPIDFromIAPPID() {
+    logCtx.fn = 'testGetShowroomPIDFromIAPPID';
+    logTest("Test started", logCtx);
+    var iapPID = 111;
+    showroomDB.getShowroomPIDFromIAPPID(iapPID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
 function testGetIAPPIDFromShowroomPID() {
     logCtx.fn = 'testGetIAPPIDFromShowroomPID';
     logTest("Test started", logCtx);

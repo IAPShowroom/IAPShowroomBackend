@@ -530,12 +530,13 @@ function getQnARoomInfo (req, res, next) {
 
 function validateIAPUser (req, res, next) {
     logCtx.fn = 'validateIAPUser';
-    var finalResult = {};
-    var errorStatus, errorMsg, projectID;
+    var isValid = true;
+    var iDSet = new Set();
+    var errorStatus, errorMsg, givenProjectIDs;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validateQNARoomInfo(req, (error) => { //Re-using validate function because of the same meeting_id query param
+            validator.validateValidateIAPUser(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -545,28 +546,10 @@ function validateIAPUser (req, res, next) {
             });
         },
         function (callback) {
-            projectID = req.query.meeting_id;
-            //Fetch IAP's project ID based on the given project ID from Showroom's table 
-            showroomDB.getIAPPIDFromShowroomPID(projectID, (error, iapPID) => {
-                if (error) {
-                    errorStatus = 500;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                    callback(error, null);
-                } else if (iapPID == undefined || iapPID == null) {
-                    errorStatus = 404;
-                    errorMsg = "No IAP project id found for given ID.";
-                    logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg), null);
-                } else {
-                    log("Response data: " + JSON.stringify(iapPID), logCtx);
-                    callback(null, iapPID);
-                }
-            });
-        },
-        function (iapPID, callback) {
-            //Fetch title, abstract, and users associated with project 
-            iapDB.fetchQnARoomInfo(iapPID, (error, result) => {
+            givenProjectIDs = req.body.meeting_ids;
+            email = req.body.email;
+            //Fetch project IDs for the given email 
+            iapDB.fetchProjectsForEmail(email, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -574,7 +557,7 @@ function validateIAPUser (req, res, next) {
                     callback(error, null);
                 } else if (result == undefined || result == null) {
                     errorStatus = 404;
-                    errorMsg = "No project information records found.";
+                    errorMsg = "No IAP project IDs found associated with given email.";
                     logError(errorMsg, logCtx);
                     callback(new Error(errorMsg), null);
                 } else {
@@ -583,21 +566,50 @@ function validateIAPUser (req, res, next) {
                 }
             });
         },
-        function (iapDBResult, callback) {
-            //Clean IAP database data
-            cleanIAPData(iapDBResult, (cleanResult) => {
-                finalResult.project_members = cleanResult; //Add list of participating users to the final result
-                meetingName = cleanResult[0].iapproject_title; //Save meeting name for create room call
-                callback(null);
+        function (iapProjectIDs, callback) {
+            async.forEachLimit(iapProjectIDs, 1, (iapPID, cb) => {
+                //Fetch Showroom's project ID based on the given project ID from IAP
+                showroomDB.getShowroomPIDFromIAPPID(iapPID, (error, showroomID) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                        cb(error);
+                    } else if (showroomID != undefined && showroomID != null) {
+                        log("Response data: " + JSON.stringify(showroomID), logCtx);
+                        iDSet.add(showroomID);
+                        cb(null);
+                    } else {
+                        log("No Showroom project ID found for given IAP project ID: " + iapPID, logCtx);
+                        cb(null);
+                    }
+                });
+            }, (error) => {
+                callback(error); //null if no error
             });
+        },
+        function (callback) {
+            //Check if IDs match
+            if (iDSet.size == 0) {
+                logError("ID set is empty, given user is not associated with any IAP Projects: " + email, logCtx);
+                isValid = false;
+            } else {
+                givenProjectIDs.forEach((pid) => {
+                    if (!iDSet.has(pid)) {
+                        logError("Given user is not associated with any IAP Projects: " + email, logCtx);
+                        isValid = false;
+                    }
+                });
+            }
+            callback(null);
         }
     ], (error) => {
         //Send responses
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            var successMessage = "Successfully retrieved project information."
-            successResponse(res, 200, successMessage, finalResult);
+            var successMessage = "Retrieved project information, user validation status: " + isValid;
+            successResponse(res, 200, successMessage, { is_valid: isValid});
         }
     });
 }

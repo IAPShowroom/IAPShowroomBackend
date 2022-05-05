@@ -120,12 +120,33 @@ function fetchQnARoomInfo (projectID, callback) {
             if (res.rowCount == 0) {
                 callback(null, null); //No info found, send null result to provoke 404 error
             } else {
-                var result = res.rows; //returns counts for users
+                var result = res.rows;
                 callback(null, result);
             }
         }
     };
     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+}
+
+function fetchProjectsForEmail (email, callback) { 
+    //Fetch project IDs corresponding to the given email 
+    logCtx.fn = 'fetchQnARoomInfo';
+    var query = "select pm.project_id as project_id from users u left join project_membership pm on u.user_id = pm.user_id where u.email = $1 and pm.session_id = (select year_id as session_id from iap_session where start_date = (select max(start_date) from iap_session));";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found, send null result to provoke 404 error
+            } else {
+                var result = res.rows.map(obj => obj.project_id); //returns array of project IDs for user
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [email], callback, queryCb);
 }
 
 function endPool() {
@@ -141,5 +162,6 @@ module.exports = {
     validateEmail: validateEmail,
     getSessions: getSessions,
     getSponsors: getSponsors,
-    fetchQnARoomInfo: fetchQnARoomInfo
+    fetchQnARoomInfo: fetchQnARoomInfo,
+    fetchProjectsForEmail: fetchProjectsForEmail
 }
