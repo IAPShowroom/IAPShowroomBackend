@@ -68,10 +68,17 @@ function getStats (req, res, next) {
         },
         function (liveResults, inPersonResults, callback) {
             var uniqueUserIDs = new Set();
+            var today = new Date();
+            today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+            var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
             liveResults.forEach((obj) => {
+                //Get date of meethistory record to compare with current date
+                var joinDate = new Date(obj.jointime)
+                joinDate.setTime(joinDate.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+                correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
-                if (!uniqueUserIDs.has(obj.userid)) {
+                if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {
                     filterStats(finalResult, obj);
                     uniqueUserIDs.add(obj.userid);
                 }
@@ -283,8 +290,10 @@ function getStatusForEvents (allEvents, mainCallback) {
                                 let attendeeUserIDs = [];
                                 //Only add user if they are participating in some way
                                 attendeeObjs.forEach((obj) => {
-                                    if ((obj.isListeningOnly && obj.isListeningOnly == true )|| (obj.hasJoinedVoice && obj.hasJoinedVoice == true) || (obj.hasVideo && obj.hasVideo == true)){
-                                        attendeeUserIDs.push(obj.userID);
+                                    if (obj != undefined) { //Let's prevent "can't read from undefined" errors
+                                        if ((obj.isListeningOnly && obj.isListeningOnly == true )|| (obj.hasJoinedVoice && obj.hasJoinedVoice == true) || (obj.hasVideo && obj.hasVideo == true)){
+                                            attendeeUserIDs.push(obj.userID);
+                                        }
                                     }
                                 });
                                 //Place into a Set for faster look up: O(1)
