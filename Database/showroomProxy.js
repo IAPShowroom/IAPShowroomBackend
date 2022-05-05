@@ -597,7 +597,7 @@ function verifyEmail (userID, callback) {
 
 function getLiveStats (callback) {
     logCtx.fn = 'getLiveStats';
-    var query = "select u.userid, m.meethistoryid,  u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by u.userid, user_role, department, gender, grad_date, meethistoryid having meethistoryid is not null;"; 
+    var query = "select u.userid, m.meethistoryid, m.jointime, u.user_role, sr.department, u.gender, sr.grad_date, count(u.userid) from users u left join student_researchers sr on u.userid = sr.userid left join company_representatives cr on u.userid = cr.userid left join advisors a on u.userid = a.userid left join meethistory m on u.userid = m.userid group by u.userid, user_role, department, gender, grad_date, meethistoryid, jointime having meethistoryid is not null;"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -873,7 +873,9 @@ function getStudentProject (userID, projectID, callback) { //TODO: test
 function postMeetHistory (userID, meetingID, callback) {
     logCtx.fn = 'postMeetHistory';
     var query = "insert into meethistory (projectid, userid, jointime) values ($1, $2, $3)";
-    var values = [meetingID, userID, new Date(Date.now()).toISOString()]; //TODO: current time seems to be in different time zone? it's 4 hours ahead
+    var today = new Date();
+    today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+    var values = [meetingID, userID, today.toISOString()];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
