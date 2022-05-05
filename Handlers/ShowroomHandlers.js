@@ -69,13 +69,13 @@ function getStats (req, res, next) {
         function (liveResults, inPersonResults, callback) {
             var uniqueUserIDs = new Set();
             var today = new Date();
-            today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+            today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
-                joinDate.setTime(joinDate.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+                joinDate.setTime(joinDate.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
                 correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
                 if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {

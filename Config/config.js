@@ -9,6 +9,7 @@ const ENVIRONMENT = env.ENVIRONMENT || 'dev'; //set NODE_ENV to 'production' wit
 const prod = ENVIRONMENT == 'prod';
 const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 43200000 //12 hours in ms
+const DATE_TIMEZONE_OFFSET = 14400000; //4 hours in ms to account for UTC offset
 const EMAIL_VERIFY_MAX_AGE = 1; //1 day 
 
 const showroomEmail = {
@@ -132,5 +133,6 @@ module.exports = {
     ssl_cert_path: ssl_cert_path,
     ssl_key_path: ssl_key_path,
     ws_stageUpdate: ws_stageUpdate,
-    ws_getStageLive: ws_getStageLive
+    ws_getStageLive: ws_getStageLive,
+    DATE_TIMEZONE_OFFSET: DATE_TIMEZONE_OFFSET
 };

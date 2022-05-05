@@ -512,7 +512,7 @@ function getEvents(all, allByDate, upcoming, time, date, callback) {
         dbUtils.makeQuery(pool, query, callback, queryCb);
     } else {
         var today = new Date();
-        today.setTime(today.getTime() - 14400000);
+        today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET);
         var currentDate = today.toISOString().slice(0,10);
         dbUtils.makeQueryWithParams(pool, query, [currentDate], callback, queryCb);
     }
@@ -874,7 +874,7 @@ function postMeetHistory (userID, meetingID, callback) {
     logCtx.fn = 'postMeetHistory';
     var query = "insert into meethistory (projectid, userid, jointime) values ($1, $2, $3)";
     var today = new Date();
-    today.setTime(today.getTime() - 14400000); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
+    today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
     var values = [meetingID, userID, today.toISOString()];
     var queryCb = (error, res) => { 
         if (error) {
