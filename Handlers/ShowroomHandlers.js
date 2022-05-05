@@ -155,11 +155,7 @@ function filterStats (finalResult, obj) { //TODO: finish testing and get it work
             case config.userGenders.other:
                 finalResult.totalResStudNotDisclosed += count;
                 break;
-            case config.userGenders.undisclosed:
-                finalResult.totalResStudUndisclosed += count;
-                break;
         }
-
         //Count student researchers soon to graduate
         if (new Date(obj.grad_date).getFullYear() == new Date(Date.now()).getFullYear()) {
             finalResult.resStudGRAD += count;
@@ -183,9 +179,6 @@ function filterStats (finalResult, obj) { //TODO: finish testing and get it work
             break;
         case config.userGenders.other:
             finalResult.totalNotDisclosed += count;
-            break;
-        case config.userGenders.undisclosed:
-            finalResult.totalResStudUndisclosed += count;
             break;
     }
 }
