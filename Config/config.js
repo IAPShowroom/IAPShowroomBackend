@@ -66,7 +66,7 @@ const ws_upcomingevents = "upcomingevents";
 const ws_die = "die";
 const ws_stageUpdate = "stageupdate";
 const ws_getStageLive = "stagelive";
-const ws_port = 8081;
+const ws_port = env.WS_PORT || 8081;
 const ssl_cert_path = env.SSL_CERT_PATH || 'testcertpath';
 const ssl_key_path = env.SSL_KEY_PATH || 'testkeypath';
 
