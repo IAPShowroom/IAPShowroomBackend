@@ -528,6 +528,80 @@ function getQnARoomInfo (req, res, next) {
     });
 }
 
+function validateIAPUser (req, res, next) {
+    logCtx.fn = 'validateIAPUser';
+    var finalResult = {};
+    var errorStatus, errorMsg, projectID;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateQNARoomInfo(req, (error) => { //Re-using validate function because of the same meeting_id query param
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            projectID = req.query.meeting_id;
+            //Fetch IAP's project ID based on the given project ID from Showroom's table 
+            showroomDB.getIAPPIDFromShowroomPID(projectID, (error, iapPID) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (iapPID == undefined || iapPID == null) {
+                    errorStatus = 404;
+                    errorMsg = "No IAP project id found for given ID.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(iapPID), logCtx);
+                    callback(null, iapPID);
+                }
+            });
+        },
+        function (iapPID, callback) {
+            //Fetch title, abstract, and users associated with project 
+            iapDB.fetchQnARoomInfo(iapPID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No project information records found.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function (iapDBResult, callback) {
+            //Clean IAP database data
+            cleanIAPData(iapDBResult, (cleanResult) => {
+                finalResult.project_members = cleanResult; //Add list of participating users to the final result
+                meetingName = cleanResult[0].iapproject_title; //Save meeting name for create room call
+                callback(null);
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            var successMessage = "Successfully retrieved project information."
+            successResponse(res, 200, successMessage, finalResult);
+        }
+    });
+}
+
 function cleanIAPData (iapDBData, callback) {
     var currentUser = 0;
     for (currentUser; currentUser < iapDBData.length; currentUser++) {
@@ -1222,5 +1296,6 @@ module.exports = {
     getAnnouncements: getAnnouncements,
     deleteAnnouncementByID: deleteAnnouncementByID,
     checkSessionAndUpdate, checkSessionAndUpdate,
-    getSponsors: getSponsors
+    getSponsors: getSponsors,
+    validateIAPUser: validateIAPUser
 }
