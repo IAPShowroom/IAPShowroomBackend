@@ -75,7 +75,6 @@ function getStats (req, res, next) {
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
-                joinDate.setTime(joinDate.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
                 correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
                 if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {
