@@ -107,6 +107,27 @@ function validateEmail (email, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function fetchQnARoomInfo (projectID, callback) { 
+    //Fetch title, abstract, and users associated with project 
+    logCtx.fn = 'fetchQnARoomInfo';
+    var query = "select p.title as iapproject_title, p.abstract as iapproject_abstract, u.email, u.first_name as first_name, u.last_name as last_name, u.user_type as user_role from users u left join project_membership pm on u.user_id = pm.user_id left join projects p on pm.project_id = p.project_id where u.is_deleted = false and pm.project_id = $1 and pm.session_id = (select year_id as session_id from iap_session where start_date = (select max(start_date) from iap_session))";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found, send null result to provoke 404 error
+            } else {
+                var result = res.rows; //returns counts for users
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+}
+
 function endPool() {
     logCtx.fn = 'endPool';
     //Close the connection pool when server closes
@@ -119,5 +140,6 @@ module.exports = {
     endPool: endPool,
     validateEmail: validateEmail,
     getSessions: getSessions,
-    getSponsors: getSponsors
+    getSponsors: getSponsors,
+    fetchQnARoomInfo: fetchQnARoomInfo
 }

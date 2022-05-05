@@ -280,7 +280,6 @@ function getBBBRoleAndName(data, projectID, callback) {
     var role = 'viewer';
     var userID = data.userID;
     var isAdmin = data.admin;
-    var isPM = data.isPM;
     showroomDB.getRoleAndName(userID, (error, result) => {
         if (error) {
             errorStatus = 500;
@@ -289,7 +288,7 @@ function getBBBRoleAndName(data, projectID, callback) {
             callback(error, null, null, null);
         } else if (result == undefined || result == null) {
             errorStatus = 404;
-            errorMsg = "No users found.";
+            errorMsg = "No users found for the given user ID: " + userID;
             logError(error, logCtx);
             callback(new Error(errorMsg), null, null, null);
         } else {
@@ -301,7 +300,7 @@ function getBBBRoleAndName(data, projectID, callback) {
                 if (result.projectIDs) { //List of project IDs is not null, they are advisor or student researcher
                     //Check if this is room is of one of their projects
                     result.projectIDs.forEach( id => {
-                        if (id == projectID && isPM) role = 'moderator';
+                        if (id == projectID) role = 'moderator';
                     });
                 }
             }

@@ -37,6 +37,7 @@ let logCtx = {
 // testGenerateEUUID();
 // testFetchShowroomSession();
 // testCheckSessionAndUpdate();
+testGetIAPPIDFromShowroomPID();
 
 
 //test functions:
@@ -46,6 +47,20 @@ function testGenerateEUUID() {
     logTest("Test started", logCtx);
     var userID = 3;
     authHandler.generateEUUID(userID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+function testGetIAPPIDFromShowroomPID() {
+    logCtx.fn = 'testGetIAPPIDFromShowroomPID';
+    logTest("Test started", logCtx);
+    var showroomPID = 5;
+    showroomDB.getIAPPIDFromShowroomPID(showroomPID, (error, info) => {
         if (error) {
             logError(error, logCtx);
         }
