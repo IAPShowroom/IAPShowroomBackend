@@ -51,7 +51,7 @@ showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers);
 //Events 
 showroomRouter.get(getRoomStatus, auth.authenticate, showroomHandler.getRoomStatus);
 showroomRouter.get(getQnARoomInfo, auth.authenticate, showroomHandler.getQnARoomInfo); 
-showroomRouter.get(getIAPValidation, showroomHandler.validateIAPUser); 
+showroomRouter.post(getIAPValidation, showroomHandler.validateIAPUser); 
 showroomRouter.get(scheduleEvents, auth.authenticate, showroomHandler.getScheduleEvents); 
 showroomRouter.post(scheduleEvents, auth.authorizeAdmin, showroomHandler.postScheduleEvents); 
 showroomRouter.get(scheduleEventsID, auth.authorizeAdmin, showroomHandler.getScheduleEventByID);
