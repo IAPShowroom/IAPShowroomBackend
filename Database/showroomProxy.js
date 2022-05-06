@@ -92,7 +92,8 @@ function registerGeneralUser (hash, body, callback) {
     var email = body.email;
     var password = hash;
     var role = body.user_role;
-    var gender = body.gender;
+    var upperCaseGender = body.gender == 'Undisclosed' ? 'other' : body.gender;
+    var gender = upperCaseGender.toLowerCase();
     var verified = false;
     let query = "insert into users (first_name, last_name, email, password, user_role, gender, verifiedemail) values ($1, $2, $3, $4, $5, $6, $7)";
     let values = [firstName, lastName, email, password, role, gender, verified];
