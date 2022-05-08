@@ -29,7 +29,7 @@ const pool = new Pool({
     database: dbConfig.database,
     password: dbConfig.password,
     port: dbConfig.port,
-    ssl: {
+    ssl: config.LOCAL_DB ? false : {
         rejectUnauthorized: false
     },
 });
