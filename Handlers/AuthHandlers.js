@@ -63,7 +63,7 @@ function registerUser (req, res, next) {
                 callback(error);
             });
         },
-        //Commented since we decided that advisors will be validated by the administrator
+        //Commented --v since IAP validation has been exported into its own endpoint.
         // function (callback) {
         //     //Check email against IAP if it's an advisor
         //     if (req.body.user_role == config.userRoles.advisor) {
@@ -83,18 +83,19 @@ function registerUser (req, res, next) {
         //         callback(null);
         //     }
         // },
-        function (callback) {
-            //Check email is not already in use
-            userEmail = req.body.email;
-            showroomDB.validateEmail(userEmail, (error) => {
-                if (error) {
-                    errorStatus = 409; //Conflict
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                }
-                callback(error);
-            });
-        },
+        //Commented --v since it has been exported into its own endpoint.
+        // function (callback) {
+        //     //Check email is not already in use
+        //     userEmail = req.body.email;
+        //     showroomDB.validateEmail(userEmail, (error) => {
+        //         if (error) {
+        //             errorStatus = 409; //Conflict
+        //             errorMsg = error.toString();
+        //             logError(error, logCtx);
+        //         }
+        //         callback(error);
+        //     });
+        // },
         function (callback) {
             //Persist user data based on role
             showroomDB.registerUser(req, (error, result) => {
