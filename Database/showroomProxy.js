@@ -539,6 +539,7 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+//Not used anymore, project information is being pulled directly from IAP's database. There is an equivalent function in iapProxy.js
 function getQnARoomInfo (projectID, callback) {
     logCtx.fn = 'getQnARoomInfo';
     var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
