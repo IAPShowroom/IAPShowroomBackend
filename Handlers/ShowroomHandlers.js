@@ -68,10 +68,13 @@ function getStats (req, res, next) {
         },
         function (liveResults, inPersonResults, callback) {
             var uniqueUserIDs = new Set();
+            var date = req.query.date;
             var today = new Date();
             today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
+            if(date !== undefined) currentDate = date;
+            console.log('LIVE STATS FOR DATE',currentDate);
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
