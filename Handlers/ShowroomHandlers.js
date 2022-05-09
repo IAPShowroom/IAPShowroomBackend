@@ -74,21 +74,25 @@ function getStats (req, res, next) {
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
             if(date !== undefined) currentDate = date;
-            console.log('LIVE STATS FOR DATE',currentDate);
+            // console.log('LIVE STATS FOR DATE',currentDate);
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
                 correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
-                if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {
+                if (!uniqueUserIDs.has(obj.userid) && currentDate === correctedJoinDate) {
                     filterStats(finalResult, obj);
                     uniqueUserIDs.add(obj.userid);
                 }
             });
             //Filter in person records to derive statistics
+            console.log(uniqueUserIDs, "Live persons attended ", inPersonResults);
+            
             if (inPersonResults != null) {
                 inPersonResults.forEach((obj) => {
-                    filterStats(finalResult, obj);
+                    let d = obj.live_date.toISOString().slice(0,10);
+                    console.log("Live person Date ", d, "Filtering by ", currentDate);
+                    if(currentDate === d) filterStats(finalResult, obj);
                 });
             }
             callback(null); 
@@ -106,7 +110,7 @@ function getStats (req, res, next) {
 function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
     var count = parseInt(obj.count, 10)
     //Count based on user role
-    if (obj.user_role == config.userRoles.studentResearcher) {
+    if (obj.user_role === config.userRoles.studentResearcher) {
         //Count student researcher
         finalResult.researchStudParticipants += count;
         //Count student researchers by department
