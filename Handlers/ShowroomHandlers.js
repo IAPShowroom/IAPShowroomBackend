@@ -68,24 +68,29 @@ function getStats (req, res, next) {
         },
         function (liveResults, inPersonResults, callback) {
             var uniqueUserIDs = new Set();
+            var date = req.query.date;
             var today = new Date();
             today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
+            if(date !== undefined) currentDate = date;
+            // console.log('LIVE STATS FOR DATE',currentDate);
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
                 correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
-                if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {
+                if (!uniqueUserIDs.has(obj.userid) && currentDate === correctedJoinDate) {
                     filterStats(finalResult, obj);
                     uniqueUserIDs.add(obj.userid);
                 }
             });
             //Filter in person records to derive statistics
+            
             if (inPersonResults != null) {
                 inPersonResults.forEach((obj) => {
-                    filterStats(finalResult, obj);
+                    let d = obj.live_date.toISOString().slice(0,10);
+                    if(currentDate === d) filterStats(finalResult, obj);
                 });
             }
             callback(null); 
@@ -103,7 +108,7 @@ function getStats (req, res, next) {
 function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
     var count = parseInt(obj.count, 10)
     //Count based on user role
-    if (obj.user_role == config.userRoles.studentResearcher) {
+    if (obj.user_role === config.userRoles.studentResearcher) {
         //Count student researcher
         finalResult.researchStudParticipants += count;
         //Count student researchers by department
@@ -894,6 +899,99 @@ function updateScheduleEvent (req, res, next) {
     });
 }
 
+
+function updateBatchEvents (req, res, next) {
+    logCtx.fn = 'updateBatchEvent';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //TODO: Validate request payload
+
+            // validator.validateUpdateEvent(req, (error) => {
+            //     if (error) {
+            //         logError(error, logCtx);
+            //         errorStatus = 400;
+            //         errorMsg = error.message;
+            //     }
+                callback(null);
+            // });
+        },
+        function (callback) {
+            //Persist updated event to DB
+            console.log("time: "+req.params.time);
+            let time = new Date(parseInt(req.params.time));
+            var upcoming = true;
+            var all = false;
+            var date = req.body.e_date;
+
+            showroomDB.getEvents(all, false, upcoming, time, date, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No events found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        },
+        function(result, callback){
+            var event = req.body;
+            let time = new Date(result[0].starttime);
+            let duration = new Date(result[0].duration);
+            var delta = +new Date(event.starttime) - +time + (+new Date(event.duration) - +duration) * 60000;
+            var updatedEventList = [];
+
+            updatedEventList.push(event);
+
+            for(let i = 1; i < result.length; i++){
+                event = result[i];
+                let updatedEvent = {
+                    ...event,
+                    starttime : new Date(+new Date(event.starttime) + delta)
+                };
+                updatedEventList.push(updatedEvent);
+            }
+
+            showroomDB.updateBatchEvents(updatedEventList, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else if (result == undefined || result == null) {
+                    errorStatus = 404;
+                    errorMsg = "No events found.";
+                    logError(error, logCtx);
+                    callback(new Error(errorMsg), null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_progressbar })));
+                    WSS.wss.clients.forEach(ws => ws.send(JSON.stringify({ type: config.ws_upcomingevents })));
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Successfully updated event.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
+
+
+
+
 function deleteScheduleEvent (req, res, next) {
     logCtx.fn = 'deleteScheduleEvent';
     var errorStatus, errorMsg;
@@ -1298,6 +1396,7 @@ module.exports = {
     getIAPSessions: getIAPSessions,
     getScheduleEventByID: getScheduleEventByID,
     filterStats: filterStats,
+    updateBatchEvents: updateBatchEvents,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects, 
     validateResearchMember: validateResearchMember,
     postLiveAttendance: postLiveAttendance,
