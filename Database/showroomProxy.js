@@ -29,7 +29,7 @@ const pool = new Pool({
     database: dbConfig.database,
     password: dbConfig.password,
     port: dbConfig.port,
-    ssl: config.LOCAL_DB ? false : {
+    ssl: config.LOCAL_DB === 'true' ? false : {
         rejectUnauthorized: false
     },
 });
@@ -477,6 +477,31 @@ function createEvents (eventList, callback) {
     });
 }
 
+function updateBatchEvents (eventList, callback) {
+    logCtx.fn = 'updateBatchEvents';
+    var result;
+    var eventArrays = eventList;
+    //Insert each array into DB
+    async.forEachLimit(eventArrays, MAX_ASYNC, (event, cb) => {
+        let values = [event.adminid, event.starttime, event.duration, event.title, event.projectid, event.e_date, event.meetid];
+        dbUtils.makeQueryWithParams(pool,"update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where meetid = $7", values, cb, (error, res) => {
+            if (error) {
+                logError(error, logCtx);
+            } else {
+                log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+                result = res.rows; //returns []
+            }
+            cb(error);
+        });
+    }, (error) => {
+        if (error) {
+            callback(error, null);
+        } else {
+            callback(null, result);
+        }
+    });
+}
+
 function getEvents(all, allByDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
@@ -493,13 +518,8 @@ function getEvents(all, allByDate, upcoming, time, date, callback) {
             if (res.rowCount == 0) {
                 callback(null, null); //No events found, send null result to provoke 404 error
             } else {
-                if (upcoming) {
-                    //Sennd current event and next upcoming
-                    result = res.rows[1] ? [res.rows[0], res.rows[1]] : [res.rows[0]];
-                } else {
-                    //Send all events
-                    result = res.rows;
-                }
+                //Send all events
+                result = res.rows;
                 callback(null, result);
             }
         }
@@ -1046,6 +1066,7 @@ module.exports = {
     postToEUUID: postToEUUID,
     fetchAllUsers: fetchAllUsers,
     updateEUUID: updateEUUID,
+    updateBatchEvents: updateBatchEvents,
     fetchAllAnnouncements: fetchAllAnnouncements,
     deleteAnnouncement: deleteAnnouncement,
     fetchShowroomSession: fetchShowroomSession,
