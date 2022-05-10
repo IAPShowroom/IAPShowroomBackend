@@ -7,6 +7,7 @@ const showroomDB = require('../Database/showroomProxy.js');
 const authHandler = require('../Handlers/AuthHandlers.js');
 const showroomHandler = require('../Handlers/ShowroomHandlers.js');
 const testData = require('./TestData.js');
+const config = require('../Config/config.js');
 const { logError, logDebug, logTest } = require('../Utility/Logger.js');
 
 let logCtx = {
@@ -39,10 +40,59 @@ let logCtx = {
 // testCheckSessionAndUpdate();
 // testGetIAPPIDFromShowroomPID();
 // testFetchProjectsForEmail();
-testGetShowroomPIDFromIAPPID();
+// testGetShowroomPIDFromIAPPID();
+// testValidateEmailWithUserID();
+testFetchEUUID();
 
 
 //test functions:
+
+function testFetchEUUID() {
+    logCtx.fn = 'testFetchEUUID';
+    logTest("Test started", logCtx);
+    var userID = 71;
+    var type = config.euuidTypes.verify;
+    showroomDB.fetchEUUID(userID, type, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testGetUserIDFromEmail() {
+    logCtx.fn = 'testGetUserIDFromEmail';
+    logTest("Test started", logCtx);
+    var email = 'jorge.e.vega6@gmail.com';
+    showroomDB.getUserIDFromEmail(email, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testValidateEmailWithUserID() {
+    logCtx.fn = 'testValidateEmailWithUserID';
+    logTest("Test started", logCtx);
+    var email = 'jorge.e.vega6@gmail.com';
+    var userID = 70;
+    showroomDB.validateEmailWithUserID(userID, email, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testFetchProjectsForEmail() {
     logCtx.fn = 'testFetchProjectsForEmail';

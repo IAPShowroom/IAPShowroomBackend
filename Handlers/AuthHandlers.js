@@ -113,7 +113,7 @@ function registerUser (req, res, next) {
         function (result, callback) {
             //Generate email unique ID for the verify email link
             var updateEUUID = false;
-            generateEUUID(updateEUUID, result.userID, (error, emailUUID) => {
+            generateEUUID(updateEUUID, result.userID, config.euuidTypes.verify, (error, emailUUID) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -148,18 +148,24 @@ function registerUser (req, res, next) {
     });
 }
 
-function generateEUUID (updateEUUID, userID, callback) {
+function generateEUUID (updateEUUID, userID, type, callback) {
     logCtx.fn = 'generateEUUID';
     //Generate new email UUID and expire time
     var emailUUID = crypto.randomUUID();
     var currentDate = new Date();
-    //Add max age of expire time to the current date
-    currentDate.setDate(currentDate.getDate() + config.EMAIL_VERIFY_MAX_AGE);
+    if (type == config.euuidTypes.verify) {
+        //Add max age of expire time to the current date
+        currentDate.setDate(currentDate.getDate() + config.EMAIL_VERIFY_MAX_AGE);
+    } else if (type == config.euuidTypes.password) {
+        //Add password change max age
+        currentDate.setTime(currentDate.getTime() + config.PASSWORD_CHANGE_MAX_AGE); 
+    }
+    currentDate.setTime(currentDate.getTime() - config.DATE_TIMEZONE_OFFSET); //subtract timezone difference from UTC
     var expireTime = currentDate.toISOString();
 
     if (updateEUUID) {
         //Update euuid in table
-        showroomDB.updateEUUID(userID, emailUUID, expireTime, (error) => {
+        showroomDB.updateEUUID(userID, emailUUID, expireTime, type, (error) => {
             if (error) {
                 logError(error, logCtx);
                 callback(error, null);
@@ -169,7 +175,7 @@ function generateEUUID (updateEUUID, userID, callback) {
         });
     } else {
         //Post euuid to table
-        showroomDB.postToEUUID(userID, emailUUID, expireTime, (error) => {
+        showroomDB.postToEUUID(userID, emailUUID, expireTime, type, (error) => {
             if (error) {
                 logError(error, logCtx);
                 callback(error, null);
@@ -326,7 +332,7 @@ function logOut (req, res, next) {
 
 function forgotPassword (req, res, next) {
     logCtx.fn = 'forgotPassword';
-    var errorStatus, errorMsg, sendLink, userEmail;
+    var errorStatus, errorMsg, sendLink, userEmail, userID, updatePassEUUID, emailUUID;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -342,18 +348,117 @@ function forgotPassword (req, res, next) {
         function (callback) {
             sendLink = req.query.sendemail;
             userEmail = req.body.email;
-            //Verify if email exists
-            showroomDB.validateEmail(userEmail, (isValid) => {
-                if (isValid) {
-                    //Email exists in users table, proceed
-                    callback(null);
-                } else {
-                    errorStatus = 400;
-                    errorMsg = "No user registered with the given email.";
-                    logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg));
-                }
-            });
+            if (sendLink != undefined && sendLink == "true") {
+                //Verify if email exists and retrieve user ID
+                showroomDB.getUserIDFromEmail(userEmail, (error, resultUserID) => {
+                    if (error) {
+                        //Catches error where user email is not registered 
+                        logError(error, logCtx);
+                        errorStatus = 400;
+                        errorMsg = error.message;
+                        callback(new Error(errorMsg));
+                    } else {
+                        userID = resultUserID;
+                        callback(null);
+                    }
+                });
+            } else {
+                userID = req.body.user_id;
+                //Verify if email exists
+                showroomDB.validateEmailWithUserID(userID, userEmail, (error, isValid) => {
+                    if (error) {
+                        logError(error, logCtx);
+                        errorStatus = 400;
+                        errorMsg = error.message;
+                        callback(new Error(errorMsg));
+                    } else {
+                        if (isValid) {
+                            //Email exists for given user ID, proceed
+                            callback(null);
+                        } else {
+                            errorStatus = 400;
+                            errorMsg = "Invalid email provided.";
+                            logError(errorMsg, logCtx);
+                            callback(new Error(errorMsg));
+                        }
+                    }
+                });
+            }
+        },
+        function (callback) {
+            if (sendLink != undefined && sendLink == "true") {
+                //Check if we should generate a new one or update the existing
+                showroomDB.fetchEUUID(userID, config.euuidTypes.password, (error, result) => {
+                    if (error) {
+                        if (error.message == "Invalid email confirmation link.") {
+                            //This means that there was no active record found
+                            updatePassEUUID = false;
+                            callback(null); //proceed
+                        } else {
+                            //Something actually blew up
+                            errorStatus = 500;
+                            errorMsg = error.toString();
+                            logError(error, logCtx);
+                            callback(error);
+                        }
+                    } else {
+                        //There is already a record
+                        updatePassEUUID = true;
+                        callback(null); //proceed
+                    }
+                });
+            } else {
+                callback(null); //Skip
+            }
+        },
+        function (callback) {
+            if (sendLink != undefined && sendLink == "true") {
+                //Generate euuid and associate with user ID with password type
+                generateEUUID(updatePassEUUID, userID, config.euuidTypes.password, (error, resultEmailUUID) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                        callback(error);
+                    } else {
+                        log("Successfully generated email UUID for password change.", logCtx);
+                        emailUUID = resultEmailUUID;
+                        callback(null);
+                    }
+                });
+            } else {
+                //Check if email UUID is valid for the given user and not expired
+                showroomDB.fetchEUUID(userID, config.euuidTypes.password, (error, result) => {
+                    if (error) {
+                        if (error.message == "Invalid email confirmation link.") {
+                            errorStatus = 400;
+                            errorMsg = "Invalid or expired password reset link. Please ask to resend a new one."
+                            logError(error, logCtx);
+                            callback(new Error(errorMsg));
+                        } else {
+                            //Something actually blew up
+                            errorStatus = 500;
+                            errorMsg = error.toString();
+                            logError(error, logCtx);
+                            callback(error);
+                        }
+                    } else {
+                        //Check that euuid matches and it's not expired yet
+                        emailUUID = req.body.euuid;
+                        var currentDate = new Date();
+                        currentDate.setTime(currentDate.getTime() - config.DATE_TIMEZONE_OFFSET); //Correct time with UTC offset
+                        if (result.euuid == emailUUID && currentDate < new Date(result.expiration)) {
+                            log("Request to change password is valid.", logCtx);
+                            callback(null); //Continue to update the users table
+                        } else {
+                            errorStatus = 400;
+                            errorMsg = "Invalid or expired password reset link. Please ask to resend a new one."
+                            logError(error, logCtx);
+                            callback(new Error(errorMsg));
+                        }
+                    }
+                });
+            }
         },
         function (callback) {
             if (sendLink != undefined && sendLink == "true") {
@@ -390,8 +495,12 @@ function forgotPassword (req, res, next) {
         function (callback) {
             if (sendLink != undefined && sendLink == "true") {
                 //Send verification email 
-                var showroomURL = "https://" + config.SHOWROOM_HOST + "/changePassword"; 
-                var subject = "Reset your password"
+                if (config.prod == true) {
+                    var showroomURL = "https://" + config.SHOWROOM_HOST + "/changePassword/" + userID + "/" + emailUUID; 
+                } else {
+                    var showroomURL = "http://localhost:3000/changePassword/" + userID + "/" + emailUUID; 
+                }
+                var subject = "Reset your password";
                 var message = "Please click the following link to reset your password. " + showroomURL; 
                 sendEmail(userEmail, subject, message, (error, info) => {
                     if (error) {
@@ -459,7 +568,7 @@ function verifyUserFromEmail (req, res, next) {
             if (resend == "false" || resend == undefined) {
                 //Check if emailUUID isn't expired or invalid
                 var emailUUID = req.params.euuid;
-                showroomDB.fetchEUUID(userID, (error, result) => {
+                showroomDB.fetchEUUID(userID, config.euuidTypes.verify, (error, result) => {
                     if (error) {
                         errorStatus = 500;
                         errorMsg = error.toString();
@@ -467,7 +576,9 @@ function verifyUserFromEmail (req, res, next) {
                         callback(error);
                     } else {
                         //Check that euuid matches and it's not expired yet
-                        if (result.euuid == emailUUID && new Date() < new Date(result.expiration)) {
+                        var currentDate = new Date();
+                        currentDate.setTime(currentDate.getTime() - config.DATE_TIMEZONE_OFFSET); //Correct time with UTC offset
+                        if (result.euuid == emailUUID && currentDate < new Date(result.expiration)) {
                             log("Email confirmation is valid.", logCtx);
                             callback(null); //Continue to update the users table
                         } else {
@@ -526,7 +637,7 @@ function resendVerify (userID, userEmail, mainCallback) {
         function (callback) {
             //Generate email unique ID for the verify email link
             var updateEUUID = true;
-            generateEUUID(updateEUUID, userID, (error, emailUUID) => {
+            generateEUUID(updateEUUID, userID, config.euuidTypes.verify, (error, emailUUID) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();

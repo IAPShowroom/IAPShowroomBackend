@@ -29,7 +29,7 @@ const pool = new Pool({
     database: dbConfig.database,
     password: dbConfig.password,
     port: dbConfig.port,
-    ssl: {
+    ssl: config.LOCAL_DB === 'true' ? false : {
         rejectUnauthorized: false
     },
 });
@@ -233,10 +233,10 @@ function fetchUserEmail (userID, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function fetchEUUID (userID, callback) {
+function fetchEUUID (userID, type, callback) {
     logCtx.fn = 'fetchEUUID';
-    var query = "select euuid, expiration from emailuuid where userid = $1";
-    var values = [userID];
+    var query = "select euuid, expiration from emailuuid where userid = $1 and type = $2";
+    var values = [userID, type];
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -447,6 +447,56 @@ function validateEmail (email, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function getUserIDFromEmail (email, callback) {
+    //Verify that email is not already being used
+    logCtx.fn = 'getUserIDFromEmail';
+    var query = "select userid from users where email = $1";
+    var values = [email];
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length > 0 ) {
+                var userID = res.rows[0].userid;
+                log("Successfully got user ID: " + userID + " for email: " + email, logCtx);
+                callback(null, userID);
+            } else {
+                var errorMsg = "This email is not registered.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function validateEmailWithUserID (userID, userEmail, callback) {
+    //Verify that email exists for the given user ID
+    logCtx.fn = 'validateEmailWithUserID';
+    var query = "select email from users where userid = $1";
+    var values = [userID];
+    var isValid = false;
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rows.length > 0 ) { //If no rows, leave isValid as false and carry on
+                //There was an email associated with the user ID, now check if it's the same one given
+                var resultEmail = res.rows[0].email;
+                if (userEmail == resultEmail) {
+                    isValid = true; //Emails matched
+                }
+            }
+            callback(null, isValid);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function createEvents (eventList, callback) {
     logCtx.fn = 'createEvents';
     var result;
@@ -478,6 +528,31 @@ function createEvents (eventList, callback) {
     });
 }
 
+function updateBatchEvents (eventList, callback) {
+    logCtx.fn = 'updateBatchEvents';
+    var result;
+    var eventArrays = eventList;
+    //Insert each array into DB
+    async.forEachLimit(eventArrays, MAX_ASYNC, (event, cb) => {
+        let values = [event.adminid, event.starttime, event.duration, event.title, event.projectid, event.e_date, event.meetid];
+        dbUtils.makeQueryWithParams(pool,"update iap_events set adminid=$1, starttime=$2, duration=$3, title=$4, projectid=$5, e_date=$6 where meetid = $7", values, cb, (error, res) => {
+            if (error) {
+                logError(error, logCtx);
+            } else {
+                log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+                result = res.rows; //returns []
+            }
+            cb(error);
+        });
+    }, (error) => {
+        if (error) {
+            callback(error, null);
+        } else {
+            callback(null, result);
+        }
+    });
+}
+
 function getEvents(all, allByDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
     var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
@@ -494,13 +569,8 @@ function getEvents(all, allByDate, upcoming, time, date, callback) {
             if (res.rowCount == 0) {
                 callback(null, null); //No events found, send null result to provoke 404 error
             } else {
-                if (upcoming) {
-                    //Sennd current event and next upcoming
-                    result = res.rows[1] ? [res.rows[0], res.rows[1]] : [res.rows[0]];
-                } else {
-                    //Send all events
-                    result = res.rows;
-                }
+                //Send all events
+                result = res.rows;
                 callback(null, result);
             }
         }
@@ -638,7 +708,7 @@ function getLiveStats (callback) {
 
 function getInPersonStats (callback) {
     logCtx.fn = 'getInPersonStats';
-    var query = "select user_role, major, department, gender, grad_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date, major;"; 
+    var query = "select user_role, major, department, gender, grad_date, live_date, count(uid) from inperson_users group by user_role, department, department, gender, grad_date, major, live_date;"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -707,10 +777,10 @@ function updateEvent (eventID, event, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function updateEUUID (userID, emailUUID, expireTime, callback) {
+function updateEUUID (userID, emailUUID, expireTime, type, callback) {
     logCtx.fn = 'updateEUUID';
-    var query = "update emailuuid set euuid=$1, expiration=$2 where userid = $3";
-    var values = [emailUUID, expireTime, userID];
+    var query = "update emailuuid set euuid=$1, expiration=$2 where userid = $3 and type = $4";
+    var values = [emailUUID, expireTime, userID, type];
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -941,10 +1011,10 @@ function postToShowroomProjects (iapProjects, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
-function postToEUUID (userID, eeuuid, expires, callback) {
+function postToEUUID (userID, eeuuid, expires, type, callback) {
     logCtx.fn = 'postToEUUID';
-    var query = "insert into emailuuid (userid, euuid, expiration) values ($1, $2, $3)";
-    var values = [userID, eeuuid, expires];
+    var query = "insert into emailuuid (userid, euuid, expiration, type) values ($1, $2, $3, $4)";
+    var values = [userID, eeuuid, expires, type];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -1044,13 +1114,15 @@ module.exports = {
     fetchEUUID: fetchEUUID,
     fetchUserEmail: fetchUserEmail,
     postLiveAttendance: postLiveAttendance,
-    postToEUUID: postToEUUID,
     fetchAllUsers: fetchAllUsers,
     updateEUUID: updateEUUID,
+    updateBatchEvents: updateBatchEvents,
     fetchAllAnnouncements: fetchAllAnnouncements,
     deleteAnnouncement: deleteAnnouncement,
     fetchShowroomSession: fetchShowroomSession,
     deleteAllShowroomProjects: deleteAllShowroomProjects,
     getIAPPIDFromShowroomPID: getIAPPIDFromShowroomPID,
-    getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID
+    getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID,
+    validateEmailWithUserID: validateEmailWithUserID,
+    getUserIDFromEmail: getUserIDFromEmail
 }

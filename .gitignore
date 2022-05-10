@@ -3,3 +3,4 @@ node_modules/
 *.rdb
 *.sh
 *.txt
+DS_Store
