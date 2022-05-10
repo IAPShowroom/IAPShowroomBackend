@@ -97,6 +97,8 @@ const iapDBConfig = {
     database: env.IAP_DB_NAME || 'test_db_name'
 }
 
+const LOCAL_DB = env.LOCAL_DB || false;
+
 const session_secret = env.SESSION_SECRET || 'testsessionsecret';
 
 module.exports = {
@@ -129,6 +131,7 @@ module.exports = {
     userGenders: userGenders,
     showroomEmail: showroomEmail,
     iapEmail: iapEmail,
+    LOCAL_DB: LOCAL_DB,
     ws_port: ws_port,
     ssl_cert_path: ssl_cert_path,
     ssl_key_path: ssl_key_path,
