@@ -993,50 +993,48 @@ function getProjects (req, res, next) {
                 callback(error);
             });
         },
+        // function (callback) {
+        //     sessionID = req.query.session_id;
+        //     updateProjects = req.query.update;
+        //     if (sessionID == undefined) {
+        //         //Fetch session being used in Showroom's projects table
+        //         showroomDB.fetchShowroomSession((error, showroomSession) => {
+        //             if (error) {
+        //                 logError(error, logCtx);
+        //                 errorMsg = error.toString();
+        //                 errorStatus = 500;
+        //                 callback(error);
+        //             } else {
+        //                 if (showroomSession == null) { //No projects were found
+        //                     sessionID = 1; //Set as incorrect session on purpose to trigger update
+        //                 } else {
+        //                     log("Response data: " + JSON.stringify(showroomSession), logCtx);
+        //                     sessionID = showroomSession;
+        //                 }
+        //                 callback(null);
+        //             }
+        //         });
+        //     } else {
+        //         callback(null); //Session ID was provided, skip
+        //     }
+        // },
+        // function (callback) {
+        //     if (updateProjects != undefined && updateProjects == "true") {
+        //         //Fetch the current session used in Showroom's projects
+        //         //Update table with projects from given session if they don't match
+        //         checkSessionAndUpdate(sessionID, (error, latestSession) => {
+        //             if (error) {
+        //                 logError(error, logCtx);
+        //                 errorMsg = error.toString();
+        //                 errorStatus = 500;
+        //             }
+        //             callback(error, latestSession); //Null if no error
+        //         });
+        //     } else {
+        //         callback(null, null); //Skip
+        //     }
+        // },
         function (callback) {
-            sessionID = req.query.session_id;
-            updateProjects = req.query.update;
-            if (sessionID == undefined) {
-                //Fetch session being used in Showroom's projects table
-                showroomDB.fetchShowroomSession((error, showroomSession) => {
-                    if (error) {
-                        logError(error, logCtx);
-                        errorMsg = error.toString();
-                        errorStatus = 500;
-                        callback(error);
-                    } else {
-                        if (showroomSession == null) { //No projects were found
-                            sessionID = 1; //Set as incorrect session on purpose to trigger update
-                        } else {
-                            log("Response data: " + JSON.stringify(showroomSession), logCtx);
-                            sessionID = showroomSession;
-                        }
-                        callback(null);
-                    }
-                });
-            } else {
-                callback(null); //Session ID was provided, skip
-            }
-        },
-        function (callback) {
-            if (updateProjects != undefined && updateProjects == "true") {
-                //Fetch the current session used in Showroom's projects
-                //Update table with projects from given session if they don't match
-                checkSessionAndUpdate(sessionID, (error, latestSession) => {
-                    if (error) {
-                        logError(error, logCtx);
-                        errorMsg = error.toString();
-                        errorStatus = 500;
-                    }
-                    callback(error, latestSession); //Null if no error
-                });
-            } else {
-                callback(null, null); //Skip
-            }
-        },
-        function (latestSession, callback) {
-            logCtx.fn = "getProjects";
-            var finalSessionID = updateProjects != undefined && updateProjects == "true" ? latestSession : sessionID;
             //Fetch projects from IAP
             showroomDB.fetchProjects(finalSessionID, (error, iapProjects) => { //result is array of objs with project info
                 if (error) {
