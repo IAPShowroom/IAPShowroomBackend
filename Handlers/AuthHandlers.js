@@ -495,7 +495,11 @@ function forgotPassword (req, res, next) {
         function (callback) {
             if (sendLink != undefined && sendLink == "true") {
                 //Send verification email 
-                var showroomURL = "https://" + config.SHOWROOM_HOST + "/changePassword/" + userID + "/" + emailUUID; 
+                if (config.prod == true) {
+                    var showroomURL = "https://" + config.SHOWROOM_HOST + "/changePassword/" + userID + "/" + emailUUID; 
+                } else {
+                    var showroomURL = "http://localhost:3000/changePassword/" + userID + "/" + emailUUID; 
+                }
                 var subject = "Reset your password";
                 var message = "Please click the following link to reset your password. " + showroomURL; 
                 sendEmail(userEmail, subject, message, (error, info) => {
