@@ -86,12 +86,10 @@ function getStats (req, res, next) {
                 }
             });
             //Filter in person records to derive statistics
-            console.log(uniqueUserIDs, "Live persons attended ", inPersonResults);
             
             if (inPersonResults != null) {
                 inPersonResults.forEach((obj) => {
                     let d = obj.live_date.toISOString().slice(0,10);
-                    console.log("Live person Date ", d, "Filtering by ", currentDate);
                     if(currentDate === d) filterStats(finalResult, obj);
                 });
             }
