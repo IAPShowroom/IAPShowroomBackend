@@ -540,25 +540,25 @@ function getEventByID (eventID, callback) {
 }
 
 //Not used anymore, project information is being pulled directly from IAP's database. There is an equivalent function in iapProxy.js
-function getQnARoomInfo (projectID, callback) {
-    logCtx.fn = 'getQnARoomInfo';
-    var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
-    var queryCb = (error, res) => { 
-        if (error) {
-            logError(error, logCtx);
-            callback(error, null);
-        } else {
-            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            if (res.rowCount == 0) {
-                callback(null, null); //No info found, send null result to provoke 404 error
-            } else {
-                var result = res.rows; //returns counts for users
-                callback(null, result);
-            }
-        }
-    };
-    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
-}
+// function getQnARoomInfo (projectID, callback) {
+//     logCtx.fn = 'getQnARoomInfo';
+//     var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
+//     var queryCb = (error, res) => { 
+//         if (error) {
+//             logError(error, logCtx);
+//             callback(error, null);
+//         } else {
+//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+//             if (res.rowCount == 0) {
+//                 callback(null, null); //No info found, send null result to provoke 404 error
+//             } else {
+//                 var result = res.rows; //returns counts for users
+//                 callback(null, result);
+//             }
+//         }
+//     };
+//     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+// }
 
 function getIAPPIDFromShowroomPID (projectID, callback) {
     logCtx.fn = 'getIAPPIDFromShowroomPID';
@@ -1035,7 +1035,7 @@ module.exports = {
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects,
     validateResearchMember: validateResearchMember,
-    getQnARoomInfo: getQnARoomInfo,
+    // getQnARoomInfo: getQnARoomInfo, //Not used anymore
     getName: getName,
     getLiveStats: getLiveStats,
     getInPersonStats: getInPersonStats,
