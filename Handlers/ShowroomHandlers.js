@@ -68,24 +68,29 @@ function getStats (req, res, next) {
         },
         function (liveResults, inPersonResults, callback) {
             var uniqueUserIDs = new Set();
+            var date = req.query.date;
             var today = new Date();
             today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET); //Subtract 4 hours (in ms) to account for UTC timezone [needed for production server in ECE]
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
+            if(date !== undefined) currentDate = date;
+            // console.log('LIVE STATS FOR DATE',currentDate);
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
                 correctedJoinDate = joinDate.toISOString().slice(0,10);
                 //Only count unique userID entries
-                if (!uniqueUserIDs.has(obj.userid) && currentDate == correctedJoinDate) {
+                if (!uniqueUserIDs.has(obj.userid) && currentDate === correctedJoinDate) {
                     filterStats(finalResult, obj);
                     uniqueUserIDs.add(obj.userid);
                 }
             });
             //Filter in person records to derive statistics
+            
             if (inPersonResults != null) {
                 inPersonResults.forEach((obj) => {
-                    filterStats(finalResult, obj);
+                    let d = obj.live_date.toISOString().slice(0,10);
+                    if(currentDate === d) filterStats(finalResult, obj);
                 });
             }
             callback(null); 
@@ -103,7 +108,7 @@ function getStats (req, res, next) {
 function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
     var count = parseInt(obj.count, 10)
     //Count based on user role
-    if (obj.user_role == config.userRoles.studentResearcher) {
+    if (obj.user_role === config.userRoles.studentResearcher) {
         //Count student researcher
         finalResult.researchStudParticipants += count;
         //Count student researchers by department
