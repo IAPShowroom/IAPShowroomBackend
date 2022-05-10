@@ -945,43 +945,14 @@ function updateBatchEvents (req, res, next) {
 
             updatedEventList.push(event);
 
-            
-
             for(let i = 1; i < result.length; i++){
                 event = result[i];
-
-                // let updatedEvent = {
-                //     meetid: event.meetid,
-                //     adminid: event.adminid,
-                //     starttime: event.starttime + delta,
-                //     duration: event.duration,
-                //     title: event.title,
-                //     projectid: event.projectid,
-                //     e_date: event.e_date,
-                // };
-                console.log("event: ");
-                console.log(event);
-                console.log("event starttime: ");
-                console.log(new Date(event.starttime));
-                console.log("delta: ");
-                console.log(delta);
-
                 let updatedEvent = {
                     ...event,
                     starttime : new Date(+new Date(event.starttime) + delta)
                 };
-
-                updatedEvent.starttime = new Date(+new Date(event.starttime) + delta)
-
-                console.log("updatedEvent: ");
-                console.log(updatedEvent);
-
                 updatedEventList.push(updatedEvent);
-                
             }
-
-            var event = req.body; //JSON object of event to be updated
-            // var eventID = req.params.eventID;
 
             showroomDB.updateBatchEvents(updatedEventList, (error, result) => {
                 if (error) {
