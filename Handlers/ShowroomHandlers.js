@@ -1134,7 +1134,7 @@ function getProjects (req, res, next) {
         // },
         function (callback) {
             //Fetch projects from IAP
-            showroomDB.fetchProjects(finalSessionID, (error, iapProjects) => { //result is array of objs with project info
+            iapDB.fetchProjects((error, iapProjects) => { //result is array of objs with project info
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
