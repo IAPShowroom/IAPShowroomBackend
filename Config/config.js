@@ -11,6 +11,7 @@ const logDebug = env.LOG_DEBUG == 'true';
 const SESSION_MAX_AGE = 43200000 //12 hours in ms
 const DATE_TIMEZONE_OFFSET = 14400000; //4 hours in ms to account for UTC offset
 const EMAIL_VERIFY_MAX_AGE = 1; //1 day 
+const PASSWORD_CHANGE_MAX_AGE = 600000; //10 minutes in ms
 
 const showroomEmail = {
     name: 'IAP Showroom',
@@ -22,6 +23,11 @@ const iapEmail = {
     name: 'IAP Team',
     email: env.IAP_MAIL_EMAIL,
     password: env.IAP_MAIL_PASSWORD
+}
+
+const euuidTypes = {
+    verify: 'verify',
+    password: 'password'
 }
 
 const userRoles = {
@@ -137,5 +143,7 @@ module.exports = {
     ssl_key_path: ssl_key_path,
     ws_stageUpdate: ws_stageUpdate,
     ws_getStageLive: ws_getStageLive,
-    DATE_TIMEZONE_OFFSET: DATE_TIMEZONE_OFFSET
+    DATE_TIMEZONE_OFFSET: DATE_TIMEZONE_OFFSET,
+    euuidTypes: euuidTypes,
+    PASSWORD_CHANGE_MAX_AGE: PASSWORD_CHANGE_MAX_AGE
 };
