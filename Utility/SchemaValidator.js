@@ -65,6 +65,11 @@ const postConferenceSchema = Joi.object({
     c_date: Joi.date().required()
 });
 
+const updateConferenceSchema = Joi.object({
+    c_text: Joi.string().required(),
+    c_date: Joi.date().required()
+});
+
 const createRoomSchema = Joi.object({
     meeting_name: Joi.string().required(),
     projectid: Joi.number().required()
@@ -111,6 +116,14 @@ const getIAPProjectsSchema = Joi.object({
 
 const roomStatusSchema = Joi.object({
     date: Joi.date().required()
+});
+
+const deleteConferenceSchema = Joi.object({
+    conferenceID: Joi.number().required()
+});
+
+const getConferenceSchema = Joi.object({
+    conference_id: Joi.number().required()
 });
 
 const eventListSchema = Joi.array().items(eventSchema);
@@ -165,6 +178,28 @@ function validateUpdateEvent (req, callback) {
     });
 }
 
+function validateUpdateConference (req, callback) {
+    logCtx.fn = 'validateUpdateConference';
+    if (req.params != undefined && Object.keys(req.params).length != 0 && req.params.conferenceID != undefined) {
+        if (!isNaN(parseInt(req.params.conferenceID, 10))) {
+            if (req.body != undefined && Object.keys(req.body).length != 0) {
+                validateRequest(req, updateConferenceSchema, callback);
+            } else {
+                logError("Missing or invalid request body.", logCtx);
+                callback(new Error("Missing or invalid request body."));
+            }
+        } else {
+            var errorMsg = "Invalid data type for path parameter.";
+            logError(errorMsg, logCtx);
+            callback(new Error(errorMsg));
+        }
+    } else {
+        var errorMsg = "Missing path parameter.";
+        logError(errorMsg, logCtx);
+        callback(new Error(errorMsg));
+    }
+}
+
 function validateDeleteEvent (req, callback) {
     validateEventWithID(req, callback, null);
 }
@@ -211,6 +246,31 @@ function validateDeleteAnnouncement (req, callback) {
     //Check path paramters
     if (req.params != undefined && Object.keys(req.params).length != 0) {
         validateRequest(req.params, verifyDeleteAnnouncementSchema, callback);
+    } else {
+        logError("Missing or invalid path parameters.", logCtx);
+        callback(new Error("Missing or invalid path parameters."));
+    }
+}
+
+function validateGetConference (req, callback) {
+    logCtx.fn = 'validateGetConference';
+    //Check path paramters
+    if (req.query != undefined && Object.keys(req.query).length != 0) {
+        var obj = {body: req.query}; //Bypass req.body look up in validateRequest
+        validateRequest(obj, getConferenceSchema, callback);
+    } else {
+        //No need to check further if the query parameter is missing
+        log("Request schema successfully validated.", logCtx);
+        callback(null);
+    }
+}
+
+function validateDeleteConference (req, callback) {
+    logCtx.fn = 'validateDeleteConference';
+    //Check path paramters
+    if (req.params != undefined && Object.keys(req.params).length != 0) {
+        var obj = {body: req.params}; //Bypass req.body look up in validateRequest
+        validateRequest(obj, deleteConferenceSchema, callback);
     } else {
         logError("Missing or invalid path parameters.", logCtx);
         callback(new Error("Missing or invalid path parameters."));
@@ -491,11 +551,6 @@ function validateServerSideEvent(req, callback){
     callback(null);
 }
 
-
-//optionally implement this function to add additional sql injection defense
-// function sanitizeInput(input, callback){ //callback: (error) => {}
-// }
-
 module.exports = {
     validateRegisterUser: validateRegisterUser,
     validateEventList: validateEventList,
@@ -520,5 +575,8 @@ module.exports = {
     validateVerifyEmail: validateVerifyEmail,
     validateDeleteAnnouncement: validateDeleteAnnouncement,
     validateValidateIAPUser: validateValidateIAPUser,
-    validatePostConference: validatePostConference
+    validatePostConference: validatePostConference,
+    validateUpdateConference: validateUpdateConference,
+    validateDeleteConference: validateDeleteConference,
+    validateGetConference: validateGetConference
 }

@@ -45,9 +45,43 @@ let logCtx = {
 // testFetchEUUID();
 // testPostConference();
 testFetchConferences();
+// testUpdateConferenceByID();
+// testDeleteConferenceByID();
 
 
 //test functions:
+
+function testDeleteConferenceByID() {
+    logCtx.fn = 'testDeleteConferenceByID';
+    logTest("Test started", logCtx);
+    var cid = 3;
+    showroomDB.deleteConferenceByID(cid, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testUpdateConferenceByID() {
+    logCtx.fn = 'testUpdateConferenceByID';
+    logTest("Test started", logCtx);
+    var msg = 'IAP Conference Fall 1998';
+    var date = '1998-10-23'
+    var cid = 3;
+    showroomDB.updateConferenceByID(msg, date, cid, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testPostConference() {
     logCtx.fn = 'testPostConference';

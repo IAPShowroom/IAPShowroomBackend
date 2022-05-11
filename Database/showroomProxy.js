@@ -1090,6 +1090,43 @@ function postConference (message, date, callback) {
     dbUtils.makeQueryWithParams(pool, query, [message, date, isdeleted], callback, queryCb);
 }
 
+function updateConferenceByID (cid, c_text, c_date, callback) {
+    logCtx.fn = 'updateConferenceByID';
+    var query = "update conference set c_text=$1, c_date=$2 where cid = $3 returning cid"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [c_text, c_date, cid], callback, queryCb);
+}
+
+function deleteConferenceByID (conferenceID, callback) {
+    logCtx.fn = 'deleteConferenceByID';
+    var query = "update conference set isdeleted=true where cid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete conference.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [conferenceID], callback, queryCb);
+}
+
 function fetchConferences (conferenceID, callback) {
     logCtx.fn = 'fetchConferences';
     if (conferenceID != undefined) {
@@ -1166,5 +1203,7 @@ module.exports = {
     validateEmailWithUserID: validateEmailWithUserID,
     getUserIDFromEmail: getUserIDFromEmail,
     postConference: postConference,
-    fetchConferences: fetchConferences
+    fetchConferences: fetchConferences,
+    updateConferenceByID: updateConferenceByID,
+    deleteConferenceByID: deleteConferenceByID
 }

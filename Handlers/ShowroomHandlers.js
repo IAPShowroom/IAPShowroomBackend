@@ -1421,7 +1421,50 @@ function postConference (req, res, next) {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            successResponse(res, 200, "Successfully posted conference.");
+            successResponse(res, 201, "Successfully posted conference.");
+            
+        }
+    });
+}
+
+function updateConferenceByID (req, res, next) {
+    logCtx.fn = 'updateConferenceByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateUpdateConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch events from DB
+            var cid = req.params.conferenceID;
+            var c_text = req.body.c_text;
+            var c_date = req.body.c_date;
+            showroomDB.updateConferenceByID(cid, c_text, c_date, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null);
+                }
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Successfully updated conference.");
             
         }
     });
@@ -1431,6 +1474,17 @@ function getConferences (req, res, next) {
     logCtx.fn = "getConferences";
     var errorStatus, errorMsg;
     async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateGetConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
         function (callback) {
             logCtx.fn = "getConferences";
             var byID = req.query.conference_id;
@@ -1464,6 +1518,46 @@ function getConferences (req, res, next) {
     });
 }
 
+function deleteConferenceByID (req, res, next) {
+    logCtx.fn = 'deleteConferenceByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateDeleteConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+            var cid = req.params.conferenceID;
+            showroomDB.deleteConferenceByID(cid, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully deleted conference.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
 module.exports = {
     getProjects: getProjects,
     getStats: getStats,
@@ -1489,6 +1583,6 @@ module.exports = {
     validateIAPUser: validateIAPUser,
     postConference: postConference,
     getConferences: getConferences,
-    // updateConferenceByID: updateConferenceByID,
-    // deleteConferenceByID: deleteConferenceByID
+    updateConferenceByID: updateConferenceByID,
+    deleteConferenceByID: deleteConferenceByID
 }
