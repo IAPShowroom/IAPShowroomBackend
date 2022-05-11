@@ -317,12 +317,11 @@ function comparePasswords (email, plaintextPassword, callback) {
         function (callback) {
             //Check if user is admin (and add to result along with user ID)
             //Login should also check for other roles 
-            isUserAdmin(result.userID, (error, adminID) => { //TODO: test
+            isUserAdmin(result.userID, (error, adminID) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
-                    // result.admin = isAdmin; //set as either true or false //TODO delete
                     result.admin = adminID; //If it's null, not admin
                     callback(null);
                 }
@@ -727,7 +726,6 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    // var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
     var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, iapprojectid as projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
     var queryCb = (error, res) => { 
         if (error) {
@@ -874,7 +872,6 @@ function postAnnouncements (adminID, message, date, callback) {
 
 function getRoleAndName (userID, callback) {
     logCtx.fn = 'getRoleAndName';
-    // var query = "select users.user_role, users.first_name, users.last_name, p.projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
     var query = "select users.user_role, users.first_name, users.last_name, p.iapprojectid as projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
@@ -902,7 +899,6 @@ function getRoleAndName (userID, callback) {
 
 function getAllMembersFromAllProjects(callback){
     logCtx.fn = 'getAllMembersFromAllProjects';
-    // var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, r.projectid, r.iapproject_title, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid inner join projects r on p.projectid = r.projectid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by r.projectid, users.userid, sr.validatedmember, a.validatedmember;";
     var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, p.iapprojectid as projectid, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by p.iapprojectid, users.userid, sr.validatedmember, a.validatedmember;";
     var queryCb = (error, res) => { 
         if (error) {
@@ -946,9 +942,8 @@ function validateResearchMember(userID, user_role, callback){
 
 
 
-function getStudentProject (userID, projectID, callback) { //TODO: test
+function getStudentProject (userID, projectID, callback) {
     logCtx.fn = 'getStudentProject';
-    // var query = "select userid, projectid from participates where userid = $1 and projectid = $2"; 
     var query = "select userid, iapprojectid as projectid from participates where userid = $1 and iapprojectid = $2"; 
     var queryCb = (error, res) => { 
         if (error) {
