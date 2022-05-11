@@ -70,10 +70,10 @@ const joinRoomSchema = Joi.object({
 });
 
 const forgotPasswordSchema = Joi.object({
-    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
+    new_password: Joi.string(),
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}),
-    user_id: Joi.number().required(),
-    euuid: Joi.string().required()
+    user_id: Joi.number(),
+    euuid: Joi.string()
 });
 
 const verifyDeleteAnnouncementSchema = Joi.object({
