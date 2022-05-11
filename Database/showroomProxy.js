@@ -196,9 +196,8 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
     } else {
         //Insert each project ID into DB
         async.forEachLimit(projectIDList, MAX_ASYNC, (projectID, cb) => {
-            var values = [userID, projectID];
-            // dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid) values ($1, $2)", values, cb, (error, res) => {
-            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, iapprojectid) values ($1, $2)", values, cb, (error, res) => {
+            var values = [userID, projectID, projectID];
+            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid, iapprojectid) values ($1, $2, $3)", values, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -376,10 +375,8 @@ function isUserAdmin (userID, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length == 0 ) {
-                // callback(null, false); //TODO: delete
                 callback(null, null);
             } else {
-                // callback(null, true); //Success //TODO: delete
                 callback(null, res.rows[0].adminid); //Success
             }
         }
