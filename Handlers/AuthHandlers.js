@@ -494,6 +494,21 @@ function forgotPassword (req, res, next) {
         },
         function (callback) {
             if (sendLink != undefined && sendLink == "true") {
+                callback(null); //Skip
+            } else {
+                //Delete euuid row after password is changed
+                showroomDB.deleteTokenAfterChangingPassword(userID, (error) => {
+                    if (error) {
+                        errorStatus = 500;
+                        errorMsg = error.toString();
+                        logError(error, logCtx);
+                    }
+                    callback(error); //Null if no error
+                });
+            }
+        },
+        function (callback) {
+            if (sendLink != undefined && sendLink == "true") {
                 //Send verification email 
                 if (config.prod == true) {
                     var showroomURL = "https://" + config.SHOWROOM_HOST + "/changePassword/" + userID + "/" + emailUUID; 

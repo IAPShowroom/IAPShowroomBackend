@@ -170,6 +170,19 @@ function changePassword (userEmail, hashedPW, callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function deleteTokenAfterChangingPassword(userID, callback) {
+    logCtx.fn = 'deleteTokenAfterChangingPassword';
+    var query = "delete from EmailUUID where userid=$1 and type='password'";
+    var values = [userID];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+        } 
+        callback(error); //Null if no error
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
 function registerCompanyRep (userID, body, callback) {
     logCtx.fn = 'registerCompanyRep';
     var companyName = body.company_name;
@@ -1122,5 +1135,6 @@ module.exports = {
     getIAPPIDFromShowroomPID: getIAPPIDFromShowroomPID,
     getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID,
     validateEmailWithUserID: validateEmailWithUserID,
-    getUserIDFromEmail: getUserIDFromEmail
+    getUserIDFromEmail: getUserIDFromEmail,
+    deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword
 }
