@@ -42,10 +42,45 @@ let logCtx = {
 // testFetchProjectsForEmail();
 // testGetShowroomPIDFromIAPPID();
 // testValidateEmailWithUserID();
-testFetchEUUID();
+// testFetchEUUID();
+// testPostConference();
+testFetchConferences();
 
 
 //test functions:
+
+function testPostConference() {
+    logCtx.fn = 'testPostConference';
+    logTest("Test started", logCtx);
+    var msg = 'IAP Conference Fall 2021';
+    var date = '2021-10-23'
+    showroomDB.postConference(msg, date, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testFetchConferences() {
+    logCtx.fn = 'testFetchConferences';
+    logTest("Test started", logCtx);
+    var req = { body: {}};
+    // var cid = '2'
+    var cid = req.body.conference_id;
+    showroomDB.fetchConferences(cid, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testFetchEUUID() {
     logCtx.fn = 'testFetchEUUID';

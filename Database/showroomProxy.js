@@ -1074,6 +1074,46 @@ function postLiveAttendance(payload,callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function postConference (message, date, callback) {
+    logCtx.fn = 'postConference';
+    var query = "insert into conference (c_text, c_date, isdeleted) values ($1, $2, $3) returning cid"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows[0].cid);
+        }
+    };
+    var isdeleted = false;
+    dbUtils.makeQueryWithParams(pool, query, [message, date, isdeleted], callback, queryCb);
+}
+
+function fetchConferences (conferenceID, callback) {
+    logCtx.fn = 'fetchConferences';
+    if (conferenceID != undefined) {
+        var query = "select * from conference where cid = $1 and isdeleted = false"; 
+    } else {
+        var query = "select * from conference where isdeleted = false"; 
+    }
+    
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows);
+        }
+    };
+
+    if (conferenceID != undefined) {
+        dbUtils.makeQueryWithParams(pool, query, [conferenceID], callback, queryCb);
+    } else {
+        dbUtils.makeQuery(pool, query, callback, queryCb);
+    }
+}
 
 function endPool() {
     logCtx.fn = 'endPool';
@@ -1124,5 +1164,7 @@ module.exports = {
     getIAPPIDFromShowroomPID: getIAPPIDFromShowroomPID,
     getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID,
     validateEmailWithUserID: validateEmailWithUserID,
-    getUserIDFromEmail: getUserIDFromEmail
+    getUserIDFromEmail: getUserIDFromEmail,
+    postConference: postConference,
+    fetchConferences: fetchConferences
 }

@@ -673,13 +673,13 @@ function getSponsors (req, res, next) {
     });
 }
 
-function postAnnouncements (req, res, next) { //TODO: test
+function postAnnouncements (req, res, next) {
     logCtx.fn = 'postAnnouncements';
     var errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validatePostAnnouncement(req, (error) => { //TODO test
+            validator.validatePostAnnouncement(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -1385,6 +1385,85 @@ function postLiveAttendance(req, res, next){
     });
 }
 
+function postConference (req, res, next) {
+    logCtx.fn = 'postConference';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validatePostConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch events from DB
+            var c_text = req.body.c_text;
+            var c_date = req.body.c_date;
+            showroomDB.postConference(c_text, c_date, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null);
+                }
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully posted conference.");
+            
+        }
+    });
+}
+
+function getConferences (req, res, next) {
+    logCtx.fn = "getConferences";
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            logCtx.fn = "getConferences";
+            var byID = req.query.conference_id;
+            //Fetch projects from IAP
+            showroomDB.fetchConferences(byID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    if (result == null || result.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No conferences found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null, result);
+                    }
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved all conferences.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
 module.exports = {
     getProjects: getProjects,
     getStats: getStats,
@@ -1407,5 +1486,9 @@ module.exports = {
     deleteAnnouncementByID: deleteAnnouncementByID,
     checkSessionAndUpdate, checkSessionAndUpdate,
     getSponsors: getSponsors,
-    validateIAPUser: validateIAPUser
+    validateIAPUser: validateIAPUser,
+    postConference: postConference,
+    getConferences: getConferences,
+    // updateConferenceByID: updateConferenceByID,
+    // deleteConferenceByID: deleteConferenceByID
 }

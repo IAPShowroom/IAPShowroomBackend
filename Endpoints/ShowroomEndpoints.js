@@ -22,6 +22,8 @@ var announcementsByID = '/announcement/:announcementID'; //used for DELETE
 var researchers_advisors = '/researchers-advisors';
 var validateResearchMember = '/validateResearchMember'
 var getAllUsers = '/all-users';
+var conference = '/conference'; //used for POST, GET
+var conferenceByID = conference + '/:conferenceID'; //used for PUT, DELETE
 
 var inPersonAttendance = '/live-attendance'
 
@@ -68,5 +70,11 @@ showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSe
 
 // Live Attendance
 showroomRouter.post(inPersonAttendance, showroomHandler.postLiveAttendance);
+
+// Conference
+showroomRouter.post(conference, auth.authorizeAdmin, showroomHandler.postConference); 
+showroomRouter.get(conference, auth.authorizeAdmin, showroomHandler.getConferences);
+showroomRouter.put(conferenceByID, auth.authorizeAdmin, showroomHandler.updateConferenceByID);
+showroomRouter.delete(conferenceByID, auth.authorizeAdmin, showroomHandler.deleteConferenceByID);
 
 module.exports = showroomRouter;

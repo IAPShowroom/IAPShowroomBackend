@@ -60,6 +60,11 @@ const postAnnouncementSchema = Joi.object({
     date: Joi.date().required()
 });
 
+const postConferenceSchema = Joi.object({
+    c_text: Joi.string().required(),
+    c_date: Joi.date().required()
+});
+
 const createRoomSchema = Joi.object({
     meeting_name: Joi.string().required(),
     projectid: Joi.number().required()
@@ -314,6 +319,16 @@ function validatePostAnnouncement (req, callback) {
     }
 }
 
+function validatePostConference (req, callback) {
+    logCtx.fn = 'validatePostConference';
+    if (req.body != undefined && Object.keys(req.body).length != 0) {
+        validateRequest(req, postConferenceSchema, callback);
+    } else {
+        logError("Missing request body.", logCtx);
+        callback(new Error("Missing request body."));
+    }
+}
+
 function validatePostMeetHistory (req, callback) {
     logCtx.fn = 'validatePostMeetHistory';
     if (req.body != undefined && Object.keys(req.body).length != 0) {
@@ -504,5 +519,6 @@ module.exports = {
     validateChangePassword: validateChangePassword,
     validateVerifyEmail: validateVerifyEmail,
     validateDeleteAnnouncement: validateDeleteAnnouncement,
-    validateValidateIAPUser: validateValidateIAPUser
+    validateValidateIAPUser: validateValidateIAPUser,
+    validatePostConference: validatePostConference
 }
