@@ -196,8 +196,8 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
     } else {
         //Insert each project ID into DB
         async.forEachLimit(projectIDList, MAX_ASYNC, (projectID, cb) => {
-            var values = [userID, projectID];
-            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid) values ($1, $2)", values, cb, (error, res) => {
+            var values = [userID, projectID, projectID];
+            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid, iapprojectid) values ($1, $2, $3)", values, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -317,12 +317,11 @@ function comparePasswords (email, plaintextPassword, callback) {
         function (callback) {
             //Check if user is admin (and add to result along with user ID)
             //Login should also check for other roles 
-            isUserAdmin(result.userID, (error, adminID) => { //TODO: test
+            isUserAdmin(result.userID, (error, adminID) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
-                    // result.admin = isAdmin; //set as either true or false //TODO delete
                     result.admin = adminID; //If it's null, not admin
                     callback(null);
                 }
@@ -375,10 +374,8 @@ function isUserAdmin (userID, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length == 0 ) {
-                // callback(null, false); //TODO: delete
                 callback(null, null);
             } else {
-                // callback(null, true); //Success //TODO: delete
                 callback(null, res.rows[0].adminid); //Success
             }
         }
@@ -609,25 +606,26 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
-function getQnARoomInfo (projectID, callback) {
-    logCtx.fn = 'getQnARoomInfo';
-    var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
-    var queryCb = (error, res) => { 
-        if (error) {
-            logError(error, logCtx);
-            callback(error, null);
-        } else {
-            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            if (res.rowCount == 0) {
-                callback(null, null); //No info found, send null result to provoke 404 error
-            } else {
-                var result = res.rows; //returns counts for users
-                callback(null, result);
-            }
-        }
-    };
-    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
-}
+//Not used anymore, project information is being pulled directly from IAP's database. There is an equivalent function in iapProxy.js
+// function getQnARoomInfo (projectID, callback) {
+//     logCtx.fn = 'getQnARoomInfo';
+//     var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
+//     var queryCb = (error, res) => { 
+//         if (error) {
+//             logError(error, logCtx);
+//             callback(error, null);
+//         } else {
+//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+//             if (res.rowCount == 0) {
+//                 callback(null, null); //No info found, send null result to provoke 404 error
+//             } else {
+//                 var result = res.rows; //returns counts for users
+//                 callback(null, result);
+//             }
+//         }
+//     };
+//     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+// }
 
 function getIAPPIDFromShowroomPID (projectID, callback) {
     logCtx.fn = 'getIAPPIDFromShowroomPID';
@@ -728,7 +726,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, iapprojectid as projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -874,7 +872,7 @@ function postAnnouncements (adminID, message, date, callback) {
 
 function getRoleAndName (userID, callback) {
     logCtx.fn = 'getRoleAndName';
-    var query = "select users.user_role, users.first_name, users.last_name, p.projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
+    var query = "select users.user_role, users.first_name, users.last_name, p.iapprojectid as projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -901,7 +899,7 @@ function getRoleAndName (userID, callback) {
 
 function getAllMembersFromAllProjects(callback){
     logCtx.fn = 'getAllMembersFromAllProjects';
-    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, r.projectid, r.iapproject_title, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid inner join projects r on p.projectid = r.projectid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by r.projectid, users.userid, sr.validatedmember, a.validatedmember;";
+    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, p.iapprojectid as projectid, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by p.iapprojectid, users.userid, sr.validatedmember, a.validatedmember;";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -944,9 +942,9 @@ function validateResearchMember(userID, user_role, callback){
 
 
 
-function getStudentProject (userID, projectID, callback) { //TODO: test
+function getStudentProject (userID, projectID, callback) {
     logCtx.fn = 'getStudentProject';
-    var query = "select userid, projectid from participates where userid = $1 and projectid = $2"; 
+    var query = "select userid, iapprojectid as projectid from participates where userid = $1 and iapprojectid = $2"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -1104,7 +1102,7 @@ module.exports = {
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects,
     validateResearchMember: validateResearchMember,
-    getQnARoomInfo: getQnARoomInfo,
+    // getQnARoomInfo: getQnARoomInfo, //Not used anymore
     getName: getName,
     getLiveStats: getLiveStats,
     getInPersonStats: getInPersonStats,

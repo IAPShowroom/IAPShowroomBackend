@@ -18,7 +18,7 @@ let logCtx = {
 
 //run test:
 
-// iapProjectsTest();
+iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
 // testGetEvents();
@@ -42,7 +42,7 @@ let logCtx = {
 // testFetchProjectsForEmail();
 // testGetShowroomPIDFromIAPPID();
 // testValidateEmailWithUserID();
-testFetchEUUID();
+// testFetchEUUID();
 
 
 //test functions:
@@ -471,11 +471,12 @@ function testEventArrayMapping() {
 function iapProjectsTest () {
     logCtx.fn = 'iapProjectsTest';
     logTest("Test started", logCtx);
-    var session_id = '14';
-    iapDB.fetchProjects(session_id, (error) => {
+    iapDB.fetchProjects((error, result) => {
         if (error) {
             logError(error, logCtx);
         }
+        logTest("Result:", logCtx);
+        console.log(result);
         iapDB.endPool();
         logTest("Test ended", logCtx);
     });

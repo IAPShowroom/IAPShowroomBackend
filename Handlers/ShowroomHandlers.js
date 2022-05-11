@@ -383,29 +383,10 @@ function getQnARoomInfo (req, res, next) {
         },
         function (callback) {
             projectID = req.query.meeting_id;
-            performBBBOps = req.query.bbb; //Indicate whether or not to only bring room info or also do BBB operations
-
-            //Fetch IAP's project ID based on the given project ID from Showroom's table 
-            showroomDB.getIAPPIDFromShowroomPID(projectID, (error, iapPID) => {
-                if (error) {
-                    errorStatus = 500;
-                    errorMsg = error.toString();
-                    logError(error, logCtx);
-                    callback(error, null);
-                } else if (iapPID == undefined || iapPID == null) {
-                    errorStatus = 404;
-                    errorMsg = "No IAP project id found for given ID.";
-                    logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg), null);
-                } else {
-                    log("Response data: " + JSON.stringify(iapPID), logCtx);
-                    callback(null, iapPID);
-                }
-            });
-        },
-        function (iapPID, callback) {
+            //Indicate whether or not to only bring room info or also do BBB operations
+            performBBBOps = req.query.bbb; 
             //Fetch title, abstract, and users associated with project 
-            iapDB.fetchQnARoomInfo(iapPID, (error, result) => {
+            iapDB.fetchQnARoomInfo(projectID, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -535,7 +516,7 @@ function getQnARoomInfo (req, res, next) {
 function validateIAPUser (req, res, next) {
     logCtx.fn = 'validateIAPUser';
     var isValid = true;
-    var iDSet = new Set();
+    var iDSet;
     var errorStatus, errorMsg, givenProjectIDs;
     async.waterfall([
         function (callback) {
@@ -558,38 +539,17 @@ function validateIAPUser (req, res, next) {
                     errorStatus = 500;
                     errorMsg = error.toString();
                     logError(error, logCtx);
-                    callback(error, null);
+                    callback(error); 
                 } else if (result == undefined || result == null) {
-                    errorStatus = 404;
                     errorMsg = "No IAP project IDs found associated with given email.";
                     logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg), null);
+                    iDSet = new Set();
+                    callback(null);
                 } else {
                     log("Response data: " + JSON.stringify(result), logCtx);
-                    callback(null, result);
+                    iDSet = new Set(result);
+                    callback(null);
                 }
-            });
-        },
-        function (iapProjectIDs, callback) {
-            async.forEachLimit(iapProjectIDs, 1, (iapPID, cb) => {
-                //Fetch Showroom's project ID based on the given project ID from IAP
-                showroomDB.getShowroomPIDFromIAPPID(iapPID, (error, showroomID) => {
-                    if (error) {
-                        errorStatus = 500;
-                        errorMsg = error.toString();
-                        logError(error, logCtx);
-                        cb(error);
-                    } else if (showroomID != undefined && showroomID != null) {
-                        log("Response data: " + JSON.stringify(showroomID), logCtx);
-                        iDSet.add(showroomID);
-                        cb(null);
-                    } else {
-                        log("No Showroom project ID found for given IAP project ID: " + iapPID, logCtx);
-                        cb(null);
-                    }
-                });
-            }, (error) => {
-                callback(error); //null if no error
             });
         },
         function (callback) {
@@ -988,10 +948,6 @@ function updateBatchEvents (req, res, next) {
     });
 }
 
-
-
-
-
 function deleteScheduleEvent (req, res, next) {
     logCtx.fn = 'deleteScheduleEvent';
     var errorStatus, errorMsg;
@@ -1092,51 +1048,8 @@ function getProjects (req, res, next) {
             });
         },
         function (callback) {
-            sessionID = req.query.session_id;
-            updateProjects = req.query.update;
-            if (sessionID == undefined) {
-                //Fetch session being used in Showroom's projects table
-                showroomDB.fetchShowroomSession((error, showroomSession) => {
-                    if (error) {
-                        logError(error, logCtx);
-                        errorMsg = error.toString();
-                        errorStatus = 500;
-                        callback(error);
-                    } else {
-                        if (showroomSession == null) { //No projects were found
-                            sessionID = 1; //Set as incorrect session on purpose to trigger update
-                        } else {
-                            log("Response data: " + JSON.stringify(showroomSession), logCtx);
-                            sessionID = showroomSession;
-                        }
-                        callback(null);
-                    }
-                });
-            } else {
-                callback(null); //Session ID was provided, skip
-            }
-        },
-        function (callback) {
-            if (updateProjects != undefined && updateProjects == "true") {
-                //Fetch the current session used in Showroom's projects
-                //Update table with projects from given session if they don't match
-                checkSessionAndUpdate(sessionID, (error, latestSession) => {
-                    if (error) {
-                        logError(error, logCtx);
-                        errorMsg = error.toString();
-                        errorStatus = 500;
-                    }
-                    callback(error, latestSession); //Null if no error
-                });
-            } else {
-                callback(null, null); //Skip
-            }
-        },
-        function (latestSession, callback) {
-            logCtx.fn = "getProjects";
-            var finalSessionID = updateProjects != undefined && updateProjects == "true" ? latestSession : sessionID;
             //Fetch projects from IAP
-            showroomDB.fetchProjects(finalSessionID, (error, iapProjects) => { //result is array of objs with project info
+            iapDB.fetchProjects((error, iapProjects) => { //result is array of objs with project info
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
