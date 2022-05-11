@@ -210,10 +210,11 @@ function getRoomStatus (req, res, next) {
             });
         },
         function (callback) {
+            var cid = undefined; //Add undefined so getEvents doesn't filter by conference ID
             //If no date query parameter, default to today's date
             var currentDate = req.query && req.query.date ? req.query.date : new Date().toISOString().slice(0,10);
             //Fetch events from DB
-            showroomDB.getEvents(false, true, false, null, currentDate, (error, result) => {
+            showroomDB.getEvents(cid, false, true, false, null, currentDate, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -735,13 +736,14 @@ function getScheduleEvents (req, res, next) {
         function (callback) {
             //Fetch events from DB
             var upcoming = req.query.upcoming == 'true';
+            var cid = req.query.conference_id;
             var all = req.query.all;
             var time, date;
             if (upcoming) {
                 time = req.query.time;
                 date = req.query.date;
             }
-            showroomDB.getEvents(all, false, upcoming, time, date, (error, result) => {
+            showroomDB.getEvents(cid, all, false, upcoming, time, date, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -923,8 +925,9 @@ function updateBatchEvents (req, res, next) {
             var upcoming = true;
             var all = false;
             var date = req.body.e_date;
+            var cid = undefined; //Add undefined so getEvents doesn't filter by conference ID
 
-            showroomDB.getEvents(all, false, upcoming, time, date, (error, result) => {
+            showroomDB.getEvents(cid, all, false, upcoming, time, date, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();

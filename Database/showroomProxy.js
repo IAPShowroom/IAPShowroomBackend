@@ -20,7 +20,7 @@ let logCtx = {
     fn: ''
 }
 
-const EVENT_PROPERTIES = 6;
+const EVENT_PROPERTIES = 7;
 const MAX_ASYNC = 1;
 
 const pool = new Pool({
@@ -509,7 +509,7 @@ function createEvents (eventList, callback) {
             cb(new Error(errorMsg));
         } else {
             event.push("false"); //add value for isdeleted
-            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date, isdeleted) values ($1, $2, $3, $4, $5, $6, $7)", event, cb, (error, res) => {
+            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date, cid, isdeleted) values ($1, $2, $3, $4, $5, $6, $7, $8)", event, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -553,13 +553,15 @@ function updateBatchEvents (eventList, callback) {
     });
 }
 
-function getEvents(all, allByDate, upcoming, time, date, callback) {
+function getEvents(cid, all, allByDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
+    var getByCID = cid != undefined;
+    var getByCIDQuery = "select * from iap_events where isdeleted = false and cid = $1 order by starttime asc";
     var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
     var getAllByDate = "select * from iap_events where isdeleted = false and e_date = $1 order by starttime asc";
     var getAllByDateProjects = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
     var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
-    var query = upcoming ? getUpcoming : allByDate ? getAllByDateProjects : all ? getAll : getAllByDate;
+    var query = upcoming ? getUpcoming : allByDate ? getAllByDateProjects : all ? getAll : getByCID ? getByCIDQuery : getAllByDate;
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -581,6 +583,8 @@ function getEvents(all, allByDate, upcoming, time, date, callback) {
         dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
     } else if (all) {
         dbUtils.makeQuery(pool, query, callback, queryCb);
+    } else if (getByCID) {
+        dbUtils.makeQueryWithParams(pool, query, [cid], callback, queryCb);
     } else {
         var today = new Date();
         today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET);

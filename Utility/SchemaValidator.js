@@ -52,7 +52,8 @@ const eventSchema = Joi.object({
     duration: Joi.number().prefs({ convert: false }).required(),
     title: Joi.string().required(),
     projectid: Joi.any(),
-    e_date: Joi.date().required()
+    e_date: Joi.date().required(),
+    cid: Joi.any()
 });
 
 const postAnnouncementSchema = Joi.object({
