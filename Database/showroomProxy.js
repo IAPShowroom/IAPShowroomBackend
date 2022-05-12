@@ -86,7 +86,6 @@ function registerUser (req, mainCallback) {
             //Check role and persist role specific info
             switch (role) {
                 case config.userRoles.studentResearcher:
-                    result.isPM = req.body.ispm; //Add isPM 
                     registerStudent(userID, req.body, callback);
                     break;
                 case config.userRoles.advisor:
@@ -345,7 +344,6 @@ function comparePasswords (email, plaintextPassword, callback) {
                     //Add user information to result object, this is later on the session data
                     result.userID = userID;
                     result.user_role = user_role;
-                    result.isPM = isPM;
                     callback(null, hash);
                 }
             });
