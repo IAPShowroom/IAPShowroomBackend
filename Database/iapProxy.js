@@ -6,8 +6,6 @@ const { Pool } = require('pg');
 const config = require('../Config/config');
 const dbConfig = config.iapDBConfig;
 const dbUtils = require('../Utility/DbUtils.js');
-const showroomDB = require('./showroomProxy.js');
-const async = require('async');
 const { logError, log } = require('../Utility/Logger.js');
 
 let logCtx = {
@@ -22,30 +20,6 @@ const pool = new Pool({
     password: dbConfig.password,
     port: dbConfig.port,
 });
-
-//Original -- leaving commented just in case it is useful in the future
-// function fetchProjects(sessionID, callback) {
-//     logCtx.fn = 'fetchProjects';
-//     dbUtils.makeQueryWithParams(pool, "select project_id, session_id, title, abstract from projects where session_id = $1", [sessionID], callback, (error, res) => {
-//         if (error) {
-//             logError(error, logCtx);
-//             callback(error, null);
-//         } else {
-//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-//             var result = res.rows; //returns array of json objects
-//             async.forEachLimit(result, 1, (iapProject, cb) => {
-//                 showroomDB.postToShowroomProjects(iapProject, (error) => {
-//                     if (error) {
-//                         logError(error.toString(), logCtx);
-//                     }
-//                     cb(error);
-//                 });
-//             }, (error) => {
-//                 callback(error); //null if no error
-//             });
-//         }
-//     });
-// }
 
 function fetchProjects(callback) {
     logCtx.fn = 'fetchProjects';

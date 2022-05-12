@@ -3,7 +3,7 @@
  */
 
 const pg = require('pg');
-const iapDB = require('./iapProxy.js');
+const iapDB = require('./iapProxy');
 const Pool = pg.Pool;
 var types = pg.types;
 types.setTypeParser(1114, function(stringValue) {
