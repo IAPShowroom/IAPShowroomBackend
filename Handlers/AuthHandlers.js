@@ -283,7 +283,7 @@ function updateParticipatesTable (userEmail, finalResult, mainCallback) {
                     logError(error, logCtx);
                     callback(error); 
                 } else if (result == undefined || result == null) {
-                    logCtx.fn = 'updateParticipatesTable';
+                    logCtx.fn = 'fetchProjectsForEmail';
                     logError("No IAP project IDs found associated with given email.", logCtx);
                     projectsFromIAP = [0]; //Simulate empty with '0' so the comparison catches the mismatch
                     callback(null);
@@ -303,7 +303,7 @@ function updateParticipatesTable (userEmail, finalResult, mainCallback) {
                     logError(error, logCtx);
                     callback(error); 
                 } else if (result == undefined || result == null) {
-                    logCtx.fn = 'updateParticipatesTable';
+                    logCtx.fn = 'fetchProjectIDsFromParticipates';
                     logError("No project IDs found associated with given user ID.", logCtx);
                     projectsFromParticipates = [0]; //Simulate empty with '0' so the comparison catches the mismatch
                     callback(null);
@@ -320,6 +320,13 @@ function updateParticipatesTable (userEmail, finalResult, mainCallback) {
             var iapSet = new Set(projectsFromIAP);
             projectsFromParticipates.forEach((participatesPID) => {
                 if (!iapSet.has(participatesPID)) {
+                    projectsMatch = false; //There was an inconsistency between the two lists
+                    log("Projects from IAP and participates did not match.", logCtx);
+                }
+            });
+            var participatesSet = new Set(projectsFromParticipates);
+            projectsFromIAP.forEach((iapPID) => {
+                if (!participatesSet.has(iapPID)) {
                     projectsMatch = false; //There was an inconsistency between the two lists
                     log("Projects from IAP and participates did not match.", logCtx);
                 }

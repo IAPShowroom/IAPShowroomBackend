@@ -39,14 +39,14 @@ let logCtx = {
 // testFetchShowroomSession();
 // testCheckSessionAndUpdate();
 // testGetIAPPIDFromShowroomPID();
-// testFetchProjectsForEmail();
+testFetchProjectsForEmail();
 // testGetShowroomPIDFromIAPPID();
 // testValidateEmailWithUserID();
 // testFetchEUUID();
 // testFetchProjectIDsFromParticipates();
 // testSetPlay();
 // testDeleteFromParticipates();
-testUpdateParticipatesTable();
+// testUpdateParticipatesTable();
 
 
 //test functions:
@@ -178,7 +178,9 @@ function testFetchProjectsForEmail() {
     logCtx.fn = 'testFetchProjectsForEmail';
     logTest("Test started", logCtx);
     // var email = 'gerson.beauchamp@upr.edu';
-    var email = 'kevin.bonet@upr.edu';
+    // var email = 'kevin.bonet@upr.edu';
+    // var email = 'luis.quiles1@upr.edu';
+    var email = 'raul_e.torres@upr.edu';
     iapDB.fetchProjectsForEmail(email, (error, info) => {
         if (error) {
             logError(error, logCtx);
