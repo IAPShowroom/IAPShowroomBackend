@@ -40,7 +40,7 @@ const store = new redisStore({ host: '127.0.0.1', port: 6379, client: redisClien
 //Log incoming requests
 app.use(logRequest);
 
-const sessionParser = session({ //TODO: review session config settings
+const sessionParser = session({
   secret: config.session_secret,
   name: 'sesid',
   store: store,
@@ -59,7 +59,7 @@ app.use(sessionParser);
 app.use(auth.checkSession);
 
 //Bind the main module routes to their respective routers
-app.use(config.auth_prefix, authRouter); //add req.sessions here??
+app.use(config.auth_prefix, authRouter);
 app.use(config.showroom_prefix, showroomRouter);
 app.use(config.stream_prefix, streamingRouter);
 

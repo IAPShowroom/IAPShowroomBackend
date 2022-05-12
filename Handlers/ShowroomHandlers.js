@@ -74,7 +74,6 @@ function getStats (req, res, next) {
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
             if(date !== undefined) currentDate = date;
-            // console.log('LIVE STATS FOR DATE',currentDate);
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
@@ -105,7 +104,7 @@ function getStats (req, res, next) {
     });
 }
 
-function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
+function filterStats (finalResult, obj) {
     var count = parseInt(obj.count, 10)
     //Count based on user role
     if (obj.user_role === config.userRoles.studentResearcher) {
@@ -210,10 +209,11 @@ function getRoomStatus (req, res, next) {
             });
         },
         function (callback) {
+            var cid = undefined; //Add undefined so getEvents doesn't filter by conference ID
             //If no date query parameter, default to today's date
             var currentDate = req.query && req.query.date ? req.query.date : new Date().toISOString().slice(0,10);
             //Fetch events from DB
-            showroomDB.getEvents(false, true, false, null, currentDate, (error, result) => {
+            showroomDB.getEvents(cid, false, true, false, null, currentDate, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -431,33 +431,6 @@ function getQnARoomInfo (req, res, next) {
         },
         function (callback) {
             if (performBBBOps && performBBBOps == 'true') {
-                //Commented this since, for now, we want anyone to be able to join the room. 
-                // //Check role
-                // switch (bbbRole) {
-                //     case "moderator":
-                //         //Create room before joining if they are moderators
-                //         meetingHandler.createRoom(meetingName, projectID, callback);
-                //         break;
-                //     case "viewer":
-                //         //Check if the meeting is running, fail the call if it's not
-                //         meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
-                //             if (error) {
-                //                 logError(error, logCtx);
-                //                 callback(error);
-                //             } else {
-                //                 if (!isRunning) {
-                //                     errorStatus = 500;
-                //                     errorMsg = "Meeting is not running.";
-                //                     logError(errorMsg, logCtx);
-                //                     callback(new Error(errorMsg));
-                //                 } else {
-                //                     callback(null); //All good, meeting is running, proceed
-                //                 }
-                //             }
-                //         });
-                //         break;
-                // }
-
                 //Create room before joining in case it's not already created
                 meetingHandler.createRoom(meetingName, projectID, callback);
             } else {
@@ -633,13 +606,13 @@ function getSponsors (req, res, next) {
     });
 }
 
-function postAnnouncements (req, res, next) { //TODO: test
+function postAnnouncements (req, res, next) {
     logCtx.fn = 'postAnnouncements';
     var errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
             //Validate request payload
-            validator.validatePostAnnouncement(req, (error) => { //TODO test
+            validator.validatePostAnnouncement(req, (error) => {
                 if (error) {
                     logError(error, logCtx);
                     errorStatus = 400;
@@ -695,13 +668,14 @@ function getScheduleEvents (req, res, next) {
         function (callback) {
             //Fetch events from DB
             var upcoming = req.query.upcoming == 'true';
+            var cid = req.query.conference_id;
             var all = req.query.all;
             var time, date;
             if (upcoming) {
                 time = req.query.time;
                 date = req.query.date;
             }
-            showroomDB.getEvents(all, false, upcoming, time, date, (error, result) => {
+            showroomDB.getEvents(cid, all, false, upcoming, time, date, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -776,7 +750,6 @@ function getScheduleEventByID (req, res, nect) {
 function postScheduleEvents (req, res, next) {
     logCtx.fn = 'postScheduleEvents';
     var errorStatus, errorMsg;
-    //req.body['adminid'] = req.session.data.admin;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -865,26 +838,15 @@ function updateBatchEvents (req, res, next) {
     var errorStatus, errorMsg;
     async.waterfall([
         function (callback) {
-            //TODO: Validate request payload
-
-            // validator.validateUpdateEvent(req, (error) => {
-            //     if (error) {
-            //         logError(error, logCtx);
-            //         errorStatus = 400;
-            //         errorMsg = error.message;
-            //     }
-                callback(null);
-            // });
-        },
-        function (callback) {
             //Persist updated event to DB
             console.log("time: "+req.params.time);
             let time = new Date(parseInt(req.params.time));
             var upcoming = true;
             var all = false;
             var date = req.body.e_date;
+            var cid = undefined; //Add undefined so getEvents doesn't filter by conference ID
 
-            showroomDB.getEvents(all, false, upcoming, time, date, (error, result) => {
+            showroomDB.getEvents(cid, all, false, upcoming, time, date, (error, result) => {
                 if (error) {
                     errorStatus = 500;
                     errorMsg = error.toString();
@@ -1300,6 +1262,179 @@ function postLiveAttendance(req, res, next){
     });
 }
 
+function postConference (req, res, next) {
+    logCtx.fn = 'postConference';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validatePostConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch events from DB
+            var c_text = req.body.c_text;
+            var c_date = req.body.c_date;
+            showroomDB.postConference(c_text, c_date, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null);
+                }
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Successfully posted conference.");
+            
+        }
+    });
+}
+
+function updateConferenceByID (req, res, next) {
+    logCtx.fn = 'updateConferenceByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateUpdateConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Fetch events from DB
+            var cid = req.params.conferenceID;
+            var c_text = req.body.c_text;
+            var c_date = req.body.c_date;
+            showroomDB.updateConferenceByID(cid, c_text, c_date, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null);
+                }
+            });
+        }
+    ], (error) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 201, "Successfully updated conference.");
+            
+        }
+    });
+}
+
+function getConferences (req, res, next) {
+    logCtx.fn = "getConferences";
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateGetConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            logCtx.fn = "getConferences";
+            var byID = req.query.conference_id;
+            //Fetch projects from IAP
+            showroomDB.fetchConferences(byID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    if (result == null || result.length == 0) {
+                        errorStatus = 404;
+                        errorMsg = "No conferences found.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        callback(null, result);
+                    }
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully retrieved all conferences.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
+function deleteConferenceByID (req, res, next) {
+    logCtx.fn = 'deleteConferenceByID';
+    var errorStatus, errorMsg;
+    async.waterfall([
+        function (callback) {
+            //Validate request payload
+            validator.validateDeleteConference(req, (error) => {
+                if (error) {
+                    logError(error, logCtx);
+                    errorStatus = 400;
+                    errorMsg = error.message;
+                }
+                callback(error);
+            });
+        },
+        function (callback) {
+            //Take DB action
+            var cid = req.params.conferenceID;
+            showroomDB.deleteConferenceByID(cid, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error, null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    callback(null, result);
+                }
+            });
+        }
+    ], (error, result) => {
+        //Send responses
+        if (error) {
+            errorResponse(res, errorStatus, errorMsg);
+        } else {
+            successResponse(res, 200, "Successfully deleted conference.", result && result.length > 0 ? result : null);
+        }
+    });
+}
+
 module.exports = {
     getProjects: getProjects,
     getStats: getStats,
@@ -1322,5 +1457,9 @@ module.exports = {
     deleteAnnouncementByID: deleteAnnouncementByID,
     checkSessionAndUpdate, checkSessionAndUpdate,
     getSponsors: getSponsors,
-    validateIAPUser: validateIAPUser
+    validateIAPUser: validateIAPUser,
+    postConference: postConference,
+    getConferences: getConferences,
+    updateConferenceByID: updateConferenceByID,
+    deleteConferenceByID: deleteConferenceByID
 }

@@ -86,11 +86,6 @@ function validateEmail (email, callback) {
             } else {
                 callback(null); //Success
             }
-            // var isInIAP = false;
-            // if (res.rows.length != 0 ) {
-            //     isInIAP = true;
-            // }
-            // callback(null, isInIAP); //Making it not fail, but just give out warning
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);

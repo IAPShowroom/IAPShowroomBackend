@@ -102,8 +102,3 @@ describe('Video Streaming Endpoints: POST /api/meet/end', () => {
         });
     });
 });
-
-//TODO: implement
-// describe('Video Streaming Endpoints: POST /api/meet/join-stage', () => {
-    
-// });

@@ -22,6 +22,8 @@ var announcementsByID = '/announcement/:announcementID'; //used for DELETE
 var researchers_advisors = '/researchers-advisors';
 var validateResearchMember = '/validateResearchMember'
 var getAllUsers = '/all-users';
+var conference = '/conference'; //used for POST, GET
+var conferenceByID = conference + '/:conferenceID'; //used for PUT, DELETE
 
 var inPersonAttendance = '/live-attendance'
 
@@ -42,7 +44,7 @@ showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnno
 showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements);
 showroomRouter.delete(announcementsByID, auth.authorizeAdmin, showroomHandler.deleteAnnouncementByID);
 showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getAllMembersFromAllProjects);
-showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
+showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember);
 showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers);
 
 //Events 
@@ -63,5 +65,11 @@ showroomRouter.get(getIAPSessions, auth.authorizeAdmin, showroomHandler.getIAPSe
 
 // Live Attendance
 showroomRouter.post(inPersonAttendance, showroomHandler.postLiveAttendance);
+
+// Conference
+showroomRouter.post(conference, auth.authorizeAdmin, showroomHandler.postConference); 
+showroomRouter.get(conference, auth.authorizeAdmin, showroomHandler.getConferences);
+showroomRouter.put(conferenceByID, auth.authorizeAdmin, showroomHandler.updateConferenceByID);
+showroomRouter.delete(conferenceByID, auth.authorizeAdmin, showroomHandler.deleteConferenceByID);
 
 module.exports = showroomRouter;

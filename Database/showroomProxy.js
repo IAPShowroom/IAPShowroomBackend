@@ -21,7 +21,7 @@ let logCtx = {
     fn: ''
 }
 
-const EVENT_PROPERTIES = 6;
+const EVENT_PROPERTIES = 7;
 const MAX_ASYNC = 1;
 
 const pool = new Pool({
@@ -559,7 +559,7 @@ function createEvents (eventList, callback) {
             cb(new Error(errorMsg));
         } else {
             event.push("false"); //add value for isdeleted
-            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date, isdeleted) values ($1, $2, $3, $4, $5, $6, $7)", event, cb, (error, res) => {
+            dbUtils.makeQueryWithParams(pool,"insert into iap_events (adminid, startTime, duration, title, projectid, e_date, cid, isdeleted) values ($1, $2, $3, $4, $5, $6, $7, $8)", event, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -603,13 +603,15 @@ function updateBatchEvents (eventList, callback) {
     });
 }
 
-function getEvents(all, allByDate, upcoming, time, date, callback) {
+function getEvents(cid, all, allByDate, upcoming, time, date, callback) {
     logCtx.fn = 'getEvents';
+    var getByCID = cid != undefined;
+    var getByCIDQuery = "select * from iap_events where isdeleted = false and cid = $1 order by starttime asc";
     var getAll = "select * from iap_events where isdeleted = false order by starttime asc";
     var getAllByDate = "select * from iap_events where isdeleted = false and e_date = $1 order by starttime asc";
     var getAllByDateProjects = "select * from iap_events where e_date = $1 and isdeleted = false and projectid is not null order by starttime asc"; //project id not null to make sure we only select project events
     var getUpcoming = "select * from iap_events where starttime + duration * interval '1 minute' > $1 and e_date = $2 and isdeleted = false order by starttime asc";
-    var query = upcoming ? getUpcoming : allByDate ? getAllByDateProjects : all ? getAll : getAllByDate;
+    var query = upcoming ? getUpcoming : allByDate ? getAllByDateProjects : all ? getAll : getByCID ? getByCIDQuery : getAllByDate;
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -631,6 +633,8 @@ function getEvents(all, allByDate, upcoming, time, date, callback) {
         dbUtils.makeQueryWithParams(pool, query, [date], callback, queryCb);
     } else if (all) {
         dbUtils.makeQuery(pool, query, callback, queryCb);
+    } else if (getByCID) {
+        dbUtils.makeQueryWithParams(pool, query, [cid], callback, queryCb);
     } else {
         var today = new Date();
         today.setTime(today.getTime() - config.DATE_TIMEZONE_OFFSET);
@@ -658,27 +662,6 @@ function getEventByID (eventID, callback) {
     };
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
-
-//Not used anymore, project information is being pulled directly from IAP's database. There is an equivalent function in iapProxy.js
-// function getQnARoomInfo (projectID, callback) {
-//     logCtx.fn = 'getQnARoomInfo';
-//     var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
-//     var queryCb = (error, res) => { 
-//         if (error) {
-//             logError(error, logCtx);
-//             callback(error, null);
-//         } else {
-//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-//             if (res.rowCount == 0) {
-//                 callback(null, null); //No info found, send null result to provoke 404 error
-//             } else {
-//                 var result = res.rows; //returns counts for users
-//                 callback(null, result);
-//             }
-//         }
-//     };
-//     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
-// }
 
 function getIAPPIDFromShowroomPID (projectID, callback) {
     logCtx.fn = 'getIAPPIDFromShowroomPID';
@@ -1141,6 +1124,83 @@ function postLiveAttendance(payload,callback) {
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
 }
 
+function postConference (message, date, callback) {
+    logCtx.fn = 'postConference';
+    var query = "insert into conference (c_text, c_date, isdeleted) values ($1, $2, $3) returning cid"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows[0].cid);
+        }
+    };
+    var isdeleted = false;
+    dbUtils.makeQueryWithParams(pool, query, [message, date, isdeleted], callback, queryCb);
+}
+
+function updateConferenceByID (cid, c_text, c_date, callback) {
+    logCtx.fn = 'updateConferenceByID';
+    var query = "update conference set c_text=$1, c_date=$2 where cid = $3 returning cid"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [c_text, c_date, cid], callback, queryCb);
+}
+
+function deleteConferenceByID (conferenceID, callback) {
+    logCtx.fn = 'deleteConferenceByID';
+    var query = "update conference set isdeleted=true where cid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount > 0) {
+                var result = res.rows;
+                callback(null, result);
+            } else {
+                var errorMsg = "Could not delete conference.";
+                logError(errorMsg, logCtx);
+                callback(new Error(errorMsg), null);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [conferenceID], callback, queryCb);
+}
+
+function fetchConferences (conferenceID, callback) {
+    logCtx.fn = 'fetchConferences';
+    if (conferenceID != undefined) {
+        var query = "select * from conference where cid = $1 and isdeleted = false"; 
+    } else {
+        var query = "select * from conference where isdeleted = false"; 
+    }
+    
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            callback(null, res.rows);
+        }
+    };
+
+    if (conferenceID != undefined) {
+        dbUtils.makeQueryWithParams(pool, query, [conferenceID], callback, queryCb);
+    } else {
+        dbUtils.makeQuery(pool, query, callback, queryCb);
+    }
+}
 
 function endPool() {
     logCtx.fn = 'endPool';
@@ -1171,7 +1231,6 @@ module.exports = {
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects,
     validateResearchMember: validateResearchMember,
-    // getQnARoomInfo: getQnARoomInfo, //Not used anymore
     getName: getName,
     getLiveStats: getLiveStats,
     getInPersonStats: getInPersonStats,
@@ -1192,6 +1251,10 @@ module.exports = {
     getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID,
     validateEmailWithUserID: validateEmailWithUserID,
     getUserIDFromEmail: getUserIDFromEmail,
+    postConference: postConference,
+    fetchConferences: fetchConferences,
+    updateConferenceByID: updateConferenceByID,
+    deleteConferenceByID: deleteConferenceByID,
     deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword,
     fetchProjectIDsFromParticipates: fetchProjectIDsFromParticipates,
     deleteFromParticipates: deleteFromParticipates

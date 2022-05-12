@@ -29,8 +29,6 @@ function createRoom (meetingName, projectID, callback) {
                 meetingID: projectID == 'stage' ? 'stage' : "0" + projectID,
                 moderatorPW: config.MOD_PASSWORD,
                 attendeePW: config.ATTENDEE_PASSWORD
-                // ,
-                // isBreakout: true //For some reason BBB doesn't accept the url if it has isBreakout query param
             }
             var queryString = (new URLSearchParams(queryParams)).toString();
             var checksum = generateChecksum('create', queryString);
@@ -247,7 +245,7 @@ function generateChecksum (callName, queryString) {
     return checksum;
 }
 
-function getBBBRoleAndNameForStage(data, callback) { //TODO: test
+function getBBBRoleAndNameForStage(data, callback) {
     logCtx.fn = "getBBBRoleAndNameForStage";
     var role = 'viewer';
     var userID = data.userID;
