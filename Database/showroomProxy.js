@@ -3,6 +3,7 @@
  */
 
 const pg = require('pg');
+const iapDB = require('./iapProxy');
 const Pool = pg.Pool;
 var types = pg.types;
 types.setTypeParser(1114, function(stringValue) {
@@ -34,11 +35,35 @@ const pool = new Pool({
     },
 });
 
-function registerUser (req, callback) {
+function registerUser (req, mainCallback) {
     logCtx.fn = 'registerUser';
     var result = {};
     var saltRounds = 10;
+    var role;
+    var userEmail = req.body.email;
     async.waterfall([
+        function (callback) {
+            role = req.body.user_role;
+            if (role == config.userRoles.studentResearcher || role == config.userRoles.advisor) {
+                //Use email to fetch associated iap projects
+                iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
+                    if (error) {
+                        callback(error); 
+                    } else if (result == undefined || result == null) {
+                        logCtx.fn = 'registerUser';
+                        var errorMsg = "No IAP projects found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        req.body.iapprojects = result; //Embed iapprojects into request body to later insert them in participates table
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null); //Skip, no need to check IAP projects
+            }
+        },
         function (callback) {
             //Hash password
             var plainText = req.body.password;
@@ -50,7 +75,7 @@ function registerUser (req, callback) {
                     callback(null, hash);
                 }
             });
-        },
+        }, 
         function (hash, callback) {
             //Persist general user info and retrieve user ID
             registerGeneralUser(hash, req.body, callback);
@@ -59,10 +84,8 @@ function registerUser (req, callback) {
             //Add user ID to result
             result.userID = userID;
             //Check role and persist role specific info
-            var role = req.body.user_role;
             switch (role) {
                 case config.userRoles.studentResearcher:
-                    result.isPM = req.body.ispm; //Add isPM 
                     registerStudent(userID, req.body, callback);
                     break;
                 case config.userRoles.advisor:
@@ -78,9 +101,9 @@ function registerUser (req, callback) {
     ], (error) => {
         //Send responses
         if (error) {
-            callback(error, null);
+            mainCallback(error, null);
         } else {
-            callback(null, result)
+            mainCallback(null, result)
         }
     });
 }
@@ -121,13 +144,11 @@ function registerGeneralUser (hash, body, callback) {
 
 function registerStudent (userID, body, callback) {
     logCtx.fn = 'registerStudent';
-    var projectIDList = body.projectids; //array of project ids for this student
     var department = body.department;
     var gradDate = body.grad_date;
-    var isPM = body.ispm;
-    // var validatedmember = body.validatedmember;
+    var projectIDList = body.iapprojects;
     var query = "insert into student_researchers (userid, department, grad_date, ispm) values ($1, $2, $3, $4)";
-    var values = [userID, department, gradDate, isPM];
+    var values = [userID, department, gradDate, null];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -142,7 +163,7 @@ function registerStudent (userID, body, callback) {
 
 function registerAdvisor (userID, body, callback) {
     logCtx.fn = 'registerAdvisor';
-    var projectIDList = body.projectids;
+    var projectIDList = body.iapprojects;
     var query = "insert into advisors (userid) values ($1)";
     var values = [userID];
     var queryCb = (error, res) => {
@@ -203,9 +224,8 @@ function registerCompanyRep (userID, body, callback) {
 function associateProjectsWithUser (userID, projectIDList, callback) {
     logCtx.fn = 'associateProjectsWithUser';
     if (projectIDList.length == 0) {
-        let errorMsg = "Empty project list.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        logError("Empty project list. Moving on.", logCtx);
+        callback(null);
     } else {
         //Insert each project ID into DB
         async.forEachLimit(projectIDList, MAX_ASYNC, (projectID, cb) => {
@@ -222,6 +242,27 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
             callback(error); //null if no error
         });
     }
+}
+
+function fetchProjectIDsFromParticipates (userID, callback) { 
+    //Fetch project IDs corresponding to the given user ID 
+    logCtx.fn = 'fetchProjectIDsFromParticipates';
+    var query = "select iapprojectid from participates where userid = $1";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found
+            } else {
+                var result = res.rows.map(obj => obj.iapprojectid); //returns array of project IDs for user
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
 function fetchUserEmail (userID, callback) {
@@ -303,7 +344,6 @@ function comparePasswords (email, plaintextPassword, callback) {
                     //Add user information to result object, this is later on the session data
                     result.userID = userID;
                     result.user_role = user_role;
-                    result.isPM = isPM;
                     callback(null, hash);
                 }
             });
@@ -827,6 +867,22 @@ function deleteEvent (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function deleteFromParticipates (userID, callback) {
+    logCtx.fn = 'deleteFromParticipates';
+    var query = "delete from participates where userid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows;
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
 function deleteAnnouncement (announcementID, callback) {
     logCtx.fn = 'deleteAnnouncement';
     var query = "delete from announcements where announcementid = $1"; 
@@ -1136,5 +1192,7 @@ module.exports = {
     getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID,
     validateEmailWithUserID: validateEmailWithUserID,
     getUserIDFromEmail: getUserIDFromEmail,
-    deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword
+    deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword,
+    fetchProjectIDsFromParticipates: fetchProjectIDsFromParticipates,
+    deleteFromParticipates: deleteFromParticipates
 }
