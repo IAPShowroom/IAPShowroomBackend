@@ -28,16 +28,15 @@ const userSchema = Joi.object({
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required(), 
+    projectids: Joi.array().items(Joi.number()), 
     department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
-    ispm: Joi.boolean().required()
-//    validatedmember: Joi.boolean().required() X
+    ispm: Joi.boolean()
 });
 
 //TODO: review and make more accurate?
 const advisorSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required()
+    projectids: Joi.array().items(Joi.number())
 });
 
 //TODO: review and make more accurate?
@@ -475,11 +474,6 @@ function validateServerSideEvent(req, callback){
     log("Request schema successfully validated.", logCtx);
     callback(null);
 }
-
-
-//optionally implement this function to add additional sql injection defense
-// function sanitizeInput(input, callback){ //callback: (error) => {}
-// }
 
 module.exports = {
     validateRegisterUser: validateRegisterUser,

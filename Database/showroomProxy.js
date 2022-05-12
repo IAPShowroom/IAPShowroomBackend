@@ -3,6 +3,7 @@
  */
 
 const pg = require('pg');
+const iapDB = require('./iapProxy.js');
 const Pool = pg.Pool;
 var types = pg.types;
 types.setTypeParser(1114, function(stringValue) {
@@ -121,20 +122,31 @@ function registerGeneralUser (hash, body, callback) {
 
 function registerStudent (userID, body, callback) {
     logCtx.fn = 'registerStudent';
-    var projectIDList = body.projectids; //array of project ids for this student
     var department = body.department;
     var gradDate = body.grad_date;
-    var isPM = body.ispm;
-    // var validatedmember = body.validatedmember;
     var query = "insert into student_researchers (userid, department, grad_date, ispm) values ($1, $2, $3, $4)";
-    var values = [userID, department, gradDate, isPM];
+    var values = [userID, department, gradDate, null];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
             callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            associateProjectsWithUser(userID, projectIDList, callback);
+            var userEmail = body.email;
+            //Use email to fetch associated iap projects
+            iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
+                if (error) {
+                    callback(error); 
+                } else if (result == undefined || result == null) {
+                    logCtx.fn = 'registerStudent';
+                    var errorMsg = "No IAP project IDs found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    associateProjectsWithUser(userID, result, callback);
+                }
+            });
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
@@ -142,7 +154,6 @@ function registerStudent (userID, body, callback) {
 
 function registerAdvisor (userID, body, callback) {
     logCtx.fn = 'registerAdvisor';
-    var projectIDList = body.projectids;
     var query = "insert into advisors (userid) values ($1)";
     var values = [userID];
     var queryCb = (error, res) => {
@@ -151,7 +162,21 @@ function registerAdvisor (userID, body, callback) {
             callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            associateProjectsWithUser(userID, projectIDList, callback);
+            var userEmail = body.email;
+            //Use email to fetch associated iap projects
+            iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
+                if (error) {
+                    callback(error); 
+                } else if (result == undefined || result == null) {
+                    logCtx.fn = 'registerAdvisor';
+                    var errorMsg = "No IAP project IDs found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
+                    logError(errorMsg, logCtx);
+                    callback(new Error(errorMsg));
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    associateProjectsWithUser(userID, result, callback);
+                }
+            });
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
@@ -203,9 +228,8 @@ function registerCompanyRep (userID, body, callback) {
 function associateProjectsWithUser (userID, projectIDList, callback) {
     logCtx.fn = 'associateProjectsWithUser';
     if (projectIDList.length == 0) {
-        let errorMsg = "Empty project list.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        logError("Empty project list. Moving on.", logCtx);
+        callback(null);
     } else {
         //Insert each project ID into DB
         async.forEachLimit(projectIDList, MAX_ASYNC, (projectID, cb) => {
@@ -222,6 +246,27 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
             callback(error); //null if no error
         });
     }
+}
+
+function fetchProjectIDsFromParticipates (userID, callback) { 
+    //Fetch project IDs corresponding to the given user ID 
+    logCtx.fn = 'fetchProjectIDsFromParticipates';
+    var query = "select iapprojectid from participates where userid = $1";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found
+            } else {
+                var result = res.rows.map(obj => obj.iapprojectid); //returns array of project IDs for user
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
 function fetchUserEmail (userID, callback) {
@@ -827,6 +872,22 @@ function deleteEvent (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function deleteFromParticipates (userID, callback) {
+    logCtx.fn = 'deleteFromParticipates';
+    var query = "delete from participates where userid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows;
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
 function deleteAnnouncement (announcementID, callback) {
     logCtx.fn = 'deleteAnnouncement';
     var query = "delete from announcements where announcementid = $1"; 
@@ -1136,5 +1197,7 @@ module.exports = {
     getShowroomPIDFromIAPPID: getShowroomPIDFromIAPPID,
     validateEmailWithUserID: validateEmailWithUserID,
     getUserIDFromEmail: getUserIDFromEmail,
-    deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword
+    deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword,
+    fetchProjectIDsFromParticipates: fetchProjectIDsFromParticipates,
+    deleteFromParticipates: deleteFromParticipates
 }

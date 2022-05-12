@@ -18,7 +18,7 @@ let logCtx = {
 
 //run test:
 
-iapProjectsTest();
+// iapProjectsTest();
 // testEventArrayMapping();
 // testCreateEvent();
 // testGetEvents();
@@ -43,9 +43,89 @@ iapProjectsTest();
 // testGetShowroomPIDFromIAPPID();
 // testValidateEmailWithUserID();
 // testFetchEUUID();
+// testFetchProjectIDsFromParticipates();
+// testSetPlay();
+// testDeleteFromParticipates();
+testUpdateParticipatesTable();
 
 
 //test functions:
+
+function testSetPlay() {
+    logCtx.fn = 'testSetPlay';
+    //test cases:
+    //a = [], b = [1,2,3]
+    //a = [1,2,3], b = []
+    //a = [1,2,3], b = [1,2,3]
+    //a = [1,2,3], b = [1,2,4]
+    //a = [1,2,4], b = [1,2,3]
+    var projectsMatch = true;
+    var projectsFromIAP = [0];
+    var projectsFromParticipates = [0];
+    var iapSet = new Set(projectsFromIAP);
+    console.log("iapSet");
+    console.log(iapSet);
+    console.log("projectsFromParticipates");
+    console.log(projectsFromParticipates);
+    projectsFromParticipates.forEach((participatesPID) => {
+        if (!iapSet.has(participatesPID)) {
+            projectsMatch = false; //There was an inconsistency between the two lists
+            logTest("Projects from IAP and participates did not match.", logCtx);
+        }
+    });
+    logTest("projectsMatch: " + projectsMatch, logCtx);
+}
+
+function testUpdateParticipatesTable() {
+    logCtx.fn = 'testUpdateParticipatesTable';
+    logTest("Test started", logCtx);
+    var finalResult = {
+        userID: 20
+    }
+    // var email = 'gerson.beauchamp@upr.edu'; // --> [114, 115]
+    var email = 'jorge.vega6@upr.edu'; // --> []
+    // var email = 'kevin.bonet@upr.edu'; // --> [108]
+    authHandler.updateParticipatesTable(email, finalResult, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        iapDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testDeleteFromParticipates() {
+    logCtx.fn = 'testDeleteFromParticipates';
+    logTest("Test started", logCtx);
+    var userID = 20;
+    showroomDB.deleteFromParticipates(userID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
+
+function testFetchProjectIDsFromParticipates() {
+    logCtx.fn = 'testFetchProjectIDsFromParticipates';
+    logTest("Test started", logCtx);
+    var userID = 134;
+    showroomDB.fetchProjectIDsFromParticipates(userID, (error, info) => {
+        if (error) {
+            logError(error, logCtx);
+        }
+        logTest("Returned info: ", logCtx);
+        console.log(info);
+        showroomDB.endPool();
+        logTest("Test ended", logCtx);
+    });
+}
 
 function testFetchEUUID() {
     logCtx.fn = 'testFetchEUUID';
@@ -97,7 +177,8 @@ function testValidateEmailWithUserID() {
 function testFetchProjectsForEmail() {
     logCtx.fn = 'testFetchProjectsForEmail';
     logTest("Test started", logCtx);
-    var email = 'gerson.beauchamp@upr.edu';
+    // var email = 'gerson.beauchamp@upr.edu';
+    var email = 'kevin.bonet@upr.edu';
     iapDB.fetchProjectsForEmail(email, (error, info) => {
         if (error) {
             logError(error, logCtx);

@@ -13,8 +13,6 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-//TODO: maybe add the transporter.verify() function to test the connection and be ready to send emails
-
 //TODO: using for testing, comment when in production
 //Showroom Email configuration
 // let transporter = nodemailer.createTransport({
@@ -63,26 +61,6 @@ function registerUser (req, res, next) {
                 callback(error);
             });
         },
-        //Commented since we decided that advisors will be validated by the administrator
-        // function (callback) {
-        //     //Check email against IAP if it's an advisor
-        //     if (req.body.user_role == config.userRoles.advisor) {
-        //         var userEmail = req.body.email;
-        //         iapDB.validateEmail(userEmail, (error, isInIAP) => {
-        //             if (error) {
-        //                 errorStatus = 400;
-        //                 errorMsg = error.toString();
-        //                 logError(error, logCtx);
-        //             } else {
-
-        //             }
-        //             callback(error);
-        //         });
-        //     } else {
-        //         //Skip
-        //         callback(null);
-        //     }
-        // },
         function (callback) {
             //Check email is not already in use
             userEmail = req.body.email;
@@ -243,43 +221,9 @@ function getUserInfo (req, res, next) {
     });
 }
 
-// Use for student/advisor permisions for project rooms
-// function getRoleAndName (req, res, next) {
-//     logCtx.fn = 'getRoleAndName';
-//     var errorStatus, errorMsg;
-//     async.waterfall([
-//         function (callback) {
-//             //Get user info. from database
-//             var userID = req.session.data["userID"];
-//             showroomDB.getRoleAndName(userID, (error, result) => {
-//                 if (error) {
-//                     errorStatus = 400;
-//                     errorMsg = error.toString();
-//                     logError(error, logCtx);
-//                     callback(error, null);
-//                 } else if (result == undefined || result == null) {
-//                     errorStatus = 404;
-//                     errorMsg = "No user found.";
-//                     logError(error, logCtx);
-//                     callback(new Error(errorMsg), null);
-//                 } else {
-//                     log("Response data: " + JSON.stringify(result), logCtx);
-//                     callback(null, result);
-//                 }
-//             });
-//         }
-//     ], (error, result) => {
-//         if (error) {
-//             errorResponse(res, errorStatus, errorMsg);
-//         } else {
-//             successResponse(res, 200, "User successfully retrieved user role and name.", result);
-//         }
-//     });
-// }
-
 function logIn (req, res, next) {
     logCtx.fn = 'logIn';
-    var errorStatus, errorMsg;
+    var errorStatus, errorMsg, userEmail;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -294,7 +238,7 @@ function logIn (req, res, next) {
         },
         function (callback) {
             //Get hash from database and compare
-            var userEmail = req.body.email;
+            userEmail = req.body.email;
             var userPassword = req.body.password;
             showroomDB.comparePasswords(userEmail, userPassword, (error, result) => {
                 if (error) {
@@ -309,13 +253,119 @@ function logIn (req, res, next) {
                     callback(null, result);
                 }
             });
+        },
+        function (finalResult, callback) {
+            //Update participates table if there are any updates to be made
+            updateParticipatesTable(userEmail, finalResult, callback);
         }
     ], (error, result) => {
         if (error) {
             errorResponse(res, errorStatus, errorMsg);
         } else {
-            //Will test integration by passing userid and admin payload, but redis sessions should be included
             successResponse(res, 200, "User successfully logged in.", result);
+        }
+    });
+}
+
+function updateParticipatesTable (userEmail, finalResult, mainCallback) {
+    //Check if email is associated with any projects in the IAP database and update the participates table with the same information
+    logCtx.fn = 'updateParticipatesTable';
+    var userID = finalResult.userID;
+    var projectsFromIAP, projectsFromParticipates;
+    var projectsMatch = true; //Default to true
+    async.waterfall([
+        function (callback) {
+            //Use email to fetch associated iap projects
+            iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error); 
+                } else if (result == undefined || result == null) {
+                    logCtx.fn = 'updateParticipatesTable';
+                    logError("No IAP project IDs found associated with given email.", logCtx);
+                    projectsFromIAP = [0]; //Simulate empty with '0' so the comparison catches the mismatch
+                    callback(null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    projectsFromIAP = result;
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            //Get all iapprojectid's in participates associated with user ID
+            showroomDB.fetchProjectIDsFromParticipates(userID, (error, result) => {
+                if (error) {
+                    errorStatus = 500;
+                    errorMsg = error.toString();
+                    logError(error, logCtx);
+                    callback(error); 
+                } else if (result == undefined || result == null) {
+                    logCtx.fn = 'updateParticipatesTable';
+                    logError("No project IDs found associated with given user ID.", logCtx);
+                    projectsFromParticipates = [0]; //Simulate empty with '0' so the comparison catches the mismatch
+                    callback(null);
+                } else {
+                    log("Response data: " + JSON.stringify(result), logCtx);
+                    projectsFromParticipates = result;
+                    callback(null);
+                }
+            });
+        },
+        function (callback) {
+            logCtx.fn = 'updateParticipatesTable';
+            //Check if both project ID lists match
+            var iapSet = new Set(projectsFromIAP);
+            projectsFromParticipates.forEach((participatesPID) => {
+                if (!iapSet.has(participatesPID)) {
+                    projectsMatch = false; //There was an inconsistency between the two lists
+                    log("Projects from IAP and participates did not match.", logCtx);
+                }
+            });
+            callback(null);
+        },
+        function (callback) {
+            if (projectsMatch) {
+                callback(null); //Skip if projects matched
+            } else {
+                //Delete current records in participates if any
+                if (projectsFromParticipates.length == 1 && projectsFromParticipates[0] == 0) {
+                    callback(null); //Skip since there's nothing to delete (a single element of 0 means it was 'empty')
+                } else {
+                    showroomDB.deleteFromParticipates(userID, (error, result) => {
+                        if (error) {
+                            errorStatus = 500;
+                            errorMsg = error.toString();
+                            logError(error, logCtx);
+                            callback(error);
+                        } else {
+                            log("Response data: " + JSON.stringify(result), logCtx);
+                            callback(null);
+                        }
+                    });
+                }
+            }
+        },
+        function (callback) {
+            if (projectsMatch) {
+                callback(null); //Skip if projects matched
+            } else {
+                if (projectsFromIAP.length == 1 && projectsFromIAP[0] == 0) {
+                    callback(null); //Skip since there's nothing to post from IAP
+                } else {
+                    showroomDB.associateProjectsWithUser(userID, projectsFromIAP, (error) => {
+                        callback(error); //null if no error
+                    });
+                }
+            }
+        }
+    ], (error) => {
+        if (error) {
+            mainCallback(error, null);
+        } else {
+            mainCallback(null, finalResult);
         }
     });
 }
@@ -719,7 +769,6 @@ function checkSession (req, res, next) {
 module.exports = {
     registerUser: registerUser,
     getUserInfo: getUserInfo,
-    // getRoleAndName: getRoleAndName,
     authenticate: authenticate,
     authorizeAdmin: authorizeAdmin,
     logOut: logOut,
@@ -728,5 +777,6 @@ module.exports = {
     forgotPassword: forgotPassword,
     verifyUserFromEmail: verifyUserFromEmail,
     sendEmail: sendEmail,
-    generateEUUID: generateEUUID
+    generateEUUID: generateEUUID,
+    updateParticipatesTable: updateParticipatesTable
 }
