@@ -28,16 +28,15 @@ const userSchema = Joi.object({
 
 //TODO: review and make more accurate?
 const studentSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required(), 
+    projectids: Joi.array().items(Joi.number()), 
     department: Joi.string().required().max(30),
     grad_date: Joi.date().required(),
-    ispm: Joi.boolean().required()
-//    validatedmember: Joi.boolean().required() X
+    ispm: Joi.boolean()
 });
 
 //TODO: review and make more accurate?
 const advisorSchema = userSchema.append({
-    projectids: Joi.array().items(Joi.number()).required()
+    projectids: Joi.array().items(Joi.number())
 });
 
 //TODO: review and make more accurate?
@@ -81,10 +80,10 @@ const joinRoomSchema = Joi.object({
 });
 
 const forgotPasswordSchema = Joi.object({
-    new_password: Joi.string().pattern(new RegExp('^[a-zA-Z0-9!@#$%^&*()]{3,30}$')),
+    new_password: Joi.string(),
     email: Joi.string().email({minDomainSegments: 2, tlds: { allow: ['com', 'net', 'org', 'edu']}}),
-    user_id: Joi.number().required(),
-    euuid: Joi.string().required()
+    user_id: Joi.number(),
+    euuid: Joi.string()
 });
 
 const verifyDeleteAnnouncementSchema = Joi.object({

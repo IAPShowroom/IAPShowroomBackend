@@ -3,6 +3,7 @@
  */
 
 const pg = require('pg');
+const iapDB = require('./iapProxy');
 const Pool = pg.Pool;
 var types = pg.types;
 types.setTypeParser(1114, function(stringValue) {
@@ -34,11 +35,35 @@ const pool = new Pool({
     },
 });
 
-function registerUser (req, callback) {
+function registerUser (req, mainCallback) {
     logCtx.fn = 'registerUser';
     var result = {};
     var saltRounds = 10;
+    var role;
+    var userEmail = req.body.email;
     async.waterfall([
+        function (callback) {
+            role = req.body.user_role;
+            if (role == config.userRoles.studentResearcher || role == config.userRoles.advisor) {
+                //Use email to fetch associated iap projects
+                iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
+                    if (error) {
+                        callback(error); 
+                    } else if (result == undefined || result == null) {
+                        logCtx.fn = 'registerUser';
+                        var errorMsg = "No IAP projects found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        req.body.iapprojects = result; //Embed iapprojects into request body to later insert them in participates table
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null); //Skip, no need to check IAP projects
+            }
+        },
         function (callback) {
             //Hash password
             var plainText = req.body.password;
@@ -50,7 +75,7 @@ function registerUser (req, callback) {
                     callback(null, hash);
                 }
             });
-        },
+        }, 
         function (hash, callback) {
             //Persist general user info and retrieve user ID
             registerGeneralUser(hash, req.body, callback);
@@ -59,10 +84,8 @@ function registerUser (req, callback) {
             //Add user ID to result
             result.userID = userID;
             //Check role and persist role specific info
-            var role = req.body.user_role;
             switch (role) {
                 case config.userRoles.studentResearcher:
-                    result.isPM = req.body.ispm; //Add isPM 
                     registerStudent(userID, req.body, callback);
                     break;
                 case config.userRoles.advisor:
@@ -78,9 +101,9 @@ function registerUser (req, callback) {
     ], (error) => {
         //Send responses
         if (error) {
-            callback(error, null);
+            mainCallback(error, null);
         } else {
-            callback(null, result)
+            mainCallback(null, result)
         }
     });
 }
@@ -121,13 +144,11 @@ function registerGeneralUser (hash, body, callback) {
 
 function registerStudent (userID, body, callback) {
     logCtx.fn = 'registerStudent';
-    var projectIDList = body.projectids; //array of project ids for this student
     var department = body.department;
     var gradDate = body.grad_date;
-    var isPM = body.ispm;
-    // var validatedmember = body.validatedmember;
+    var projectIDList = body.iapprojects;
     var query = "insert into student_researchers (userid, department, grad_date, ispm) values ($1, $2, $3, $4)";
-    var values = [userID, department, gradDate, isPM];
+    var values = [userID, department, gradDate, null];
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -142,7 +163,7 @@ function registerStudent (userID, body, callback) {
 
 function registerAdvisor (userID, body, callback) {
     logCtx.fn = 'registerAdvisor';
-    var projectIDList = body.projectids;
+    var projectIDList = body.iapprojects;
     var query = "insert into advisors (userid) values ($1)";
     var values = [userID];
     var queryCb = (error, res) => {
@@ -161,6 +182,19 @@ function changePassword (userEmail, hashedPW, callback) {
     logCtx.fn = 'changePassword';
     var query = "update users set password=$1 where email = $2";
     var values = [hashedPW, userEmail];
+    var queryCb = (error, res) => {
+        if (error) {
+            logError(error, logCtx);
+        } 
+        callback(error); //Null if no error
+    };
+    dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
+}
+
+function deleteTokenAfterChangingPassword(userID, callback) {
+    logCtx.fn = 'deleteTokenAfterChangingPassword';
+    var query = "delete from EmailUUID where userid=$1 and type='password'";
+    var values = [userID];
     var queryCb = (error, res) => {
         if (error) {
             logError(error, logCtx);
@@ -190,14 +224,13 @@ function registerCompanyRep (userID, body, callback) {
 function associateProjectsWithUser (userID, projectIDList, callback) {
     logCtx.fn = 'associateProjectsWithUser';
     if (projectIDList.length == 0) {
-        let errorMsg = "Empty project list.";
-        logError(errorMsg, logCtx);
-        callback(new Error(errorMsg));
+        logError("Empty project list. Moving on.", logCtx);
+        callback(null);
     } else {
         //Insert each project ID into DB
         async.forEachLimit(projectIDList, MAX_ASYNC, (projectID, cb) => {
-            var values = [userID, projectID];
-            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid) values ($1, $2)", values, cb, (error, res) => {
+            var values = [userID, projectID, projectID];
+            dbUtils.makeQueryWithParams(pool,"insert into participates (userid, projectid, iapprojectid) values ($1, $2, $3)", values, cb, (error, res) => {
                 if (error) {
                     logError(error, logCtx);
                 } else {
@@ -209,6 +242,27 @@ function associateProjectsWithUser (userID, projectIDList, callback) {
             callback(error); //null if no error
         });
     }
+}
+
+function fetchProjectIDsFromParticipates (userID, callback) { 
+    //Fetch project IDs corresponding to the given user ID 
+    logCtx.fn = 'fetchProjectIDsFromParticipates';
+    var query = "select iapprojectid from participates where userid = $1";
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            if (res.rowCount == 0) {
+                callback(null, null); //No info found
+            } else {
+                var result = res.rows.map(obj => obj.iapprojectid); //returns array of project IDs for user
+                callback(null, result);
+            }
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
 }
 
 function fetchUserEmail (userID, callback) {
@@ -290,7 +344,6 @@ function comparePasswords (email, plaintextPassword, callback) {
                     //Add user information to result object, this is later on the session data
                     result.userID = userID;
                     result.user_role = user_role;
-                    result.isPM = isPM;
                     callback(null, hash);
                 }
             });
@@ -317,12 +370,11 @@ function comparePasswords (email, plaintextPassword, callback) {
         function (callback) {
             //Check if user is admin (and add to result along with user ID)
             //Login should also check for other roles 
-            isUserAdmin(result.userID, (error, adminID) => { //TODO: test
+            isUserAdmin(result.userID, (error, adminID) => {
                 if (error) {
                     logError(error, logCtx);
                     callback(error);
                 } else {
-                    // result.admin = isAdmin; //set as either true or false //TODO delete
                     result.admin = adminID; //If it's null, not admin
                     callback(null);
                 }
@@ -375,10 +427,8 @@ function isUserAdmin (userID, callback) {
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
             if (res.rows.length == 0 ) {
-                // callback(null, false); //TODO: delete
                 callback(null, null);
             } else {
-                // callback(null, true); //Success //TODO: delete
                 callback(null, res.rows[0].adminid); //Success
             }
         }
@@ -613,25 +663,26 @@ function getEventByID (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
-function getQnARoomInfo (projectID, callback) {
-    logCtx.fn = 'getQnARoomInfo';
-    var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
-    var queryCb = (error, res) => { 
-        if (error) {
-            logError(error, logCtx);
-            callback(error, null);
-        } else {
-            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            if (res.rowCount == 0) {
-                callback(null, null); //No info found, send null result to provoke 404 error
-            } else {
-                var result = res.rows; //returns counts for users
-                callback(null, result);
-            }
-        }
-    };
-    dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
-}
+//Not used anymore, project information is being pulled directly from IAP's database. There is an equivalent function in iapProxy.js
+// function getQnARoomInfo (projectID, callback) {
+//     logCtx.fn = 'getQnARoomInfo';
+//     var query = "select proj.iapproject_title, proj.iapproject_abstract, u.first_name, u.last_name, u.user_role, sr.ispm, sr.grad_date from users u left join student_researchers sr on u.userid = sr.userid left join participates p on u.userid = p.userid left join projects proj on p.projectid = proj.projectid where proj.projectid = $1"; 
+//     var queryCb = (error, res) => { 
+//         if (error) {
+//             logError(error, logCtx);
+//             callback(error, null);
+//         } else {
+//             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+//             if (res.rowCount == 0) {
+//                 callback(null, null); //No info found, send null result to provoke 404 error
+//             } else {
+//                 var result = res.rows; //returns counts for users
+//                 callback(null, result);
+//             }
+//         }
+//     };
+//     dbUtils.makeQueryWithParams(pool, query, [projectID], callback, queryCb);
+// }
 
 function getIAPPIDFromShowroomPID (projectID, callback) {
     logCtx.fn = 'getIAPPIDFromShowroomPID';
@@ -732,7 +783,7 @@ function getInPersonStats (callback) {
 
 function getUserInfo (userID, callback) {
     logCtx.fn = 'getUserInfo';
-    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
+    var query = "select first_name, last_name, email, user_role, gender, verifiedemail, department, grad_date, ispm, company_name, adminid, iapprojectid as projectid from users as u left join student_researchers as sr on u.userid = sr.userid left join advisors as a on u.userid = a.userid left join admins as adm on u.userid = adm.userid left join participates as p on u.userid = p.userid left join company_representatives as cr on u.userid = cr.userid where u.userid = $1";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -820,6 +871,22 @@ function deleteEvent (eventID, callback) {
     dbUtils.makeQueryWithParams(pool, query, [eventID], callback, queryCb);
 }
 
+function deleteFromParticipates (userID, callback) {
+    logCtx.fn = 'deleteFromParticipates';
+    var query = "delete from participates where userid = $1"; 
+    var queryCb = (error, res) => { 
+        if (error) {
+            logError(error, logCtx);
+            callback(error, null);
+        } else {
+            log("Got response from DB - rowCount: " + res.rowCount, logCtx);
+            var result = res.rows;
+            callback(null, result);
+        }
+    };
+    dbUtils.makeQueryWithParams(pool, query, [userID], callback, queryCb);
+}
+
 function deleteAnnouncement (announcementID, callback) {
     logCtx.fn = 'deleteAnnouncement';
     var query = "delete from announcements where announcementid = $1"; 
@@ -878,7 +945,7 @@ function postAnnouncements (adminID, message, date, callback) {
 
 function getRoleAndName (userID, callback) {
     logCtx.fn = 'getRoleAndName';
-    var query = "select users.user_role, users.first_name, users.last_name, p.projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
+    var query = "select users.user_role, users.first_name, users.last_name, p.iapprojectid as projectid from users left join participates as p on users.userid = p.userid where users.userid = $1"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -905,7 +972,7 @@ function getRoleAndName (userID, callback) {
 
 function getAllMembersFromAllProjects(callback){
     logCtx.fn = 'getAllMembersFromAllProjects';
-    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, r.projectid, r.iapproject_title, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid inner join projects r on p.projectid = r.projectid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by r.projectid, users.userid, sr.validatedmember, a.validatedmember;";
+    var query = "SELECT users.userid, users.user_role, users.first_name, users.last_name, p.iapprojectid as projectid, sr.validatedmember, a.validatedmember as validatedAdvisor from users inner join participates p on users.userid = p.userid left outer join student_researchers sr on p.userid = sr.userid left outer join advisors a on p.userid = a.userid group by p.iapprojectid, users.userid, sr.validatedmember, a.validatedmember;";
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -948,9 +1015,9 @@ function validateResearchMember(userID, user_role, callback){
 
 
 
-function getStudentProject (userID, projectID, callback) { //TODO: test
+function getStudentProject (userID, projectID, callback) {
     logCtx.fn = 'getStudentProject';
-    var query = "select userid, projectid from participates where userid = $1 and projectid = $2"; 
+    var query = "select userid, iapprojectid as projectid from participates where userid = $1 and iapprojectid = $2"; 
     var queryCb = (error, res) => { 
         if (error) {
             logError(error, logCtx);
@@ -1185,7 +1252,7 @@ module.exports = {
     fetchUserIDsAndRoles: fetchUserIDsAndRoles,
     getAllMembersFromAllProjects: getAllMembersFromAllProjects,
     validateResearchMember: validateResearchMember,
-    getQnARoomInfo: getQnARoomInfo,
+    // getQnARoomInfo: getQnARoomInfo, //Not used anymore
     getName: getName,
     getLiveStats: getLiveStats,
     getInPersonStats: getInPersonStats,
@@ -1209,5 +1276,8 @@ module.exports = {
     postConference: postConference,
     fetchConferences: fetchConferences,
     updateConferenceByID: updateConferenceByID,
-    deleteConferenceByID: deleteConferenceByID
+    deleteConferenceByID: deleteConferenceByID,
+    deleteTokenAfterChangingPassword: deleteTokenAfterChangingPassword,
+    fetchProjectIDsFromParticipates: fetchProjectIDsFromParticipates,
+    deleteFromParticipates: deleteFromParticipates
 }
