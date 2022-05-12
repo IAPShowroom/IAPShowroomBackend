@@ -68,7 +68,7 @@ showroomRouter.post(inPersonAttendance, showroomHandler.postLiveAttendance);
 
 // Conference
 showroomRouter.post(conference, auth.authorizeAdmin, showroomHandler.postConference); 
-showroomRouter.get(conference, auth.authorizeAdmin, showroomHandler.getConferences);
+showroomRouter.get(conference, auth.authenticate, showroomHandler.getConferences);
 showroomRouter.put(conferenceByID, auth.authorizeAdmin, showroomHandler.updateConferenceByID);
 showroomRouter.delete(conferenceByID, auth.authorizeAdmin, showroomHandler.deleteConferenceByID);
 
