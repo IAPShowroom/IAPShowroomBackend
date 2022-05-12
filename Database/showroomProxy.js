@@ -35,11 +35,35 @@ const pool = new Pool({
     },
 });
 
-function registerUser (req, callback) {
+function registerUser (req, mainCallback) {
     logCtx.fn = 'registerUser';
     var result = {};
     var saltRounds = 10;
+    var role;
+    var userEmail = req.body.email;
     async.waterfall([
+        function (callback) {
+            role = req.body.user_role;
+            if (role == config.userRoles.studentResearcher || role == config.userRoles.advisor) {
+                //Use email to fetch associated iap projects
+                iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
+                    if (error) {
+                        callback(error); 
+                    } else if (result == undefined || result == null) {
+                        logCtx.fn = 'registerUser';
+                        var errorMsg = "No IAP projects found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
+                        logError(errorMsg, logCtx);
+                        callback(new Error(errorMsg));
+                    } else {
+                        log("Response data: " + JSON.stringify(result), logCtx);
+                        req.body.iapprojects = result; //Embed iapprojects into request body to later insert them in participates table
+                        callback(null);
+                    }
+                });
+            } else {
+                callback(null); //Skip, no need to check IAP projects
+            }
+        },
         function (callback) {
             //Hash password
             var plainText = req.body.password;
@@ -51,7 +75,7 @@ function registerUser (req, callback) {
                     callback(null, hash);
                 }
             });
-        },
+        }, 
         function (hash, callback) {
             //Persist general user info and retrieve user ID
             registerGeneralUser(hash, req.body, callback);
@@ -60,7 +84,6 @@ function registerUser (req, callback) {
             //Add user ID to result
             result.userID = userID;
             //Check role and persist role specific info
-            var role = req.body.user_role;
             switch (role) {
                 case config.userRoles.studentResearcher:
                     result.isPM = req.body.ispm; //Add isPM 
@@ -79,9 +102,9 @@ function registerUser (req, callback) {
     ], (error) => {
         //Send responses
         if (error) {
-            callback(error, null);
+            mainCallback(error, null);
         } else {
-            callback(null, result)
+            mainCallback(null, result)
         }
     });
 }
@@ -124,6 +147,7 @@ function registerStudent (userID, body, callback) {
     logCtx.fn = 'registerStudent';
     var department = body.department;
     var gradDate = body.grad_date;
+    var projectIDList = body.iapprojects;
     var query = "insert into student_researchers (userid, department, grad_date, ispm) values ($1, $2, $3, $4)";
     var values = [userID, department, gradDate, null];
     var queryCb = (error, res) => { 
@@ -132,21 +156,7 @@ function registerStudent (userID, body, callback) {
             callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var userEmail = body.email;
-            //Use email to fetch associated iap projects
-            iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
-                if (error) {
-                    callback(error); 
-                } else if (result == undefined || result == null) {
-                    logCtx.fn = 'registerStudent';
-                    var errorMsg = "No IAP project IDs found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
-                    logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg));
-                } else {
-                    log("Response data: " + JSON.stringify(result), logCtx);
-                    associateProjectsWithUser(userID, result, callback);
-                }
-            });
+            associateProjectsWithUser(userID, projectIDList, callback);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
@@ -154,6 +164,7 @@ function registerStudent (userID, body, callback) {
 
 function registerAdvisor (userID, body, callback) {
     logCtx.fn = 'registerAdvisor';
+    var projectIDList = body.iapprojects;
     var query = "insert into advisors (userid) values ($1)";
     var values = [userID];
     var queryCb = (error, res) => {
@@ -162,21 +173,7 @@ function registerAdvisor (userID, body, callback) {
             callback(error);
         } else {
             log("Got response from DB - rowCount: " + res.rowCount, logCtx);
-            var userEmail = body.email;
-            //Use email to fetch associated iap projects
-            iapDB.fetchProjectsForEmail(userEmail, (error, result) => {
-                if (error) {
-                    callback(error); 
-                } else if (result == undefined || result == null) {
-                    logCtx.fn = 'registerAdvisor';
-                    var errorMsg = "No IAP project IDs found associated with given email: " + userEmail + " Please contact the IAP coordinator if this is a mistake.";
-                    logError(errorMsg, logCtx);
-                    callback(new Error(errorMsg));
-                } else {
-                    log("Response data: " + JSON.stringify(result), logCtx);
-                    associateProjectsWithUser(userID, result, callback);
-                }
-            });
+            associateProjectsWithUser(userID, projectIDList, callback);
         }
     };
     dbUtils.makeQueryWithParams(pool, query, values, callback, queryCb);
