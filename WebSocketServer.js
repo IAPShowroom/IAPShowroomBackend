@@ -26,7 +26,6 @@ let logCtx = {
 var isStagelive = false;
 
 wss.on('connection', function (ws, request) {
-    // const userId = request.session.data.userID;
 
     ws.on('message', function (message) {
         logCtx.fn = 'MessageHandler';
@@ -50,7 +49,7 @@ wss.on('connection', function (ws, request) {
     });
 
     ws.on('close', function () {
-    // userIDtoWSMap.delete(userId);
+
     });
 });
 

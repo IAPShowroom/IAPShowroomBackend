@@ -44,7 +44,7 @@ showroomRouter.post(announcements, auth.authorizeAdmin, showroomHandler.postAnno
 showroomRouter.get(announcements, auth.authenticate, showroomHandler.getAnnouncements);
 showroomRouter.delete(announcementsByID, auth.authorizeAdmin, showroomHandler.deleteAnnouncementByID);
 showroomRouter.get(researchers_advisors, auth.authenticate, showroomHandler.getAllMembersFromAllProjects);
-showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember); //TODO: Validated advisors and PM's should be able to do this
+showroomRouter.post(validateResearchMember, auth.authorizeAdmin, showroomHandler.validateResearchMember);
 showroomRouter.get(getAllUsers, auth.authenticate, showroomHandler.getAllUsers);
 
 //Events 

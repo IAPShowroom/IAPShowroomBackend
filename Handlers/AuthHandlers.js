@@ -174,7 +174,6 @@ function sendEmail(destEmail, subject, message, callback) {
         to: destEmail, 
         subject: subject,
         text: message,
-        // html: //TODO: add prettiness
       };
 
     transporter.sendMail(mail, function (error, info) {

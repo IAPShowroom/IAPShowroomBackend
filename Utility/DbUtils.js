@@ -34,7 +34,6 @@ function serverSideResponse (callerEvent, res, status, msg, payload) {
 }
 
 function errorResponse (res, status, msg) {
-    // successResponse(res, status, 'Error: ' + msg); //Remove 'Error' injection
     successResponse(res, status, msg);
 }
 

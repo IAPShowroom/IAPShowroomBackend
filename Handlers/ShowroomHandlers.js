@@ -74,7 +74,6 @@ function getStats (req, res, next) {
             var currentDate = today.toISOString().slice(0,10);
             //Filter live conference records to derive statistics
             if(date !== undefined) currentDate = date;
-            // console.log('LIVE STATS FOR DATE',currentDate);
             liveResults.forEach((obj) => {
                 //Get date of meethistory record to compare with current date
                 var joinDate = new Date(obj.jointime)
@@ -105,7 +104,7 @@ function getStats (req, res, next) {
     });
 }
 
-function filterStats (finalResult, obj) { //TODO: finish testing and get it working correctly
+function filterStats (finalResult, obj) {
     var count = parseInt(obj.count, 10)
     //Count based on user role
     if (obj.user_role === config.userRoles.studentResearcher) {
@@ -432,33 +431,6 @@ function getQnARoomInfo (req, res, next) {
         },
         function (callback) {
             if (performBBBOps && performBBBOps == 'true') {
-                //Commented this since, for now, we want anyone to be able to join the room. 
-                // //Check role
-                // switch (bbbRole) {
-                //     case "moderator":
-                //         //Create room before joining if they are moderators
-                //         meetingHandler.createRoom(meetingName, projectID, callback);
-                //         break;
-                //     case "viewer":
-                //         //Check if the meeting is running, fail the call if it's not
-                //         meetingHandler.isMeetingRunning(projectID, (error, isRunning) => {
-                //             if (error) {
-                //                 logError(error, logCtx);
-                //                 callback(error);
-                //             } else {
-                //                 if (!isRunning) {
-                //                     errorStatus = 500;
-                //                     errorMsg = "Meeting is not running.";
-                //                     logError(errorMsg, logCtx);
-                //                     callback(new Error(errorMsg));
-                //                 } else {
-                //                     callback(null); //All good, meeting is running, proceed
-                //                 }
-                //             }
-                //         });
-                //         break;
-                // }
-
                 //Create room before joining in case it's not already created
                 meetingHandler.createRoom(meetingName, projectID, callback);
             } else {
@@ -778,7 +750,6 @@ function getScheduleEventByID (req, res, nect) {
 function postScheduleEvents (req, res, next) {
     logCtx.fn = 'postScheduleEvents';
     var errorStatus, errorMsg;
-    //req.body['adminid'] = req.session.data.admin;
     async.waterfall([
         function (callback) {
             //Validate request payload
@@ -866,18 +837,6 @@ function updateBatchEvents (req, res, next) {
     logCtx.fn = 'updateBatchEvent';
     var errorStatus, errorMsg;
     async.waterfall([
-        function (callback) {
-            //TODO: Validate request payload
-
-            // validator.validateUpdateEvent(req, (error) => {
-            //     if (error) {
-            //         logError(error, logCtx);
-            //         errorStatus = 400;
-            //         errorMsg = error.message;
-            //     }
-                callback(null);
-            // });
-        },
         function (callback) {
             //Persist updated event to DB
             console.log("time: "+req.params.time);

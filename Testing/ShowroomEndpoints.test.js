@@ -12,21 +12,6 @@ let logCtx = {
     fn: ''
 }
 
-//TODO: remove - temporarily leaving here for reference
-// expect(res.response.status).toBe(200);
-// expect(error.response.status).toBe(401);
-// expect(error).toBeNull(); //or tobeUndefined?
-// describe('Test Suit Number One', () => {
-//     test('Test test', () => {
-//         var hello = 'hi';
-//         expect(hello).toBe('hi');
-//     });
-    
-//     test.each(testCases)('check %i is %i', (a, b) => {
-//         expect(a).toBe(b);
-//     });
-// });
-
 //Global variables for testing
 var env = process.env;
 var adminEmail = env.TEST_ADMIN_EMAIL;
@@ -51,7 +36,6 @@ beforeAll( async () => {
     });
 });
 
-//TODO: uncomment, this is a real test
 describe('Test test endpoint.', () => {
     test('GET /test', () => {
         axios.get('http://localhost:8080/test').then((res) => {
@@ -64,9 +48,8 @@ describe('Test test endpoint.', () => {
 });
 
 
-//TODO: finish implementing, work in progress --v
 describe('Showroom Endpoints: GET /api/showroom/stats', () => {
-    test('Successful test', async () => { //TODO: repeat this for failure too and other test cases
+    test('Successful test', async () => {
         expect.assertions(1);
         await axios.get('http://localhost:8080/api/showroom/stats', authHeadersAdmin).then((response) => {
             expect(response.status).toBe(200);
@@ -92,7 +75,7 @@ describe('Showroom Endpoints: GET /api/showroom/stats', () => {
             expect(error).toBeUndefined();
         });
     });
-    test('Failure test', async () => { //TODO: check out testing plan and change this test to fit the test cases described
+    test('Failure test', async () => {
         expect.assertions(18);
         await axios.get('http://localhost:8080/api/showroom/stats', authHeadersAdmin).then((response) => {
             expect(response.status).toBe(200);

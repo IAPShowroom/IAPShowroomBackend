@@ -26,7 +26,6 @@ const userSchema = Joi.object({
     user_role: Joi.string().min(1).max(30).required()
 });
 
-//TODO: review and make more accurate?
 const studentSchema = userSchema.append({
     projectids: Joi.array().items(Joi.number()), 
     department: Joi.string().required().max(30),
@@ -34,17 +33,14 @@ const studentSchema = userSchema.append({
     ispm: Joi.boolean()
 });
 
-//TODO: review and make more accurate?
 const advisorSchema = userSchema.append({
     projectids: Joi.array().items(Joi.number())
 });
 
-//TODO: review and make more accurate?
 const companyRepSchema = userSchema.append({
     company_name: Joi.string().min(1).max(30).required()
 });
 
-//TODO: review and make more accurate
 const eventSchema = Joi.object({
     adminid: Joi.number().required().prefs({ convert: false }),
     starttime: Joi.string().required(),
@@ -349,7 +345,7 @@ function validateJoinRoom (req, callback) {
     }
 }
 
-function validateJoinStage (req, callback) { //TODO: test
+function validateJoinStage (req, callback) {
     logCtx.fn = 'validateJoinStage';
     if (req.body != undefined && Object.keys(req.body).length != 0) {
         validateRequest(req, joinStageSchema, callback);
@@ -485,7 +481,7 @@ function validateGetIAPProjects (req, callback) {
     }
 }
 
-function validateQNARoomInfo (req, callback) { //TODO: test
+function validateQNARoomInfo (req, callback) {
     logCtx.fn = 'validateQNARoomInfo';
     if (req.query != undefined && Object.keys(req.query).length != 0) {
         var obj = {body: req.query}; //Bypass validateRequest's req.body call
