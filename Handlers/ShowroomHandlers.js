@@ -903,6 +903,8 @@ function updateBatchEvents (req, res, next) {
         },
         function(result, callback){
             var event = req.body;
+            event.cid = result[0].cid;
+            event.meetid = result[0].meetid;
             let time = new Date(result[0].starttime);
             let duration = new Date(result[0].duration);
             var delta = +new Date(event.starttime) - +time + (+new Date(event.duration) - +duration) * 60000;
@@ -918,7 +920,7 @@ function updateBatchEvents (req, res, next) {
                 };
                 updatedEventList.push(updatedEvent);
             }
-
+            
             showroomDB.updateBatchEvents(updatedEventList, (error, result) => {
                 if (error) {
                     errorStatus = 500;
